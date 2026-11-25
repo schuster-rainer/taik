@@ -1,0 +1,9 @@
+84	start	Factory hat den Auftrag übernommen
+179	probe	Prüfbefund aus round-01.run: AssertionError [ERR_ASSERTION]: the flow detail is clamped to at least two lines
+471	worker	Savant erhält Auftrag und akzeptierten Ausgangsstand
+25894745	worker	worker_model=subq-savant-1.4 worker_input_tokens=35298 worker_output_tokens=11606 worker_cost_usd=0.009333 worker_duration_ms=25894 
+25894858	worker	Lease durch laufende Ausgabe gehalten, 1 Herzschläge, zuletzt bei 3 Zeichen
+25894873	evaluate	Unabhängiges, gespeichertes Prüfgate ausführen
+25895638	worker	Patch mit 5 Blöcken auf den angenommenen Stand angewendet
+25970532	checks	PASS: host contract, 17 token shadows, window box, 9px WebKit scrollbar with a mixed thumb, 24px shadow room, no gradient arrow, 28px controls, readable type, pane-driven flow, reduced motion, contrast 5.12
+25981719	accepted	Retain the accepted artifact. No further work was authorized by this round.

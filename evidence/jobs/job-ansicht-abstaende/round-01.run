@@ -1,0 +1,25 @@
+decision=rejected
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=Runde: Abstände, Scrollbars und Verläufe der Ansicht nach Messung berichtigen.
+baseline=/Users/rainer/projects/ideas/talk/evidence/jobs/job-ansicht-abstaende/submission.seed.html
+worker=savant
+worker_model=subq-savant-1.4
+worker_input_tokens=18187
+worker_output_tokens=15256
+worker_cost_usd=0.009447
+worker_duration_ms=33606
+limits=4 rounds; worker lease 60s up to 900s; verifier 15s; 96KiB source
+gate_sha256=0ce114c523881741bb60f18c9324195fc88bf2bbea87f74339d67c3714f0dc02
+gate_ms=97
+patch_blocks=6
+checks=AssertionError [ERR_ASSERTION]: the flow detail is clamped to at least two lines
+artifact=
+rejected_candidate=round-01.rejected.txt
+feedback=
+follow_up=
+continuation=Revise the retained source using the gate diagnosis, then run the same gate.
+advance=true
+end

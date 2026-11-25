@@ -21,7 +21,7 @@ This is a running seed, not a product. What the evidence supports today:
 | The Factory changes its own viewer without an agent writing the code | Shown three times. In the last case nothing was done by an agent after queueing: patch, gate, WebKit check and installation ran in the service. See [the observation](evidence/jobs/job-ansicht-fragment/observation.run) |
 | The Factory writes its next job itself | Shown once, with the user's approval: brief and gate derived from an observation, accepted in round 1. See [the observation](evidence/jobs/job-mehrdatei-programm/observation.run) |
 | The Factory changes its own procedures and viewer through its own gate | Shown for the search procedure and the viewer |
-| The Factory judges and installs its own backend | Shown once. The installed binary ran the pinned gate, checked the candidate itself and replaced itself in [job-backend](evidence/jobs/job-backend/round-01.run). The thirteen rounds before were decided by their authors |
+| The Factory judges and installs its own backend | Shown in twelve rounds. In each one the installed binary ran the pinned gate, checked the candidate itself and replaced itself, keeping the predecessor as rollback. See [job-backend round 1](evidence/jobs/job-backend/round-01.run) and [round 12](evidence/jobs/job-backend/round-12.run) |
 | Reusing a result across jobs lowers cost (G-03, I-03) | Not supported on software jobs. See [the experiment](evidence/jobs/job-galaxy-quellcode/summary.run) |
 | The seed derives its own learning procedure (I-01) | Not shown. Every learning rule so far was written by an external agent |
 
@@ -77,7 +77,11 @@ taik-seed queue-source STATE NAME brief.md verify.mjs [accepted-source]
 
 `STATE` is the service's state directory. The command snapshots brief and gate into `STATE/jobs/job-NAME` and wakes the service.
 
-Unattended rounds need a worker command:
+A gate may authorise one follow-up job by starting with `// TAIK: allow-follow-up` and printing one `TAIK_FOLLOWUP: <next intent>` line when it accepts.
+
+## Workers
+
+Unattended rounds need a worker command. Both workers get the same prompt and the same sandbox.
 
 | Variable | Effect |
 | --- | --- |
@@ -87,9 +91,7 @@ Unattended rounds need a worker command:
 | neither | The signed-in Codex subscription does the work. |
 | `TAIK_DAILY_BUDGET_USD` | Bound on the cost of Claude rounds within 24 hours, at list price. Default 3. A round beyond it is rejected before the worker is called. |
 
-Both workers get the same prompt and the same sandbox. The Claude CLI runs headless as a subprocess (`claude -p`) with the login of the account, without tools. A Claude round records model, output tokens, cost, duration and the usage state the account reported. A failed worker records its stage, kind and duration, never its raw output. Setting either variable lets the service spend usage on your account.
-
-A gate may authorise one follow-up job by starting with `// TAIK: allow-follow-up` and printing one `TAIK_FOLLOWUP: <next intent>` line when it accepts.
+The Claude CLI runs headless as a subprocess (`claude -p`) with the login of the account, without tools. A Claude round records model, output tokens, cost, duration and the usage state the account reported. A failed worker records its stage, kind and duration, never its raw output. Setting either variable lets the service spend usage on your account.
 
 ## The service
 
@@ -123,7 +125,9 @@ With `TAIK_AUTO_PROPOSE` set, the service reflects once after each finished soft
 
 ## Requests from GitHub issues
 
-`tools/issues-sync.sh` reads open issues with the label `taik` that the repository owner wrote. Each becomes a proposal that waits. The label `freigegeben` approves it, the decision of the job is posted back, and an accepted job closes the issue. Without the argument `apply` the script only reports what it would do. [tools/service/local.taik.issues.plist](tools/service/local.taik.issues.plist) is a template for a launchd timer that runs it every ten minutes. It is the only timer around the Factory. Text by anyone else never reaches a worker.
+`tools/issues-sync.sh` reads open issues with the label `taik` that the repository owner wrote. Each becomes a proposal that waits. The label `freigegeben` approves it, the decision of the job is posted back, and an accepted job closes the issue. Without the argument `apply` the script only reports what it would do.
+
+[tools/service/local.taik.issues.plist](tools/service/local.taik.issues.plist) is a template for a launchd timer that runs it every ten minutes. It is the only timer around the Factory. Text by anyone else never reaches a worker.
 
 ## Changing the backend
 

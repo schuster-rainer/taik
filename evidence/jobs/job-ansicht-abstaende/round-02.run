@@ -1,0 +1,25 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-02
+intent=Prüfbefund aus round-01.run bearbeiten
+baseline=/Users/rainer/projects/ideas/talk/evidence/jobs/job-ansicht-abstaende/submission.seed.html
+worker=savant
+worker_model=subq-savant-1.4
+worker_input_tokens=35298
+worker_output_tokens=11606
+worker_cost_usd=0.009333
+worker_duration_ms=25894
+limits=4 rounds; worker lease 60s up to 900s; verifier 15s; 96KiB source
+gate_sha256=0ce114c523881741bb60f18c9324195fc88bf2bbea87f74339d67c3714f0dc02
+gate_ms=64
+patch_blocks=5
+checks=PASS: host contract, 17 token shadows, window box, 9px WebKit scrollbar with a mixed thumb, 24px shadow room, no gradient arrow, 28px controls, readable type, pane-driven flow, reduced motion, contrast 5.12
+artifact=round-02.html
+rejected_candidate=
+feedback=round-01.run
+follow_up=
+continuation=Retain the accepted artifact. No further work was authorized by this round.
+advance=false
+end
