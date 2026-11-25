@@ -105,6 +105,15 @@ The template sets `ProcessType` to `Interactive`. Without it launchd throttled t
 
 The service stays a persistent process. It finished tag jobs in 55 to 72 ms. A `drain` started by launchd on demand took 81 to 293 ms. See [the measurement](evidence/jobs/job-dienst-form/summary.run).
 
+## Jobs the Factory proposes
+
+```sh
+taik-seed propose STATE NAME evidence/jobs/job-X/round-NN.run
+taik-seed approve STATE NAME
+```
+
+`propose` asks the worker for a brief and a gate, derived from the continuation of a record. Both wait in `STATE/proposals/NAME`. Nothing runs until `approve` queues the job. The worker that later writes the candidate sees the brief and never the gate.
+
 ## Changing the backend
 
 The installed binary judges its successor:
@@ -162,6 +171,8 @@ taik-seed evolve BASELINE.run OUTPUT.run
 taik-seed evaluate BASELINE.run OUTPUT.run ORDER
 taik-seed source JOB BRIEF GATE [--attached[=WORKER]]
 taik-seed promote JOB BRIEF GATE INSTALLED_BINARY WORKER
+taik-seed propose STATE NAME RECORD.run
+taik-seed approve STATE NAME
 taik-seed experiment BASELINE.run OUTPUT_DIRECTORY
 taik-seed queue STATE BASELINE.run
 taik-seed queue-source STATE NAME BRIEF GATE

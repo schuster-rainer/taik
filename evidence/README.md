@@ -77,6 +77,15 @@
 
 - [Rust-Werkzeug `taik-stats`, vom Gate übersetzt und ausgeführt](jobs/job-taik-stats/round-03.run), [Auftrag](jobs/job-taik-stats/submission.brief.md), [Gate](jobs/job-taik-stats/submission.gate.mjs) und [Auswertung mit Gate-Fehler](jobs/job-taik-stats/observation.run)
 
+## Vorschläge der Factory
+
+- [Vorschlagsweg eingeführt](jobs/job-backend/round-04.run)
+- Wartet auf Freigabe: [Auftrag](proposals/mehrdatei-programm/brief.md) und [Gate](proposals/mehrdatei-programm/verify.mjs) für ein Cargo-Projekt aus mehreren Dateien, abgeleitet aus [dieser Beobachtung](jobs/job-taik-stats/observation.run)
+
+## Snap als Kategorisierer
+
+- [Sechs abgelehnte Runden klassifiziert](jobs/job-snap-kategorisierer/summary.run) und [Antworten](jobs/job-snap-kategorisierer/results.json)
+
 ## Marke
 
 - [Markenblatt](jobs/job-markenblatt/round-01.html), [Auftrag](jobs/job-markenblatt/submission.brief.md) und [Entscheidung](jobs/job-markenblatt/round-01.run)

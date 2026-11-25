@@ -1,0 +1,12 @@
+decision=observed
+identity=snap-kategorisierer-01
+intent=Snap von Subquadratic als Kategorisierer für abgelehnte Runden prüfen.
+scope=All six rejected round records of the archive on 2026-11-25. One choice question per record with four causes: worker, limit, requirement, unclear. Model subq-snap-preview through the shared snap CLI. Sent per record: intent, worker, the first 600 bytes of checks, and continuation.
+result=6 of 6 choices matched the expected cause. Confidence 0.88 to 0.995. 1.2 to 1.4 s per call including the start of the CLI, 219 to 425 input tokens per call.
+labels=The expected causes were assigned by claude-fable, who also wrote the four criteria. No independent labels.
+blind_spot=The two taik-stats rejections were classed as a violated requirement, which is what the record says. The real cause was a contradiction in the gate. That cannot be seen from the record text.
+savant=Not tested. The snap CLI offers only the decisions endpoint. No client or endpoint for Savant is known in this project.
+limitations=Six records, four classes, clear cases. Not a measure of accuracy. No test of whether the classification saves work.
+continuation=A use would be to route a rejected round: retry the worker, shrink the candidate, or hand the diagnosis back. Test that only when there are enough rejected rounds to compare against. For Savant the user has to name the endpoint or a client.
+measurement=results.json
+end

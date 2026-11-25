@@ -1,0 +1,3 @@
+derived_from=/Users/rainer/projects/ideas/talk/evidence/jobs/job-taik-stats/observation.run
+proposed_by=claude-cli
+state=waiting for approval

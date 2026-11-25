@@ -1,0 +1,50 @@
+[
+ {
+  "record": "job-factory-gestaltung/round-01.run",
+  "expected": "limit",
+  "exit": 0,
+  "ms": 1410,
+  "answer": "{\"mock\":false,\"model\":\"subq-snap-preview\",\"input_tokens\":219,\"answers\":{\"cause\":{\"type\":\"choice\",\"choice\":\"limit\",\"confidence\":0.9952332973480225,\"probabilities\":{\"worker\":0.0023831655271351337,\"limit\":0.9964249730110168,\"requirement\":0.000145740297739394,\"unclear\":0.0010461166966706514}}}}\n",
+  "stderr": ""
+ },
+ {
+  "record": "job-factory-gestaltung/round-03.run",
+  "expected": "limit",
+  "exit": 0,
+  "ms": 1255,
+  "answer": "{\"mock\":false,\"model\":\"subq-snap-preview\",\"input_tokens\":226,\"answers\":{\"cause\":{\"type\":\"choice\",\"choice\":\"limit\",\"confidence\":0.9922777811686198,\"probabilities\":{\"worker\":0.004092088434845209,\"limit\":0.9942083358764648,\"requirement\":0.00019491082639433444,\"unclear\":0.0015046510379761457}}}}\n",
+  "stderr": ""
+ },
+ {
+  "record": "job-floorplanner/round-01.run",
+  "expected": "unclear",
+  "exit": 0,
+  "ms": 1216,
+  "answer": "{\"mock\":false,\"model\":\"subq-snap-preview\",\"input_tokens\":425,\"answers\":{\"cause\":{\"type\":\"choice\",\"choice\":\"unclear\",\"confidence\":0.9781126976013184,\"probabilities\":{\"worker\":0.0017482935218140483,\"limit\":0.0010754988761618733,\"requirement\":0.013591599650681019,\"unclear\":0.9835845232009888}}}}\n",
+  "stderr": ""
+ },
+ {
+  "record": "job-taik-stats/round-01.run",
+  "expected": "requirement",
+  "exit": 0,
+  "ms": 1281,
+  "answer": "{\"mock\":false,\"model\":\"subq-snap-preview\",\"input_tokens\":241,\"answers\":{\"cause\":{\"type\":\"choice\",\"choice\":\"requirement\",\"confidence\":0.8828847408294678,\"probabilities\":{\"worker\":0.0015324467094615102,\"limit\":0.0009014388779178262,\"requirement\":0.9121635556221008,\"unclear\":0.08540262281894684}}}}\n",
+  "stderr": ""
+ },
+ {
+  "record": "job-taik-stats/round-02.run",
+  "expected": "requirement",
+  "exit": 0,
+  "ms": 1323,
+  "answer": "{\"mock\":false,\"model\":\"subq-snap-preview\",\"input_tokens\":226,\"answers\":{\"cause\":{\"type\":\"choice\",\"choice\":\"requirement\",\"confidence\":0.8821037610371908,\"probabilities\":{\"worker\":0.0014175024116411805,\"limit\":0.0008479895768687129,\"requirement\":0.9115778207778931,\"unclear\":0.08615674078464508}}}}\n",
+  "stderr": ""
+ },
+ {
+  "record": "job-worker-verfuegbarkeit/round-01.run",
+  "expected": "worker",
+  "exit": 0,
+  "ms": 1259,
+  "answer": "{\"mock\":false,\"model\":\"subq-snap-preview\",\"input_tokens\":232,\"answers\":{\"cause\":{\"type\":\"choice\",\"choice\":\"worker\",\"confidence\":0.9941887855529785,\"probabilities\":{\"worker\":0.9956415891647339,\"limit\":0.0004110738227609545,\"requirement\":0.00022930948762223125,\"unclear\":0.003718035761266947}}}}\n",
+  "stderr": ""
+ }
+]
