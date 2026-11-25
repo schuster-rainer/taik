@@ -391,8 +391,21 @@ private final class FactoryMonitor {
             return first.1 > second.1
         }.map(\.0)
         return ordered.enumerated().compactMap { index, url in
-            index < 12 || url.lastPathComponent == "job-floorplanner" || url.lastPathComponent == shownJob ? url : nil
+            index < 12 || url.lastPathComponent == "job-floorplanner" || url.lastPathComponent == shownJob || waits(url) ? url : nil
         }
+    }
+
+    // A job that waits is always loaded in full, however old it is: waiting is not a decision.
+    // It waits when its last round was rejected, when its agent asked last, or when a round is still due.
+    private func waits(_ url: URL) -> Bool {
+        var last: Round?
+        for number in 1...99 {
+            guard let round = Round(file: url.appendingPathComponent(String(format: "round-%02d.run", number))) else { break }
+            last = round
+        }
+        if last?.fields["decision"] == "rejected" || last?.fields["advance"] == "true" { return true }
+        if jobMessages(in: url).last?.author == "agent" { return true }
+        return last == nil && FileManager.default.fileExists(atPath: url.appendingPathComponent("submission.brief.md").path)
     }
 
     private func workFiles(in url: URL) -> [URL] {
