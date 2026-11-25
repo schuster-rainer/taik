@@ -273,6 +273,14 @@ fn run_source_job(jobs: &Path, job: &Path) -> Result<bool> {
             outcome = crate::source::run_queued(&destination)?.0.or(outcome);
         }
     }
+    // A round ran in this call and the job is final. Ask once what follows, if the user enabled it.
+    #[cfg(target_os = "macos")]
+    if outcome.is_some()
+        && std::env::var_os(crate::proposal::AUTO).is_some()
+        && let Err(error) = crate::proposal::reflect(jobs, job)
+    {
+        eprintln!("{}: reflection: {error}", job.display());
+    }
     Ok(outcome.unwrap_or(true))
 }
 

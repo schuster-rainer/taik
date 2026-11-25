@@ -113,6 +113,8 @@ taik-seed propose STATE NAME evidence/jobs/job-X/round-NN.run
 taik-seed approve STATE NAME
 ```
 
+With `TAIK_AUTO_PROPOSE` set, the service reflects once after each finished software job, at most three times in 24 hours, and either writes a proposal or records why it stops. Waiting proposals appear in the viewer with an approve button.
+
 `propose` asks the worker for a brief and a gate, derived from the continuation of a record. Both wait in `STATE/proposals/NAME`. Nothing runs until `approve` queues the job. The worker that later writes the candidate sees the brief and never the gate.
 
 ## Changing the backend

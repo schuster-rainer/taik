@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>PATH</key>
+		<string>/Users/rainer/.nvm/versions/node/v20.19.4/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+		<key>TAIK_LEAD_WORKER</key>
+		<string>/Users/rainer/.local/bin/claude</string>
+	</dict>
+	<key>KeepAlive</key>
+	<true/>
+	<key>Label</key>
+	<string>local.taik.factory</string>
+	<key>ProcessType</key>
+	<string>Interactive</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/Users/rainer/.local/state/taik-factory/taik-seed</string>
+		<string>serve</string>
+		<string>/Users/rainer/.local/state/taik-factory</string>
+		<string>--reflect</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>StandardErrorPath</key>
+	<string>/Users/rainer/.local/state/taik-factory/service-error.log</string>
+	<key>StandardOutPath</key>
+	<string>/Users/rainer/.local/state/taik-factory/service.log</string>
+	<key>ThrottleInterval</key>
+	<integer>5</integer>
+	<key>Umask</key>
+	<integer>63</integer>
+	<key>WorkingDirectory</key>
+	<string>/Users/rainer/projects/ideas/talk</string>
+</dict>
+</plist>

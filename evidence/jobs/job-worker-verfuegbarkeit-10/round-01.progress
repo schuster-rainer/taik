@@ -1,0 +1,6 @@
+278	start	Factory hat den Auftrag übernommen
+1340	worker	Claude erhält Auftrag und akzeptierten Ausgangsstand
+6113868	worker	worker_model=claude-opus-5-5 worker_output_tokens=147 worker_cost_usd=0.0097 worker_duration_ms=6112 worker_account_usage=seven_day allowed_warning 0.97 
+6116255	evaluate	Unabhängiges, gespeichertes Prüfgate ausführen
+6336294	checks	PASS: inert probe document with heading and paragraph
+6347935	accepted	Retain the accepted artifact. No further work was authorized by this round.

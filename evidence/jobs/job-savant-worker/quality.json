@@ -1,0 +1,50 @@
+{
+ "minicalc-opus-1": {
+  "lines": 324,
+  "bytes": 9177,
+  "rustc_warnings": 0,
+  "heldout_passed": 22,
+  "heldout_total": 22,
+  "failed_cases": [],
+  "big_program_ms": 143,
+  "big_program_ok": true,
+  "unwrap_or_expect": 5,
+  "comments": 0
+ },
+ "minicalc-opus-2": {
+  "lines": 326,
+  "bytes": 9428,
+  "rustc_warnings": 0,
+  "heldout_passed": 22,
+  "heldout_total": 22,
+  "failed_cases": [],
+  "big_program_ms": 174,
+  "big_program_ok": true,
+  "unwrap_or_expect": 4,
+  "comments": 0
+ },
+ "minicalc-savant-1": {
+  "lines": 518,
+  "bytes": 13433,
+  "rustc_warnings": 0,
+  "heldout_passed": 22,
+  "heldout_total": 22,
+  "failed_cases": [],
+  "big_program_ms": 228,
+  "big_program_ok": true,
+  "unwrap_or_expect": 1,
+  "comments": 0
+ },
+ "minicalc-savant-2": {
+  "lines": 440,
+  "bytes": 11309,
+  "rustc_warnings": 0,
+  "heldout_passed": 22,
+  "heldout_total": 22,
+  "failed_cases": [],
+  "big_program_ms": 230,
+  "big_program_ok": true,
+  "unwrap_or_expect": 1,
+  "comments": 0
+ }
+}

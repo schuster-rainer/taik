@@ -63,7 +63,15 @@ private struct ProgressEvent: Codable {
     }
 }
 
+private struct Proposal: Codable {
+    let name: String
+    let intent: String
+    let origin: String
+}
+
 private struct Snapshot: Codable {
+    let proposals: [Proposal]
+    let spent: Double
     let jobs: [Job]
     let pending: Int
     let service: String
@@ -89,6 +97,7 @@ private final class FactoryMonitor {
             watchPath(state)
             watchPath(queue)
             watchPath(state.appendingPathComponent("service-error.log"))
+            watchPath(state.appendingPathComponent("proposals", isDirectory: true))
         }
         let jobURLs = latestJobs(in: queue)
         if watch { for url in jobURLs { watchPath(url) } }
@@ -96,14 +105,15 @@ private final class FactoryMonitor {
         if watch {
             let workFiles = workFilesByJob.values.flatMap { $0 }
             for url in workFiles { watchPath(url) }
-            let retained = Set(jobURLs + workFiles + [state, queue, state.appendingPathComponent("service-error.log")])
+            let retained = Set(jobURLs + workFiles + [state, queue, state.appendingPathComponent("service-error.log"),
+                state.appendingPathComponent("proposals", isDirectory: true)])
             for url in Array(directories.keys) where !retained.contains(url) { stopWatching(url) }
         }
         let jobs = jobURLs.compactMap { readJob($0, workFilesByJob[$0] ?? []) }
         let pid = runningService()
         if watch { watchServiceExit(pid) }
         let snapshot = Snapshot(
-            jobs: jobs, pending: jobs.filter(\.pending).count,
+            proposals: waitingProposals(), spent: recentWorkerCost(in: queue), jobs: jobs, pending: jobs.filter(\.pending).count,
             service: state == defaultState ? (pid == nil ? "offline" : "running") : "unmanaged", pid: pid
         )
         let encoder = JSONEncoder()
@@ -112,6 +122,41 @@ private final class FactoryMonitor {
               json != lastSnapshot else { return }
         lastSnapshot = json
         onChange(json)
+    }
+
+    // Proposals the Factory wrote that nobody has approved yet.
+    private func waitingProposals() -> [Proposal] {
+        let directory = state.appendingPathComponent("proposals", isDirectory: true)
+        let entries = (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles])) ?? []
+        return entries.sorted { $0.lastPathComponent < $1.lastPathComponent }.compactMap { url in
+            guard !FileManager.default.fileExists(atPath: url.appendingPathComponent("approved.txt").path),
+                  let brief = try? String(contentsOf: url.appendingPathComponent("brief.md"), encoding: .utf8),
+                  let intent = brief.split(separator: "\n").first else { return nil }
+            let origin = (try? String(contentsOf: url.appendingPathComponent("origin.txt"), encoding: .utf8))?
+                .split(separator: "\n").first { $0.hasPrefix("derived_from=") }
+                .map { URL(fileURLWithPath: String($0.dropFirst("derived_from=".count))).deletingLastPathComponent().lastPathComponent } ?? ""
+            return Proposal(name: url.lastPathComponent, intent: String(intent.prefix(300)), origin: origin)
+        }
+    }
+
+    // Cost at list price that worker calls recorded during the last 24 hours, over the whole queue.
+    private func recentWorkerCost(in queue: URL) -> Double {
+        let keys: [URLResourceKey] = [.contentModificationDateKey]
+        let jobs = (try? FileManager.default.contentsOfDirectory(at: queue, includingPropertiesForKeys: nil)) ?? []
+        var total = 0.0
+        for job in jobs {
+            let files = (try? FileManager.default.contentsOfDirectory(at: job, includingPropertiesForKeys: keys)) ?? []
+            for file in files where file.pathExtension == "run" {
+                guard let modified = try? file.resourceValues(forKeys: Set(keys)).contentModificationDate,
+                      modified.timeIntervalSinceNow > -86400,
+                      let text = try? String(contentsOf: file, encoding: .utf8) else { continue }
+                for line in text.split(separator: "\n") where line.hasPrefix("worker_cost_usd=") {
+                    total += Double(line.dropFirst("worker_cost_usd=".count)) ?? 0
+                }
+            }
+        }
+        return (total * 1000).rounded() / 1000
     }
 
     private func latestJobs(in queue: URL) -> [URL] {
@@ -315,6 +360,7 @@ private final class FactoryWindow: NSObject, NSApplicationDelegate, WKNavigation
         configuration.websiteDataStore = .nonPersistent()
         configuration.userContentController.add(self, name: "openArtifact")
         configuration.userContentController.add(self, name: "setAppearance")
+        configuration.userContentController.add(self, name: "approveProposal")
         webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = self
         window.contentView = webView
@@ -357,6 +403,15 @@ private final class FactoryWindow: NSObject, NSApplicationDelegate, WKNavigation
            let appearance = ViewerAppearance(rawValue: value) {
             UserDefaults.standard.set(appearance.rawValue, forKey: ViewerAppearance.preference)
             window.appearance = appearance.native
+            return
+        }
+        if message.name == "approveProposal", let name = message.body as? String,
+           name.range(of: #"^[a-z0-9-]{1,32}$"#, options: .regularExpression) != nil {
+            // The user's click is the approval. The installed Factory queues the job.
+            let approval = Process()
+            approval.executableURL = state.appendingPathComponent("taik-seed")
+            approval.arguments = ["approve", state.path, name]
+            try? approval.run()
             return
         }
         guard message.name == "openArtifact", let body = message.body as? [String: String],

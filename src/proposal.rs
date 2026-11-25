@@ -27,9 +27,11 @@ Candidate format: one text document of at most 96 KiB. Either a standalone HTML 
 
 Gate: a Node.js ES module of at most 12000 bytes. It reads the candidate from process.argv[2], uses node:assert/strict, and exits with a failed assertion that carries a clear message when a requirement is not met. On success it prints one line that starts with 'PASS: '. It runs in a sandbox without network. It may write only inside its working directory and has 15 seconds. It may unpack a bundle there and compile and run it. rustc is at process.env.HOME + '/.cargo/bin/rustc'. No other compiler is guaranteed.
 
-Rules for the gate: check behaviour and results, not the presence of words. Every requirement must be satisfiable together with all others. Never require what the brief does not state. Keep the scope of the job as small as the record's continuation justifies.";
+Rules for the gate: check behaviour and results, not the presence of words. Every requirement must be satisfiable together with all others. Never require what the brief does not state. Keep the scope of the job as small as the record's continuation justifies.
 
-pub fn propose(state: &Path, name: &str, record_path: &Path) -> Result<PathBuf> {
+If the record justifies no further job, reply with exactly one line 'STOP: <reason in one German sentence>' and nothing else. Do not invent work.";
+
+pub fn propose(state: &Path, name: &str, record_path: &Path) -> Result<Option<PathBuf>> {
     let name = crate::worker_name(name).ok_or("invalid proposal name")?;
     let state = state.canonicalize()?;
     let target = state.join("proposals").join(name);
@@ -51,6 +53,9 @@ pub fn propose(state: &Path, name: &str, record_path: &Path) -> Result<PathBuf> 
         return Err("the record has no continuation to derive a job from".into());
     }
     let job = record_path.parent().ok_or("record without a job folder")?;
+    if job.join(format!("reflection-{name}.run")).try_exists()? {
+        return Err("this record was already reflected under that name".into());
+    }
     let origin_brief =
         record::read_regular(&job.join("submission.brief.md"), record::MAX_RECORD_BYTES)
             .unwrap_or_default();
@@ -68,7 +73,23 @@ pub fn propose(state: &Path, name: &str, record_path: &Path) -> Result<PathBuf> 
     let workspace = scratch.join("worker");
     fs::create_dir(&workspace)?;
     let (answer, worker) = source::ask(&workspace, job, &prompt, &mut Progress::silent());
-    let answer = answer?;
+    let (answer, usage) = answer?;
+    // The reflection is kept beside the record it came from, with its cost.
+    let note = |outcome: &str| {
+        record::publish_text(
+            &job.join(format!("reflection-{name}.run")),
+            &format!(
+                "decision=observed\nidentity=reflection-{name}\nderived_from={}\nworker={worker}\n{usage}outcome={}\nend\n",
+                record_path.display(),
+                source::single_line(outcome),
+            ),
+            record::MAX_RECORD_BYTES,
+        )
+    };
+    if let Some(reason) = answer.trim().strip_prefix("STOP:") {
+        note(&format!("stop: {}", reason.trim()))?;
+        return Ok(None);
+    }
     let (brief, gate) =
         split(&answer).ok_or("the worker did not return brief.md and verify.mjs")?;
     source::intent(&brief)?;
@@ -100,7 +121,49 @@ pub fn propose(state: &Path, name: &str, record_path: &Path) -> Result<PathBuf> 
         ),
         record::MAX_RECORD_BYTES,
     )?;
-    Ok(target)
+    note(&format!("proposal {} waits for approval", target.display()))?;
+    Ok(Some(target))
+}
+
+const DAILY_REFLECTIONS: usize = 3;
+pub const AUTO: &str = "TAIK_AUTO_PROPOSE";
+
+// After a job reached its final decision the service asks once what follows from it.
+pub fn reflect(jobs: &Path, job: &Path) -> Result<()> {
+    let recent = |path: &Path| {
+        path.metadata()
+            .and_then(|metadata| metadata.modified())
+            .ok()
+            .and_then(|modified| modified.elapsed().ok())
+            .is_some_and(|age| age < Duration::from_secs(24 * 60 * 60))
+    };
+    let reflections = fs::read_dir(jobs)?
+        .flatten()
+        .filter_map(|entry| fs::read_dir(entry.path()).ok())
+        .flat_map(|files| files.flatten())
+        .filter(|file| {
+            file.file_name()
+                .to_string_lossy()
+                .starts_with("reflection-")
+                && recent(&file.path())
+        })
+        .count();
+    if reflections >= DAILY_REFLECTIONS {
+        return Ok(());
+    }
+    let label = job
+        .file_name()
+        .and_then(|name| name.to_str())
+        .and_then(|name| name.strip_prefix("job-"))
+        .ok_or("job without a name")?;
+    let name = format!("{}-next", &label[..label.len().min(27)]);
+    let last = (1..=4)
+        .rev()
+        .map(|number| job.join(format!("round-{number:02}.run")))
+        .find(|path| path.is_file())
+        .ok_or("job without a round record")?;
+    let state = jobs.parent().ok_or("jobs without a state directory")?;
+    propose(state, &name, &last).map(|_| ())
 }
 
 pub fn approve(state: &Path, name: &str) -> Result<PathBuf> {

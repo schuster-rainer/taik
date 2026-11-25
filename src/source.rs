@@ -726,14 +726,11 @@ pub(crate) fn ask(
     job: &Path,
     prompt: &str,
     progress: &mut Progress,
-) -> (Result<String>, &'static str) {
+) -> (Result<(String, String)>, &'static str) {
     match env::var(LEAD_WORKER) {
-        Ok(program) => (
-            claude(&program, scratch, job, prompt, |_| {}).map(|(text, _)| text),
-            "claude-cli",
-        ),
+        Ok(program) => (claude(&program, scratch, job, prompt, |_| {}), "claude-cli"),
         Err(_) => (
-            codex(scratch, job, prompt, progress, |_| {}),
+            codex(scratch, job, prompt, progress, |_| {}).map(|text| (text, String::new())),
             "codex-subscription",
         ),
     }

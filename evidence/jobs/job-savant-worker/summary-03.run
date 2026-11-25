@@ -1,0 +1,17 @@
+decision=observed
+identity=savant-worker-03
+intent=Die Qualität der vier MiniCalc-Interpreter jenseits des Gates vergleichen.
+scope=The four accepted candidates of the MiniCalc job, two by Opus 5.5 and two by Savant 1.4. 22 held-out cases written by claude-fable from the brief after the candidates existed, none shown to a worker. Size, rustc warnings, panicking calls and run time on a program of 60000 statement pairs.
+heldout_passed=22 of 22 for all four candidates, including 2000 nested parentheses and 3001 unary minus signs.
+rustc_warnings=0 for all four
+lines_opus=324, 326
+lines_savant=518, 440
+unwrap_or_expect_opus=5, 4
+unwrap_or_expect_savant=1, 1
+run_ms_opus=143, 174
+run_ms_savant=228, 230
+observation=No difference in correctness was found. Opus wrote about a third less code and its programs ran the large input 25 to 40 percent faster. Savant used fewer calls that can panic.
+limitations=One task. The held-out cases come from one author and cover the stated rules, not readability or design. Run time is one measurement per program on one machine. Savant ran at low reasoning effort.
+measurement=quality.py, quality.json
+continuation=For this kind of job the models differ in price and style, not in correctness. A harder class of job is still needed to separate them.
+end

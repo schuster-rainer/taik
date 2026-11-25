@@ -1,0 +1,3 @@
+Nach jedem abgeschlossenen Auftrag reflektieren und einen Folgeauftrag vorschlagen oder begründet anhalten.
+
+Beobachtung: Der Dienst erzeugte keine Aufträge von selbst. Der Nutzer hat am 2026-11-25 entschieden, dass die Factory vorschlagen darf und er freigibt. Mit `TAIK_AUTO_PROPOSE` fragt der Dienst nach einem abgeschlossenen Software-Auftrag einmal den Worker, was aus dem Protokoll folgt. Die Antwort ist ein Vorschlag im Wartebereich oder `STOP` mit Grund. Höchstens drei Reflexionen in 24 Stunden. Jede hinterlässt ein Protokoll mit ihren Kosten neben dem Auftrag, sodass die Tagesgrenze sie mitzählt.

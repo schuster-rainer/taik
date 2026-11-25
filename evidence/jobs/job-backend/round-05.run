@@ -1,0 +1,20 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-05
+intent=Nach jedem abgeschlossenen Auftrag reflektieren und einen Folgeauftrag vorschlagen oder begründet anhalten.
+baseline=taik-seed d7dfb8ddbe58bb394a0bc3d9049a1ccb43c52a9c7078e5f9edaef78c96437eb8
+worker=claude-fable
+decided_by=the installed taik-seed d7dfb8ddbe58bb394a0bc3d9049a1ccb43c52a9c7078e5f9edaef78c96437eb8 at /Users/rainer/.local/state/taik-factory/taik-seed
+limits=99 rounds; gate 900s; candidate checks 10s each
+gate_sha256=76b41170f51fa7e1a5424ba01f903bcf2276b8f8f19e4d87f952e88d18b6b0ce
+gate_ms=20487
+checks=PASS: Rust tests, Clippy with warnings denied, release build; candidate seeded, rejected an invalid procedure without touching the accepted record, and extended it
+evidence=round-05.checks.log
+artifact=round-05-taik-seed
+artifact_sha256=8ae91bdbb2e6635cc3b43df2cd03f1e862de3b4d8ab58d9d27bc3e1da9985cfb
+rollback=round-05.rollback-taik-seed
+continuation=Restart the service so that it runs the accepted binary.
+advance=false
+end

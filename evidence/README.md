@@ -79,6 +79,7 @@
 
 ## Vorschläge der Factory
 
+- [Reflexion nach jedem Auftrag](jobs/job-backend/round-05.run) und [erste Reflexion im Dienst, mit Halt](jobs/job-worker-verfuegbarkeit-10/reflection-worker-verfuegbarkeit-10-next.run)
 - [Vorschlagsweg eingeführt](jobs/job-backend/round-04.run)
 - Freigegeben und angenommen: [Cargo-Projekt aus vier Dateien](jobs/job-mehrdatei-programm/round-01.run), [vorgeschlagener Auftrag](proposals/mehrdatei-programm/brief.md) und [Gate](proposals/mehrdatei-programm/verify.mjs), abgeleitet aus [dieser Beobachtung](jobs/job-taik-stats/observation.run), mit [Auswertung](jobs/job-mehrdatei-programm/observation.run)
 
@@ -89,6 +90,7 @@
 ## Savant als Worker
 
 - [Zwei Aufträge mit Savant statt Opus, gleiche Gates](jobs/job-savant-worker/summary.run)
+- [Interpreter-Auftrag, je zwei Läufe](jobs/job-savant-worker/summary-02.run) und [Qualität jenseits des Gates](jobs/job-savant-worker/summary-03.run)
 
 ## Marke
 
@@ -98,6 +100,7 @@
 
 - [Neumorphe Ansicht mit ausgezeichneten Prüfprotokollen](jobs/job-factory-neomorph/round-01.html), [Auftrag](jobs/job-factory-neomorph/round-01.brief.md) und [Entscheidung](jobs/job-factory-neomorph/round-01.run)
 - [Bildmarke in der Kopfzeile](jobs/job-factory-neomorph/round-02.run) und [Aufnahme der installierten Ansicht](jobs/job-factory-neomorph/round-02.screenshot.png)
+- [Ablauf einer Runde als Stationen](jobs/job-factory-neomorph/round-04.run) und [Vorschläge mit Freigabe im Dashboard](jobs/job-factory-ansicht-2/round-01.run)
 - [Aufnahme des Kandidaten](jobs/job-factory-neomorph/round-01.screenshot.png), [WebKit-Prüfung](jobs/job-factory-neomorph/round-01.webkit.log) und [vorheriger Stand](jobs/job-factory-neomorph/rollback.factory-view.html)
 
 Die Dateien eines Auftrags liegen in seinem Ordner unter `jobs/`. Dateien mit gleichem Rundennamen gehören zusammen. `.brief.md` beschreibt den Auftrag, `.progress` hält die Schritte fest und `.run` die Entscheidung. `artifact=` in der `.run` benennt das akzeptierte Ergebnis.

@@ -352,10 +352,10 @@ fn run() -> Result<bool> {
         #[cfg(target_os = "macos")]
         "propose" if rest.len() == 2 => {
             let name = rest[0].to_str().ok_or("proposal name must be ASCII")?;
-            println!(
-                "{}",
-                proposal::propose(first, name, Path::new(&rest[1]))?.display()
-            );
+            match proposal::propose(first, name, Path::new(&rest[1]))? {
+                Some(path) => println!("{}", path.display()),
+                None => println!("stop"),
+            }
             Ok(true)
         }
         #[cfg(target_os = "macos")]
