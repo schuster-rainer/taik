@@ -1,0 +1,25 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=Im Werkstück-Feld ein Fragment als Quelltext zeigen statt als leere Hülle.
+baseline=/Users/rainer/projects/ideas/talk/evidence/jobs/job-ansicht-fragment/submission.seed.html
+worker=savant
+worker_model=subq-savant-1.4
+worker_input_tokens=16979
+worker_output_tokens=495
+worker_cost_usd=0.001945
+worker_duration_ms=1884
+limits=4 rounds; worker lease 60s up to 900s; verifier 15s; 96KiB source
+gate_sha256=041a8fbe0a806deb1bacd9c7b37127b88c40b80955afa27af270545110bf6f58
+gate_ms=59
+patch_blocks=1
+checks=PASS: host contract, offline isolation, 17 token shadows without glow, contrast 5.12–13.04, lossless .run highlighting, token flow per round, one workpiece pane with live draft, animated flow
+artifact=round-01.html
+rejected_candidate=
+feedback=
+follow_up=
+continuation=Retain the accepted artifact. No further work was authorized by this round.
+advance=false
+end

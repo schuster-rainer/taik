@@ -1,0 +1,816 @@
+<style>
+  :root {
+    color-scheme: light dark;
+    --nm-base: light-dark(#e4e8ee, #21262e);
+    --nm-shade: light-dark(#c2c8d2, #15181d);
+    --nm-light: light-dark(#ffffff, #2e353f);
+    --ink: light-dark(#1b2330, #e9eef5);
+    --quiet: light-dark(#535f70, #9ea9b8);
+    --active: light-dark(#0d6b5f, #6fd0bf);
+    --good: light-dark(#196c42, #7ccf9d);
+    --bad: light-dark(#ad3345, #f0909b);
+    --nm-raised: 7px 7px 16px var(--nm-shade), -7px -7px 16px var(--nm-light);
+    --nm-raised-sm: 3px 3px 7px var(--nm-shade), -3px -3px 7px var(--nm-light);
+    --nm-inset: inset 4px 4px 9px var(--nm-shade), inset -4px -4px 9px var(--nm-light);
+    --nm-inset-sm: inset 2px 2px 4px var(--nm-shade), inset -2px -2px 4px var(--nm-light);
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", sans-serif;
+  }
+  html[data-appearance="light"] { color-scheme: light; }
+  html[data-appearance="dark"] { color-scheme: dark; }
+  body { margin: 0; background: var(--nm-base); color: var(--ink); font-family: var(--sans); }
+
+  #taik-live { max-width: 1760px; margin-inline: auto; padding: 18px 24px 22px; display: grid; gap: 14px;
+    grid-template-rows: auto minmax(0, 1fr); height: 100vh; color: var(--ink); font-size: 14px; line-height: 1.45;
+    -webkit-font-smoothing: antialiased; scrollbar-width: thin; scrollbar-color: var(--nm-shade) transparent; }
+  #taik-live *, #taik-live *::before, #taik-live *::after { box-sizing: border-box; }
+  #taik-live h1, #taik-live h2, #taik-live h3, #taik-live p { margin: 0; }
+
+  /* Header */
+  #taik-header { display: flex; justify-content: space-between; align-items: center; gap: 12px 20px; flex-wrap: wrap; padding: 2px 4px; }
+  #taik-live h1 { font-size: 1.02rem; font-weight: 680; letter-spacing: .22em; text-transform: uppercase; display: flex; align-items: center; gap: 12px; }
+  #taik-live .mark { width: 36px; height: 36px; margin: -6px -4px -6px -6px; flex: none; fill: currentColor; }
+  #taik-live .mark .core { fill: var(--active); }
+  #taik-live h1 span { font-weight: 400; color: var(--quiet); }
+  #taik-live .header-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+  #taik-live .status { display: flex; align-items: center; gap: 9px; padding: 7px 14px; border-radius: 999px;
+    box-shadow: var(--nm-inset-sm); font-size: .8rem; white-space: nowrap; }
+  #taik-live .appearance { display: flex; align-items: center; gap: 9px; }
+  #taik-live .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--quiet); }
+  #taik-live .dot.active { width: 12px; height: 12px; border: 2px solid var(--active); border-right-color: transparent; background: transparent; animation: taik-working .9s linear infinite, taik-blink 1.8s ease-in-out infinite; }
+  @keyframes taik-blink { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+  #taik-live .dot.offline { background: var(--bad); }
+  @keyframes taik-working { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { #taik-live .dot.active { animation: none; } }
+
+  /* Type scale */
+  #taik-live h2, #taik-live .label, #taik-live .appearance, #taik-live .job-control label {
+    font-size: .68rem; font-weight: 640; letter-spacing: .16em; text-transform: uppercase; color: var(--quiet); }
+  #taik-live h3 { font-size: .93rem; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; }
+  #taik-live .sub { color: var(--quiet); font-size: .8rem; }
+  #taik-live .unverified { color: var(--bad); }
+  #taik-live code { font-family: var(--mono); font-size: .86em; overflow-wrap: anywhere; }
+  #taik-live pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: .74rem/1.6 var(--mono); }
+
+  /* Layout */
+  #taik-live .split { display: grid; grid-template-columns: minmax(320px, .78fr) minmax(0, 1.3fr); gap: 10px; min-height: 0; }
+  #taik-activity { min-width: 0; min-height: 0; overflow-y: auto; padding: 10px 12px 18px; margin-left: -12px;
+    display: flex; flex-direction: column; gap: 20px; }
+  #taik-live .preview { min-width: 0; min-height: 0; padding: 10px 12px 18px; margin-right: -12px; display: grid;
+    grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); gap: 20px; }
+
+  /* Raised surfaces */
+  #taik-activity > section, #taik-live .preview-pane { margin: 0; padding: 16px 18px 18px; border-radius: 20px;
+    background: var(--nm-base); box-shadow: var(--nm-raised); }
+  #taik-live .preview-pane { min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
+  #taik-live .section-heading { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; }
+  #taik-live .goal p { margin-top: 8px; font-size: 1.02rem; line-height: 1.45; overflow-wrap: anywhere; }
+
+  /* Controls */
+  #taik-live select, #taik-live button { font: inherit; font-size: .84rem; color: var(--ink); border: 0; border-radius: 11px;
+    background-color: var(--nm-base); box-shadow: var(--nm-raised-sm); padding: 7px 14px; max-width: 100%; }
+  #taik-live select { appearance: none; -webkit-appearance: none; padding-right: 32px; text-overflow: ellipsis;
+    background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+    background-position: calc(100% - 17px) 55%, calc(100% - 12px) 55%; background-size: 5px 5px; background-repeat: no-repeat; }
+  #taik-live button:active { box-shadow: var(--nm-inset-sm); }
+  #taik-live select:focus-visible, #taik-live button:focus-visible, #taik-live summary:focus-visible { outline: 2px solid var(--active); outline-offset: 2px; }
+  #taik-live .job-control { margin-top: 14px; display: flex; gap: 10px 14px; align-items: center; flex-wrap: wrap; }
+  #taik-live .job-control select { flex: 1; min-width: 0; }
+
+  /* History timeline */
+  #taik-live .rounds { list-style: none; margin: 18px 0 0; padding: 0; }
+  #taik-live .round { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 14px; }
+  #taik-live .rail { display: flex; flex-direction: column; align-items: center; gap: 6px; padding-top: 2px; }
+  #taik-live .node { width: 18px; height: 18px; border-radius: 50%; box-shadow: var(--nm-raised-sm); display: grid; place-items: center; flex: none; }
+  #taik-live .node::after { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--good); }
+  #taik-live .round.rejected .node::after { background: var(--bad); }
+  #taik-live .groove { flex: 1; width: 4px; min-height: 10px; border-radius: 2px; box-shadow: var(--nm-inset-sm); }
+  #taik-live .round:last-child .groove { visibility: hidden; }
+  #taik-live .round-body { min-width: 0; padding-bottom: 20px; }
+  #taik-live .round:last-child .round-body { padding-bottom: 2px; }
+  #taik-live .round-meta { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 3px; }
+  #taik-live .index { font: .7rem var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--quiet); white-space: nowrap; }
+  #taik-live .result { color: var(--good); font-size: .76rem; font-weight: 560; }
+  #taik-live .result.rejected { color: var(--bad); }
+  #taik-live details { margin-top: 8px; font-size: .83rem; }
+  #taik-live summary { color: var(--quiet); list-style: none; display: inline-flex; align-items: center; gap: 8px; min-height: 24px;
+    border-radius: 8px; cursor: default; user-select: none; -webkit-user-select: none; }
+  #taik-live summary::-webkit-details-marker { display: none; }
+  #taik-live summary::before { content: ""; width: 5px; height: 5px; border: solid currentColor; border-width: 0 1.5px 1.5px 0;
+    transform: rotate(-45deg); transition: transform .15s; }
+  #taik-live details[open] > summary::before { transform: rotate(45deg); }
+  #taik-live details[open] > summary { color: var(--ink); }
+
+  /* Inset wells */
+  #taik-live .events, #taik-live .run-record {
+    border-radius: 13px; box-shadow: var(--nm-inset); background: var(--nm-base); }
+  #taik-live .events { list-style: none; margin: 8px 0 0; padding: 9px 13px; }
+  #taik-live .events li { display: grid; grid-template-columns: 62px minmax(0, 1fr); gap: 11px; margin: 5px 0; align-items: baseline; animation: taik-rise .35s ease-out both; }
+  @keyframes taik-rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  #taik-live .events time { color: var(--quiet); font: .7rem var(--mono); text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  #taik-live .events .event-name { font-size: .81rem; font-weight: 580; }
+  #taik-live .events code { display: block; color: var(--quiet); font-size: .73rem; line-height: 1.45; }
+  #taik-live .events li:last-child .event-name { color: var(--active); }
+  #taik-live .run-record { margin-top: 8px; padding: 11px 14px; }
+  #taik-live .round details > .events, #taik-live .round details > .run-record { max-height: 15rem; overflow: auto; }
+
+  /* .run records */
+  #taik-live .run-key { color: var(--active); }
+  #taik-live .run-good { color: var(--good); font-weight: 650; }
+  #taik-live .run-bad { color: var(--bad); font-weight: 650; }
+  #taik-live .run-end { color: var(--quiet); font-style: italic; }
+  #taik-live .run-hash { color: var(--quiet); }
+  #taik-live .run-path { text-decoration: underline; text-decoration-color: var(--quiet); text-underline-offset: 3px; }
+  #taik-live .run-number { font-weight: 650; }
+
+  /* Source */
+  #taik-live .source-code { padding: 0; white-space: pre; }
+  #taik-live .source-code code { font: inherit; }
+  #taik-live .syntax-tag { color: var(--active); }
+  #taik-live .syntax-string { color: var(--good); }
+  #taik-live .syntax-comment { color: var(--quiet); font-style: italic; }
+  #taik-live .syntax-keyword { color: var(--bad); }
+  #taik-live .syntax-file { display: inline-block; margin: 10px 0 4px; font-weight: 700; color: var(--ink); }
+
+  /* Activity details */
+  #taik-live .running { color: var(--quiet); margin-top: 6px; font-size: .8rem; font-variant-numeric: tabular-nums; }
+  #taik-live .steps { padding: 0; margin: 13px 0 0; list-style: none; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  #taik-live .steps li { box-shadow: var(--nm-raised-sm); padding: 5px 11px; border-radius: 9px; font-size: .8rem; }
+  #taik-live .steps li.changed { color: var(--active); font-weight: 600; }
+  #taik-live .tags { margin-top: 14px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  #taik-live .tags code { padding: 2px 9px; border-radius: 7px; box-shadow: var(--nm-inset-sm); }
+  #taik-live .lead { margin-top: 10px; }
+  #taik-live .measures { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 20px; margin-top: 12px; }
+  #taik-live .measure p { margin-top: 4px; }
+  #taik-live .metric-bars { display: grid; gap: 6px; margin-top: 8px; }
+  #taik-live .metric-track { height: 8px; border-radius: 4px; box-shadow: var(--nm-inset-sm); overflow: hidden; }
+  #taik-live .metric-bar { display: block; height: 100%; border-radius: 4px; background: var(--active); }
+  #taik-live .metric-bar.before { background: var(--quiet); }
+  #taik-live .token-flow { display: flex; height: 8px; margin-top: 8px; border-radius: 4px; box-shadow: var(--nm-inset-sm); overflow: hidden; }
+  #taik-live .token-flow .in { background: var(--quiet); }
+  #taik-live .token-flow .out { background: var(--active); }
+
+  #taik-live .proposals { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 12px; }
+  #taik-live .proposals li { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 11px 14px;
+    border-radius: 13px; box-shadow: var(--nm-inset-sm); }
+  #taik-live .proposals button { flex: none; color: var(--active); font-weight: 620; }
+  #taik-live button:disabled { color: var(--quiet); box-shadow: var(--nm-inset-sm); }
+
+  #taik-live .agents { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 10px; }
+  #taik-live .agents li { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 9px 14px;
+    border-radius: 13px; box-shadow: var(--nm-inset-sm); }
+  #taik-live .agents .sub { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #taik-live .agents h3 .sub { display: inline; font-weight: 400; font-family: var(--mono); }
+
+  #taik-live .modes { display: inline-flex; gap: 8px; margin-right: auto; margin-left: 6px; }
+  #taik-live .modes button { padding: 3px 11px; font-size: .74rem; border-radius: 9px; }
+  #taik-live .diff { flex: 1; min-height: 0; overflow: auto; padding: 12px 14px; border-radius: 15px; box-shadow: var(--nm-inset); }
+  #taik-live .diff[hidden] { display: none; }
+  #taik-live .diff pre { white-space: pre; }
+  #taik-live .diff-add { color: var(--good); }
+  #taik-live .diff-del { color: var(--bad); }
+  #taik-live .diff-same, #taik-live .diff-gap { color: var(--quiet); }
+
+  /* Flow of a round */
+  #taik-live .flow { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  #taik-live .flow-node { position: relative; margin: 0 10px; padding: 9px 12px 10px; border-radius: 14px; box-shadow: var(--nm-raised-sm); min-width: 0; }
+  #taik-live .flow-node + .flow-node::before { content: ""; position: absolute; left: -20px; top: 50%; width: 20px; height: 3px; margin-top: -1.5px;
+    border-radius: 2px; background: var(--nm-shade); }
+  #taik-live .flow-node.done + .flow-node::before { background: var(--active); }
+  #taik-live .flow-node.done + .flow-node.active::before { background: repeating-linear-gradient(90deg, var(--active) 0 5px, transparent 5px 10px);
+    background-size: 10px 3px; animation: taik-flow .6s linear infinite; }
+  @keyframes taik-flow { to { background-position: 10px 0; } }
+  @media (prefers-reduced-motion: reduce) { #taik-live .flow-node.done + .flow-node.active::before { animation: none; } }
+  #taik-live .flow-node.active { box-shadow: var(--nm-inset); animation: taik-breathe 2.4s ease-in-out infinite; }
+  @keyframes taik-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+  #taik-live .flow-dot { position: absolute; left: -20px; top: 50%; width: 4px; height: 4px; margin-top: -2px; border-radius: 50%; background: var(--active); opacity: 0; animation: taik-travel 1.5s linear infinite; }
+  #taik-live .flow-dot:nth-of-type(2) { animation-delay: .5s; }
+  #taik-live .flow-dot:nth-of-type(3) { animation-delay: 1s; }
+  @keyframes taik-travel { 0% { transform: translateX(0); opacity: 0; } 20% { opacity: 1; } 80% { opacity: 1; } 100% { transform: translateX(20px); opacity: 0; } }
+  #taik-live .flow-node.done .flow-op { animation: taik-op-done .6s ease-out 1; }
+  @keyframes taik-op-done { from { color: var(--quiet); } to { color: var(--active); } }
+  #taik-live .flow-op { display: block; font: 600 .6rem var(--mono); letter-spacing: .14em; color: var(--quiet); }
+  #taik-live .flow-node.done .flow-op, #taik-live .flow-node.active .flow-op { color: var(--active); }
+  #taik-live .flow-node.failed .flow-op { color: var(--bad); }
+  #taik-live .flow-name { display: flex; align-items: center; gap: 7px; font-size: .86rem; font-weight: 620; margin-top: 2px; }
+  #taik-live .flow-node.active .flow-name::after { content: ""; width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--active);
+    border-right-color: transparent; animation: taik-working .9s linear infinite; }
+  #taik-live .flow-detail { display: block; margin-top: 1px; color: var(--quiet); font-size: .72rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #taik-live .flow-pane { gap: 10px; padding-bottom: 14px; }
+
+  /* Right column */
+  #taik-live taik-artifact-preview { flex: 1; min-height: 0; }
+  #taik-live .preview p { line-height: 1.5; overflow-wrap: anywhere; }
+
+  @media (max-width: 800px) {
+    #taik-live { height: auto; padding: 14px 16px 20px; }
+    #taik-live .split { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+    #taik-activity { overflow: visible; }
+    #taik-live .preview { margin-left: -12px; grid-template-rows: auto minmax(480px, 75vh); }
+    #taik-live .flow { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 0; }
+    #taik-live .flow-node + .flow-node::before { display: none; }
+    #taik-live .flow-dot { display: none; }
+  }
+  @media (max-width: 450px) {
+    #taik-live .measures { grid-template-columns: 1fr; }
+  }
+  @media (pointer: coarse) { #taik-live summary, #taik-live select, #taik-live button { min-height: 38px; } }
+  @media (prefers-reduced-motion: reduce) {
+    #taik-live *, #taik-live *::before, #taik-live *::after { animation: none; }
+  }
+</style>
+<div id="taik-live" lang="de">
+  <header id="taik-header"></header>
+  <div class="split">
+    <main id="taik-activity"></main>
+    <aside id="taik-preview" class="preview" aria-label="Vorschau">
+      <section class="preview-pane flow-pane" aria-labelledby="taik-flow-heading">
+        <div class="section-heading"><h2 id="taik-flow-heading">Ablauf</h2><span id="taik-flow-label" class="sub"></span></div>
+        <ol id="taik-flow" class="flow"></ol>
+      </section>
+      <section class="preview-pane" aria-labelledby="taik-result-heading">
+        <div class="section-heading"><h2 id="taik-result-heading">Werkstück</h2><span id="taik-result-modes" class="modes"><button type="button" data-workpiece-mode="view" disabled>Ansicht</button><button type="button" data-workpiece-mode="source">Quelltext</button><button type="button" data-workpiece-mode="diff">Diff</button></span><span id="taik-result-label" class="sub"></span></div>
+        <taik-artifact-preview id="taik-result-viewport" hidden></taik-artifact-preview>
+        <taik-artifact-preview id="taik-draft-viewport" draft hidden></taik-artifact-preview>
+        <div id="taik-result-source" class="diff" hidden></div>
+        <div id="taik-result-diff" class="diff" hidden></div>
+      </section>
+    </aside>
+  </div>
+</div>
+<script>
+  (() => {
+    class ArtifactPreview extends HTMLElement {
+      constructor() {
+        super();
+        const shadow = this.attachShadow({ mode: 'open' });
+        shadow.innerHTML = `<style>
+          :host { display: block; box-sizing: border-box; padding: 5px; border-radius: 15px; box-shadow: var(--nm-inset); }
+          :host([hidden]) { display: none; }
+          iframe { box-sizing: border-box; display: block; width: 100%; height: 100%; border: 0; border-radius: 11px;
+            color-scheme: inherit; background: light-dark(white, #192625); }
+        </style><iframe title="Freigegebenes Ergebnis" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe>`;
+        this.frame = shadow.querySelector('iframe');
+        this.draft = this.hasAttribute('draft');
+        if (this.draft) {
+          this.frame.title = 'Arbeitsvorschau · ungeprüfter HTML-Entwurf';
+          this.frame.setAttribute('sandbox', '');
+        }
+        this.frame.addEventListener('load', () => this.setAppearance(this.appearance));
+      }
+
+      setAppearance(appearance) {
+        if (!appearance) return;
+        this.appearance = appearance;
+        this.frame.contentWindow?.postMessage({ type: 'taik-appearance', appearance }, '*');
+      }
+
+      show(revision, html) {
+        this.hidden = false;
+        if (this.revision === revision && this.source === html) return;
+        this.revision = revision;
+        this.source = html;
+        const scriptPolicy = this.draft ? "'none'" : "'unsafe-inline'";
+        const policy = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src ${scriptPolicy}; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; form-action 'none'; base-uri 'none'">`;
+        const theme = this.draft ? '<meta name="color-scheme" content="light dark">' : '';
+        const source = html.replace(/^\s*<!doctype html\s*>/i, '');
+        this.frame.srcdoc = `<!doctype html>${policy}${theme}${source}`;
+      }
+    }
+    customElements.define('taik-artifact-preview', ArtifactPreview);
+
+    /*RUN_HIGHLIGHT_BEGIN*/
+    function highlightRun(text) {
+      const esc = value => value.replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
+      const span = (kind, value) => '<span class="run-' + kind + '">' + esc(value) + '</span>';
+      const tokens = /\b[a-f0-9]{40,64}\b|(?:\.\.?\/)?[\w.\/-]*\.(?:run|html|mjs|md|log|json|txt|png|jpg|gz)\b|[\w.-]+-taik-seed\b|\b(?:accepted|PASS|true|retained)\b|\b(?:rejected|FAIL|false|error)\b|(?<![\w.-])\d+(?:\.\d+)?(?:KiB|MiB|ms|µs|s|%)?(?![\w-])/g;
+      const kinds = match => /^[a-f0-9]{40,64}$/.test(match) ? 'hash'
+        : /^(?:accepted|PASS|true|retained)$/.test(match) ? 'good'
+        : /^(?:rejected|FAIL|false|error)$/.test(match) ? 'bad'
+        : /^\d/.test(match) && !/[\/]|\.[a-z]{2,4}$/.test(match) ? 'number' : 'path';
+      const value = line => {
+        let cursor = 0;
+        let markup = '';
+        for (const token of line.matchAll(tokens)) {
+          markup += esc(line.slice(cursor, token.index)) + span(kinds(token[0]), token[0]);
+          cursor = token.index + token[0].length;
+        }
+        return markup + esc(line.slice(cursor));
+      };
+      return String(text ?? '').split('\n').map(line => {
+        if (line === 'end') return span('end', line);
+        const at = line.indexOf('=');
+        const key = line.slice(0, Math.max(at, 0));
+        if (!/^[a-z_][a-z0-9_]*$/.test(key)) return value(line);
+        return span('key', key) + '=' + value(line.slice(at + 1));
+      }).join('\n');
+    }
+    /*RUN_HIGHLIGHT_END*/
+
+    const root = document.getElementById('taik-live');
+    const header = document.getElementById('taik-header');
+    const activity = document.getElementById('taik-activity');
+    const modes = document.getElementById('taik-result-modes');
+    const resultLabel = document.getElementById('taik-result-label');
+    const resultViewport = document.getElementById('taik-result-viewport');
+    const draftViewport = document.getElementById('taik-draft-viewport');
+    const resultSource = document.getElementById('taik-result-source');
+    const resultDiff = document.getElementById('taik-result-diff');
+    const labels = { lower: 'Kleinschreiben', trim: 'Ränder trimmen', sort: 'Sortieren', dedup: 'Duplikate entfernen', 'drop-blank': 'Leere Tags entfernen' };
+    const aliases = { 'lower-then-trim': 'lower,trim,sort,dedup,drop-blank', 'trim-then-lower': 'trim,lower,sort,dedup,drop-blank' };
+    const openRounds = new Map();
+    const eventLabels = {
+      start: 'Runde gestartet', baseline: 'Prozedur geladen', probe: 'Ausgangsaufwand gemessen',
+      skip: 'Reihenfolge verletzt Abhängigkeiten', trial: 'Kandidat ohne Verbesserung', found: 'Verbesserung gefunden',
+      evaluate: 'Ausgabe und Prüfdaten vergleichen', checks: 'Unabhängige Prüfungen ausgewertet', compare: 'Aufwand verglichen',
+      accepted: 'Änderung veröffentlicht', retained: 'Bisherige Prozedur bestätigt', rejected: 'Kandidat abgelehnt', error: 'Runde unterbrochen',
+      worker: 'Code-Worker', lookup: 'Geprüfte Suchentscheidung übernommen',
+    };
+    let snapshot = null;
+    let selected = 'latest';
+    let lastHTML = '';
+    let lastHeader = '';
+    let workpieceMode = 'view';
+    let workpieceKey = '';
+    const appearances = { system: 'System', light: 'Hell', dark: 'Dunkel' };
+    const systemAppearance = matchMedia('(prefers-color-scheme: dark)');
+    let appearance = document.documentElement.dataset.appearance ?? 'system';
+
+    function syncAppearance() {
+      const resolved = appearance === 'system' ? (systemAppearance.matches ? 'dark' : 'light') : appearance;
+      resultViewport.setAppearance(resolved);
+      draftViewport.style.colorScheme = resolved;
+    }
+    systemAppearance.addEventListener('change', syncAppearance);
+    syncAppearance();
+
+    function highlight(code) {
+      const pattern = /^=== .+ ===$|\/\/[^\n]*|<!--[\s\S]*?(?:-->|$)|<\/?[\w:-]+|"[^"\n]*"|'[^'\n]*'|`[^`\n]*`|\b(?:const|let|function|return|if|else|for|class|true|false|null|fn|pub|use|mod|struct|enum|impl|match|mut|while|loop)\b/gm;
+      let cursor = 0;
+      let markup = '';
+      for (const token of code.matchAll(pattern)) {
+        const value = token[0];
+        const color = value.startsWith('=== ') ? 'file' : value.startsWith('<!--') || value.startsWith('//') ? 'comment' : value.startsWith('<') ? 'tag'
+          : /^['"\x60]/.test(value) ? 'string' : 'keyword';
+        markup += escape(code.slice(cursor, token.index)) + `<span class="syntax-${color}">${escape(value)}</span>`;
+        cursor = token.index + value.length;
+      }
+      return markup + escape(code.slice(cursor));
+    }
+
+    /*WORKPIECE_BEGIN*/
+    function workpieceState(job, mode) {
+      const isDocument = text => /^\s*<(?:!doctype|html|style)/i.test(text ?? '');
+      if (!job || (!job.draft && !job.preview)) return { show: 'empty', unverified: false };
+      if (job.draft) {
+        const show = mode === 'source' ? 'source'
+          : mode === 'diff' ? (job.preview ? 'diff' : 'source')
+          : isDocument(job.draft) ? 'draft' : 'source';
+        return { show, unverified: true };
+      }
+      const show = mode === 'source' ? 'source'
+        : mode === 'diff' ? (typeof job.previous === 'string' ? 'diff' : 'source')
+        : isDocument(job.preview) ? 'accepted' : 'source';
+      return { show, unverified: false };
+    }
+    /*WORKPIECE_END*/
+
+    function setWorkpieceModes(mode) {
+      for (const button of modes.querySelectorAll('button[data-workpiece-mode]')) {
+        button.disabled = button.dataset.workpieceMode === mode;
+      }
+    }
+
+    function renderPreview(selectedJob) {
+      const shown = selectedJob && (selectedJob.draft || selectedJob.preview) ? selectedJob
+        : snapshot.jobs.find(job => workpieceState(job, 'view').show === 'accepted') ?? selectedJob;
+      const state = workpieceState(shown, workpieceMode);
+      setWorkpieceModes(workpieceMode);
+      const key = JSON.stringify([shown?.id, state.show, state.unverified, workpieceMode, shown?.draft, shown?.preview, shown?.previous]);
+      if (key === workpieceKey) { renderFlow(selectedJob); return; }
+      workpieceKey = key;
+      resultViewport.hidden = state.show !== 'accepted';
+      draftViewport.hidden = state.show !== 'draft';
+      resultSource.hidden = state.show !== 'source';
+      resultDiff.hidden = state.show !== 'diff';
+      if (state.show === 'accepted') {
+        const accepted = latestAccepted(shown);
+        resultViewport.show(`${shown.id}/${accepted.name}`, shown.preview);
+      }
+      if (state.show === 'draft') {
+        const draft = shown.draft.replace(/^\s*```(?:html)?[ \t]*\r?\n/i, '').replace(/\r?\n```\s*$/, '');
+        draftViewport.show(shown.id, draft);
+      }
+      if (state.show === 'source') {
+        const code = shown.draft ?? shown.preview ?? '';
+        const offset = resultSource.scrollTop;
+        const follow = resultSource.scrollHeight - offset - resultSource.clientHeight < 36;
+        resultSource.innerHTML = `<pre class="source-code"><code>${highlight(code)}</code></pre>`;
+        resultSource.scrollTop = shown.draft && follow ? resultSource.scrollHeight : offset;
+      }
+      if (state.show === 'diff') {
+        const [before, after] = shown.draft ? [shown.preview ?? '', shown.draft] : [shown.previous, shown.preview];
+        const diff = diffLines(before, after);
+        resultDiff.innerHTML = diff.markup ? `<pre>${diff.markup}</pre>` : '<p class="sub">Kein Unterschied zum vorherigen Stand.</p>';
+        resultDiff.scrollTop = 0;
+      }
+      if (state.show === 'empty') {
+        resultLabel.textContent = 'Der erste geprüfte Stand steht aus.';
+      } else if (state.unverified) {
+        resultLabel.innerHTML = '<span class="unverified">Entwurf · ungeprüft</span>';
+      } else {
+        const artifact = latestAccepted(shown)?.fields.artifact ?? '';
+        resultLabel.textContent = `${shown.id.replace(/^job-/, '')} · freigegeben${artifact ? ' · ' + artifact : ''}`;
+      }
+      renderFlow(selectedJob);
+    }
+
+    const flowEl = document.getElementById('taik-flow');
+    const flowLabel = document.getElementById('taik-flow-label');
+    let flowKey = '';
+    function renderFlow(job) {
+      const round = Object.keys(job?.progress ?? {}).sort().at(-1);
+      const events = job?.progress?.[round] ?? [];
+      const last = events.at(-1);
+      const record = job?.rounds.at(-1)?.fields ?? {};
+      const running = !!job && isPending(job) && !['accepted', 'retained', 'rejected', 'error'].includes(last?.kind);
+      const reached = !job ? -1 : !last ? (job.rounds.length ? 4 : 0)
+        : ({ start: 0, evaluate: 2, checks: 2, compare: 2, accepted: 4, retained: 4, rejected: 4, error: 4 })[last.kind] ?? 1;
+      const failed = !running && (record.decision === 'rejected' || last?.kind === 'error');
+      const software = job?.baseline.fields.kind === 'software';
+      const worker = record.worker_model || record.worker || (software ? 'Code-Worker' : 'lokale Suche');
+      const cost = record.worker_cost_usd ? ` · ${Number(record.worker_cost_usd).toFixed(3)} $` : '';
+      const draftCount = job?.draft ? `${tokenCount(job.draft.length)} Zeichen` : '';
+      const startedAt = Number(job?.sourceStartedAt) || 0;
+      const nodes = [
+        ['STRUCTURE', 'Auftrag', job ? job.id.replace(/^job-/, '') : 'kein Auftrag'],
+        ['ADD', 'Worker', running && job?.draft ? draftCount : running && reached === 1 ? (last.detail ?? '') : worker + cost],
+        ['REDUCE', 'Gate', record.gate_ms ? `${record.gate_ms} ms` : software ? 'fixiertes Prüfgate' : 'feste Prüfungen'],
+        ['REFLECT', 'Entscheidung', running ? 'steht aus' : failed ? 'abgelehnt' : record.decision === 'accepted' ? 'angenommen' : (record.decision ?? 'steht aus')],
+        ['RETAIN', 'Bestand', job ? `${job.rounds.length} ${job.rounds.length === 1 ? 'Protokoll' : 'Protokolle'}` : ''],
+      ];
+      const html = nodes.map(([operation, name, detail], index) => {
+        const state = index < reached || (!running && index <= reached) ? 'done' : index === reached && running ? 'active' : '';
+        const tone = failed && index === 3 ? ' failed' : '';
+        const dots = state === 'active' && index > 0 ? '<i class="flow-dot"></i><i class="flow-dot"></i><i class="flow-dot"></i>' : '';
+        const live = index === 0 && running && startedAt ? ` <time data-started="${startedAt}"></time>` : '';
+        return `<li class="flow-node ${state}${tone}">${dots}<span class="flow-op">${operation}</span><span class="flow-name">${name}</span><span class="flow-detail" title="${escape(detail)}">${escape(detail)}${live}</span></li>`;
+      }).join('');
+      const label = !job ? '' : running ? `Runde ${job.rounds.length + 1} läuft` : job.rounds.length ? `Runde ${job.rounds.length} abgeschlossen` : 'eingereiht';
+      if (html + label === flowKey) return;
+      flowKey = html + label;
+      flowEl.innerHTML = html;
+      flowLabel.textContent = label;
+    }
+
+    const money = value => Number(value) > 0 ? `${Number(value).toFixed(Number(value) < 0.1 ? 3 : 2).replace('.', ',')} $` : '';
+
+    /*TOKEN_FLOW_BEGIN*/
+    function tokenFlow(rounds) {
+      const read = value => {
+        const number = Number(value);
+        return Number.isFinite(number) && number > 0 ? number : 0;
+      };
+      const entries = rounds.map(fields => {
+        const input = read(fields?.worker_input_tokens);
+        const output = read(fields?.worker_output_tokens);
+        return { input, output, cost: read(fields?.worker_cost_usd), seconds: read(fields?.worker_duration_ms) / 1000 };
+      });
+      const largest = entries.reduce((max, entry) => Math.max(max, entry.input + entry.output), 0);
+      return entries.map(entry => ({
+        ...entry,
+        widthIn: largest ? entry.input / largest * 100 : 0,
+        widthOut: largest ? entry.output / largest * 100 : 0,
+      }));
+    }
+    /*TOKEN_FLOW_END*/
+    const tokenCount = value => String(Math.round(value)).replace(/\B(?=(\d{3})+(?!\d))/g, '\u202f');
+    const secondsText = value => value >= 10 ? `${Math.round(value)} s` : `${value.toFixed(1).replace('.', ',')} s`;
+    const tokenLine = flow => [
+      `${tokenCount(flow.input)} → ${tokenCount(flow.output)} Tokens`,
+      secondsText(flow.seconds),
+      money(flow.cost),
+    ].filter(Boolean).join(' · ');
+
+    // Line diff of two texts as hunks with two lines of context. Computed here, without any model.
+    function diffLines(before, after) {
+      const a = before.split('\n'), b = after.split('\n');
+      let start = 0;
+      while (start < a.length && start < b.length && a[start] === b[start]) start += 1;
+      let endA = a.length, endB = b.length;
+      while (endA > start && endB > start && a[endA - 1] === b[endB - 1]) { endA -= 1; endB -= 1; }
+      const x = a.slice(start, endA), y = b.slice(start, endB);
+      let ops = [];
+      if (x.length * y.length > 4000000) {
+        ops = [...x.map(line => ['-', line]), ...y.map(line => ['+', line])];
+      } else {
+        const width = y.length + 1, table = new Uint32Array((x.length + 1) * width);
+        for (let i = x.length - 1; i >= 0; i -= 1) for (let j = y.length - 1; j >= 0; j -= 1) {
+          table[i * width + j] = x[i] === y[j] ? table[(i + 1) * width + j + 1] + 1
+            : Math.max(table[(i + 1) * width + j], table[i * width + j + 1]);
+        }
+        let i = 0, j = 0;
+        while (i < x.length && j < y.length) {
+          if (x[i] === y[j]) { ops.push([' ', x[i]]); i += 1; j += 1; }
+          else if (table[(i + 1) * width + j] >= table[i * width + j + 1]) { ops.push(['-', x[i]]); i += 1; }
+          else { ops.push(['+', y[j]]); j += 1; }
+        }
+        while (i < x.length) { ops.push(['-', x[i]]); i += 1; }
+        while (j < y.length) { ops.push(['+', y[j]]); j += 1; }
+      }
+      const all = [...a.slice(Math.max(0, start - 2), start).map(line => [' ', line]), ...ops,
+        ...b.slice(endB, endB + 2).map(line => [' ', line])];
+      const keep = all.map((op, index) => all.slice(Math.max(0, index - 2), index + 3).some(near => near[0] !== ' '));
+      let markup = '', gap = false;
+      all.forEach(([kind, line], index) => {
+        if (!keep[index]) { gap = true; return; }
+        if (gap && markup) markup += '<span class="diff-gap">···</span>\n';
+        gap = false;
+        markup += `<span class="diff-${kind === '+' ? 'add' : kind === '-' ? 'del' : 'same'}">${kind} ${escape(line)}</span>\n`;
+      });
+      return { markup, added: ops.filter(op => op[0] === '+').length, removed: ops.filter(op => op[0] === '-').length };
+    }
+
+    function escape(text) {
+      return String(text ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
+    }
+
+    function order(text) {
+      if (!text) return [];
+      const name = text.replace(/^Some\("(.*)"\)$/, '$1');
+      return (Object.hasOwn(aliases, name) ? aliases[name] : name).split(',').map(value => value.trim()).filter(Boolean);
+    }
+
+    function latestAccepted(job) {
+      return [...job.rounds].reverse().find(round => round.fields.decision === 'accepted') ?? job.baseline;
+    }
+
+    function isPending(job) {
+      if (job.baseline.fields.kind === 'software') return job.sourceActive || job.sourceQueued;
+      return !job.rounds.length || (job.rounds.length < 20 && job.rounds.at(-1).fields.advance === 'true');
+    }
+
+    function jobStatus(job) {
+      if (job.baseline.fields.kind === 'software' && job.sourceActive) return 'Code-Worker aktiv';
+      if (job.sourceQueued && job.rounds.length) return 'Überarbeitung vorgesehen';
+      if (job.rounds.at(-1)?.fields.decision === 'rejected') return 'Kandidat abgelehnt';
+      if (isPending(job)) return job.rounds.length ? 'Nächste Runde ausstehend' : 'Eingereiht';
+      return job.rounds.at(-1)?.fields.advance === 'true' ? 'Rundenlimit erreicht' : 'Abgeschlossen';
+    }
+
+    function readiness(data) {
+      if (data.service === 'offline') return ['offline', 'Factory angehalten'];
+      if (data.service === 'unmanaged') return ['', 'Aufträge verfolgen'];
+      if (data.pending) return ['active', data.pending === 1 ? 'Auftrag in Arbeit' : `${data.pending} offene Aufträge`];
+      return ['', 'Wartet auf Auftrag'];
+    }
+
+    function operationChange(oldOrder, newOrder) {
+      if (!oldOrder.length || !newOrder.length || oldOrder.join() === newOrder.join()) return '';
+      const firstMismatch = newOrder.findIndex((step, index) => step !== oldOrder[index]);
+      const nextStep = newOrder[firstMismatch];
+      const movedFrom = oldOrder.indexOf(nextStep);
+      if (movedFrom > firstMismatch) return `${labels[nextStep] ?? nextStep} vor ${labels[oldOrder[firstMismatch]] ?? oldOrder[firstMismatch]}`;
+      return 'Reihenfolge geändert';
+    }
+
+    function measure(text, key) {
+      return Number((text ?? '').match(new RegExp(`(?:^|, )${key}:(\\d+)(?:,|$)`))?.[1] ?? NaN);
+    }
+
+    function comparison(job, accepted) {
+      const first = job.rounds.find(round => round.fields.baseline_work)?.fields.baseline_work;
+      const current = accepted.fields.probe_work;
+      if (!first || !current) return '';
+      const measures = [['lowercase_bytes', 'Bytes vor Kleinschreibung'], ['sort_items', 'Elemente beim Sortieren']];
+      const groups = measures.map(([key, label]) => {
+        const before = measure(first, key);
+        const after = measure(current, key);
+        if (!Number.isFinite(before) || !Number.isFinite(after)) return '';
+        const max = Math.max(before, after, 1);
+        return `<div class="measure" role="img" aria-label="${label}: vorher ${before}, jetzt ${after}">
+          <h3>${label}</h3><p class="sub">Vorher ${before} · Jetzt ${after}</p>
+          <div class="metric-bars" aria-hidden="true">
+            <div class="metric-track"><span class="metric-bar before" style="width:${before / max * 100}%"></span></div>
+            <div class="metric-track"><span class="metric-bar" style="width:${after / max * 100}%"></span></div>
+          </div></div>`;
+      }).join('');
+      return groups ? `<section aria-label="Gemessene Änderung"><h2>Aufwand im Prüflauf</h2><div class="measures">${groups}</div></section>` : '';
+    }
+
+    function renderRound(round, index, job, flow) {
+      const fields = round.fields;
+      const rejected = fields.decision === 'rejected';
+      const name = `${job.id}/${round.name}`;
+      const events = job.progress?.[round.name.replace(/\.run$/, '')] ?? [];
+      const latest = index === job.rounds.length - 1;
+      const eventKey = `${name}/events`;
+      const eventsOpen = openRounds.get(eventKey) ?? latest;
+      const checksOpen = openRounds.get(name) ?? (latest && !events.length);
+      const changed = operationChange(order(fields.baseline_procedure), order(fields.procedure));
+      const software = fields.kind === 'software';
+      const search = fields.kind === 'search';
+      const changedPolicy = search && fields.policy !== fields.baseline_policy;
+      const applied = changedPolicy || fields.advance === 'true';
+      const decision = rejected ? 'Kandidat abgelehnt' : software ? 'Quellcode angenommen' : applied ? 'Änderung übernommen' : 'Prozedur beibehalten';
+      const description = search ? searchPolicies[fields.policy] ?? fields.intent : software ? fields.intent : changed || (rejected ? 'Der letzte akzeptierte Stand bleibt gültig.' : 'Keine weitere einzelne Umstellung verbessert den geprüften Aufwand.');
+      return `<li class="round${rejected ? ' rejected' : ''}"><div class="rail" aria-hidden="true"><span class="node"></span><span class="groove"></span></div>
+        <div class="round-body"><div class="round-meta"><span class="index">Runde ${String(index + 1).padStart(2, '0')}</span>
+        <span class="result${rejected ? ' rejected' : ''}">${decision}${fields.worker_cost_usd ? ' · ' + money(fields.worker_cost_usd) : ''}</span></div>
+        ${flow && flow.input + flow.output > 0 ? `<div class="token-flow" title="${escape(round.name)}"><span class="in" style="width:${flow.widthIn}%"></span><span class="out" style="width:${flow.widthOut}%"></span></div>
+        <p class="sub">${tokenLine(flow)}</p>` : ''}
+        <h3>${escape(description)}</h3>
+        ${events.length ? `<details data-round="${escape(eventKey)}" data-initial-open="${eventsOpen}"${eventsOpen ? ' open' : ''}>
+          <summary>Arbeitsschritte (${events.length})</summary>${eventList(events)}</details>` : ''}
+        <details data-round="${escape(name)}" data-initial-open="${checksOpen}"${checksOpen ? ' open' : ''}>
+          <summary>Prüfprotokoll</summary><pre class="run-record">${highlightRun(round.detail)}</pre>
+        </details>
+      </div></li>`;
+    }
+
+    function eventList(events) {
+      return `<ol class="events">${events.map(event => {
+        const elapsed = event.elapsed >= 1000000 ? `${(event.elapsed / 1000000).toFixed(1)} s`
+          : event.elapsed >= 1000 ? `${(event.elapsed / 1000).toFixed(1)} ms` : `${event.elapsed} µs`;
+        const name = Object.hasOwn(eventLabels, event.kind) ? eventLabels[event.kind] : event.kind;
+        return `<li><time>${elapsed}</time><div><span class="event-name">${escape(name)}</span><code>${escape(event.detail)}</code></div></li>`;
+      }).join('')}</ol>`;
+    }
+
+    function progressPanel(job) {
+      const index = job.rounds.length + (isPending(job) ? 1 : 0);
+      if (index < 1) return '';
+      const key = `round-${String(index).padStart(2, '0')}`;
+      const events = job.progress?.[key] ?? [];
+      if (!events.length && !isPending(job)) return '';
+      const title = job.sourceQueued ? 'Auftrag eingereiht' : isPending(job) ? `Runde ${index} · Live` : `Letzte Runde · ${index}`;
+      const recent = events.length ? eventList(events.slice(-4)) : '<p class="sub lead">Die Runde wartet auf ihren Start.</p>';
+      const last = events.at(-1)?.kind;
+      const phase = last === 'evaluate' || last === 'checks' ? 'Factory prüft den Code' : 'Code-Worker arbeitet';
+      const running = job.sourceActive ? `<p class="running">${phase} <span data-started="${Number(job.sourceStartedAt) || 0}"></span></p>` : '';
+      return `<section aria-label="Arbeitsschritte"><h2>${title}</h2>${running}${recent}</section>`;
+    }
+
+    const searchPolicies = {
+      all: 'Alle Umstellungen',
+      unique: 'Jede Umstellung einmal',
+      'valid-unique': 'Nur gültige Umstellungen, jeweils einmal',
+      precomputed: 'Vorausberechnete Suchentscheidungen'
+    };
+
+    function render() {
+      if (!snapshot) return;
+      const [tone, status] = readiness(snapshot);
+      const appearanceOptions = Object.entries(appearances).map(([value, label]) =>
+        `<option value="${value}"${appearance === value ? ' selected' : ''}>${label}</option>`).join('');
+      setHeader(`<h1><svg class="mark" viewBox="0 0 64 64" aria-hidden="true"><path d="M26.22 14.55A17.35 17.35 0 1 1 18.13 43.58A15.72 15.72 0 1 0 26.22 14.55Z M16.43 31.11A10.96 10.96 0 1 1 36.03 35.93A10.1 10.1 0 1 0 16.43 31.11Z M22.27 37.25A6.47 6.47 0 1 1 32.15 29.67A7.04 7.04 0 0 0 22.27 37.25Z"/><path class="core" d="M26.6 39.95A4.95 4.95 0 1 1 34.1 34.52A5.32 5.32 0 0 0 26.6 39.95Z"/></svg>TAIK <span>Factory</span></h1><div class="header-controls">
+        <div class="status" role="status"><span class="dot ${tone}" aria-hidden="true"></span>${status}</div>
+        ${Number.isFinite(snapshot.spent) ? `<div class="status" title="Worker-Kosten der letzten 24 Stunden zum Listenpreis">24 h · ${snapshot.spent.toFixed(2)} $</div>` : ''}
+        ${Number.isFinite(snapshot.parallel) ? `<label class="appearance" title="Wie viele Software-Aufträge der Dienst gleichzeitig bearbeitet">Parallel <select id="taik-parallel">${[1, 2, 3, 4, 5, 6, 7, 8].map(slots =>
+          `<option value="${slots}"${snapshot.parallel === slots ? ' selected' : ''}>${slots}</option>`).join('')}</select></label>` : ''}
+        <label class="appearance">Darstellung <select id="taik-appearance">${appearanceOptions}</select></label>
+      </div>`);
+      const job = snapshot.jobs.find(job => job.id === selected)
+        ?? snapshot.jobs.find(job => job.sourceActive) ?? snapshot.jobs[0];
+      if (!job) {
+        renderPreview();
+        setContent(`<section><h2>Aufträge</h2><p class="sub lead">Hier erscheinen die Aufträge, sobald die Factory sie annimmt.</p></section>`);
+        return;
+      }
+      const proposals = (snapshot.proposals ?? []).map(proposal => `<li><div><h3>${escape(proposal.intent)}</h3>
+          <span class="sub">${escape(proposal.name)}${proposal.origin ? ' · aus ' + escape(proposal.origin.replace(/^job-/, '')) : ''}</span></div>
+          <button type="button" data-proposal="${escape(proposal.name)}">Freigeben</button></li>`).join('');
+      const agentState = agent => agent.event === 'Stop' ? ['', 'wartet']
+        : agent.event === 'UserPromptSubmit' ? ['active', 'liest den Auftrag']
+        : agent.event === 'PreToolUse' ? ['active', agent.tool] : ['', `${agent.tool} beendet`];
+      const agents = (snapshot.agents ?? []).map(agent => {
+        const [tone, doing] = agentState(agent);
+        const where = agent.target ? agent.target.split('/').slice(-2).join('/') : agent.cwd.split('/').at(-1);
+        return `<li><span class="dot ${tone}" aria-hidden="true"></span><div><h3>Claude Code <span class="sub">${escape(agent.session.slice(0, 8))}</span></h3>
+          <span class="sub" title="${escape(agent.target)}">${escape(doing)}${where ? ' · ' + escape(where) : ''}</span></div>
+          <time class="sub" data-at="${Number(agent.at) || 0}"></time></li>`;
+      }).join('');
+      const working = agents ? `<section aria-label="Agenten"><div class="section-heading"><h2>Agenten</h2>
+          <span class="sub">gemeldet über Hooks, ohne Modellaufruf</span></div><ul class="agents">${agents}</ul></section>` : '';
+      const waiting = proposals ? `<section aria-label="Vorschläge"><div class="section-heading"><h2>Vorschläge der Factory</h2>
+          <span class="sub">warten auf deine Freigabe</span></div><ul class="proposals">${proposals}</ul></section>` : '';
+      const goal = job.goal ? `<section class="goal" aria-labelledby="taik-goal"><h2 id="taik-goal">Auftragsziel</h2><p>${escape(job.goal)}</p></section>` : '';
+      const accepted = latestAccepted(job);
+      renderPreview(job);
+      const initialOrder = order(job.baseline.fields.procedure);
+      const currentOrder = order(accepted.fields.procedure);
+      const steps = currentOrder.map((operation, index) => `<li${initialOrder[index] !== operation ? ' class="changed"' : ''}>${escape(labels[operation] ?? operation)}</li>`).join('');
+      const tags = (accepted.fields.tags || '').split(',').filter(Boolean).map(tag => `<code>${escape(tag)}</code>`).join('');
+      const artifact = accepted.fields.artifact;
+      const software = job.baseline.fields.kind === 'software';
+      const search = job.baseline.fields.kind === 'search';
+      const policy = escape(searchPolicies[accepted.fields.policy ?? accepted.fields.procedure]);
+      const results = software ? `<section><div class="section-heading"><h2>Software-Auftrag</h2>${artifact
+        ? `<button type="button" data-artifact="${escape(artifact)}" data-job="${escape(job.id)}">${job.id === 'job-floorplanner' ? 'Floorplanner öffnen' : artifact.endsWith('-taik-seed') ? 'taik-seed im Finder zeigen' : 'Ergebnis öffnen'}</button>`
+        : '<span class="sub">Der erste geprüfte Stand steht aus.</span>'}</div></section>` : search ? `<section><h2>Akzeptierte Suchprozedur</h2><p class="lead">${policy}</p></section>` : `<section><h2>Akzeptierte Prozedur</h2><ol class="steps">${steps}</ol>
+        <div class="tags"><span class="sub">Ergebnis</span>${tags || '<span class="sub">Leere Tag-Liste</span>'}</div></section>`;
+      const flows = tokenFlow(job.rounds.map(round => round.fields));
+      const tokenTotals = flows.reduce((sum, entry) => ({ input: sum.input + entry.input, output: sum.output + entry.output, seconds: sum.seconds + entry.seconds }), { input: 0, output: 0, seconds: 0 });
+      const totalsLine = tokenTotals.input + tokenTotals.output > 0
+        ? `<p class="sub">Gesamt ${tokenCount(tokenTotals.input)} → ${tokenCount(tokenTotals.output)} Tokens · ${secondsText(tokenTotals.seconds)} · ${job.rounds.length} ${job.rounds.length === 1 ? 'Runde' : 'Runden'}</p>` : '';
+      const rounds = job.rounds.length ? `<ol class="rounds">${job.rounds.map((round, index) => renderRound(round, index, job, flows[index])).join('')}</ol>`
+        : '<p class="sub lead">Die Factory hat den Auftrag erhalten. Die erste Runde steht noch aus.</p>';
+      const options = snapshot.jobs.map(entry => `<option value="${escape(entry.id)}"${selected === entry.id ? ' selected' : ''}>${escape(entry.id)} · ${jobStatus(entry)}${entry.cost > 0 ? ' · ' + money(entry.cost) : ''}</option>`).join('');
+      setContent(`${working}${waiting}${goal}<section aria-label="Auftragsverlauf">
+        <div class="section-heading"><h2>Auftragsverlauf</h2><span class="sub">${escape(job.id)} · ${jobStatus(job)}${job.cost > 0 ? ' · ' + money(job.cost) : ''}</span></div>
+        <div class="job-control"><label for="taik-live-job">Auftrag</label>
+        <select id="taik-live-job"><option value="latest"${selected === 'latest' ? ' selected' : ''}>Neuester Auftrag</option>${options}</select></div>
+        ${totalsLine}
+        ${rounds}</section>${isPending(job) ? progressPanel(job) : ''}${results}${comparison(job, accepted)}`);
+    }
+
+    function setHeader(html) {
+      if (html === lastHeader) return;
+      lastHeader = html;
+      const focused = ['taik-appearance', 'taik-parallel'].find(id => document.activeElement?.id === id);
+      header.innerHTML = html;
+      if (focused) document.getElementById(focused)?.focus({ preventScroll: true });
+    }
+
+    function setContent(html) {
+      if (html === lastHTML) return;
+      lastHTML = html;
+      const focusId = document.activeElement?.id;
+      const offsets = new Map([...activity.querySelectorAll('details[open][data-round] > :not(summary)')]
+        .map(element => [element.parentElement.dataset.round, element.scrollTop]));
+      activity.innerHTML = html;
+      for (const element of activity.querySelectorAll('details[open][data-round] > :not(summary)')) {
+        element.scrollTop = offsets.get(element.parentElement.dataset.round) ?? 0;
+      }
+      updateElapsed();
+      if (focusId === 'taik-live-job') document.getElementById(focusId)?.focus({ preventScroll: true });
+    }
+
+    function updateAges() {
+      for (const label of root.querySelectorAll('time[data-at]')) {
+        const seconds = Math.max(0, Math.floor(Date.now() / 1000 - Number(label.dataset.at)));
+        label.textContent = seconds < 60 ? `vor ${seconds} s` : `vor ${Math.floor(seconds / 60)} min`;
+      }
+    }
+
+    function updateElapsed() {
+      updateAges();
+      for (const label of root.querySelectorAll('[data-started]')) {
+        const start = Number(label.dataset.started);
+        if (!start) continue;
+        const seconds = Math.max(0, Math.floor(Date.now() / 1000 - start));
+        label.textContent = `· ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+      }
+    }
+
+    window.setInterval(updateElapsed, 1000);
+
+    root.addEventListener('change', event => {
+      if (event.target.id === 'taik-appearance' && Object.hasOwn(appearances, event.target.value)) {
+        appearance = event.target.value;
+        document.documentElement.dataset.appearance = appearance;
+        syncAppearance();
+        window.webkit?.messageHandlers?.setAppearance?.postMessage(appearance);
+        return;
+      }
+      if (event.target.id === 'taik-parallel') {
+        window.webkit?.messageHandlers?.setParallel?.postMessage(Number(event.target.value));
+        return;
+      }
+      if (event.target.id !== 'taik-live-job') return;
+      selected = event.target.value;
+      render();
+    });
+    root.addEventListener('click', event => {
+      const modeButton = event.target.closest('button[data-workpiece-mode]');
+      if (modeButton) {
+        workpieceMode = modeButton.dataset.workpieceMode;
+        render();
+        return;
+      }
+      const approve = event.target.closest('button[data-proposal]');
+      if (approve) {
+        approve.disabled = true;
+        approve.textContent = 'Eingereiht';
+        window.webkit?.messageHandlers?.approveProposal?.postMessage(approve.dataset.proposal);
+        return;
+      }
+      const button = event.target.closest('button[data-artifact]');
+      if (button) window.webkit?.messageHandlers?.openArtifact?.postMessage({job:button.dataset.job,name:button.dataset.artifact});
+    });
+    root.addEventListener('toggle', event => {
+      const id = event.target.dataset?.round;
+      if (!id || !event.target.isConnected || event.target.dataset.initialOpen === String(event.target.open)) return;
+      openRounds.set(id, event.target.open);
+      event.target.dataset.initialOpen = String(event.target.open);
+      lastHTML = activity.innerHTML;
+    }, true);
+    window.updateFactory = data => {
+      if (!data) return;
+      snapshot = data;
+      if (selected !== 'latest' && !snapshot.jobs.some(job => job.id === selected)) selected = 'latest';
+      render();
+    };
+    window.updateFactory(/*FACTORY_DATA*/null);
+  })();
+</script>

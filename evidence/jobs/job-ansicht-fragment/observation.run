@@ -1,0 +1,10 @@
+decision=observed
+identity=ansicht-fragment-beobachtung-01
+intent=Festhalten, dass eine Änderung der Ansicht nach dem Einreihen ohne Agent bis zur Installation lief.
+scope=One queued job on the live service on 2026-11-25. Worker Savant 1.4, the installed viewer as the starting source, a gate that names tools/release-view.sh as its release step. Brief and gate by claude-fable.
+chain=queued by claude-fable -> worker returned a patch of one block in 1.9 s for 0.0019 USD -> the pinned gate accepted -> the service ran the release step -> WebKit check on the accepted bytes passed -> those bytes were installed -> WebKit check on the installed app passed -> release-round-01.run written.
+agent_steps_after_queueing=None. The digest of the installed viewer changed from dc7abc9bdb29 to d0890735a953 without an agent command.
+what_is_still_human_or_agent=The request, the brief and the gate. For requests through GitHub issues the Factory writes brief and gate itself, but such jobs start without a source, so they cannot change the viewer yet.
+limitations=One small change. The release step runs with the rights of the user and is not sandboxed.
+continuation=Let a proposal name an accepted artifact as its starting source, so that a request through an issue can change an existing product.
+end

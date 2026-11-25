@@ -18,7 +18,7 @@ This is a running seed, not a product. What the evidence supports today:
 | A rejected candidate leaves the accepted result intact | Shown |
 | Accepted work survives a restart and is reused by later rounds | Shown |
 | Unattended rounds build software that is not HTML | Shown twice: a Rust tool as one file and as a Cargo project of four files, compiled and run by their gates. See [job-taik-stats](evidence/jobs/job-taik-stats/observation.run) |
-| The Factory changes its own viewer without an agent writing the code | Shown once: the service worker patched the installed viewer in six blocks, accepted in round 1. An agent still ran the WebKit check and installed it. See [the observation](evidence/jobs/job-ansicht-tokenfluss/observation.run) |
+| The Factory changes its own viewer without an agent writing the code | Shown three times. In the last case nothing was done by an agent after queueing: patch, gate, WebKit check and installation ran in the service. See [the observation](evidence/jobs/job-ansicht-fragment/observation.run) |
 | The Factory writes its next job itself | Shown once, with the user's approval: brief and gate derived from an observation, accepted in round 1. See [the observation](evidence/jobs/job-mehrdatei-programm/observation.run) |
 | The Factory changes its own procedures and viewer through its own gate | Shown for the search procedure and the viewer |
 | The Factory judges and installs its own backend | Shown once. The installed binary ran the pinned gate, checked the candidate itself and replaced itself in [job-backend](evidence/jobs/job-backend/round-01.run). The thirteen rounds before were decided by their authors |
@@ -123,7 +123,7 @@ With `TAIK_AUTO_PROPOSE` set, the service reflects once after each finished soft
 
 ## Requests from GitHub issues
 
-`tools/issues-sync.sh` reads open issues with the label `taik` that the repository owner wrote. Each becomes a proposal that waits. The label `freigegeben` approves it, the decision of the job is posted back, and an accepted job closes the issue. Without the argument `apply` the script only reports what it would do. Text by anyone else never reaches a worker.
+`tools/issues-sync.sh` reads open issues with the label `taik` that the repository owner wrote. Each becomes a proposal that waits. The label `freigegeben` approves it, the decision of the job is posted back, and an accepted job closes the issue. Without the argument `apply` the script only reports what it would do. [tools/service/local.taik.issues.plist](tools/service/local.taik.issues.plist) is a template for a launchd timer that runs it every ten minutes. It is the only timer around the Factory. Text by anyone else never reaches a worker.
 
 ## Changing the backend
 
@@ -154,7 +154,7 @@ The viewer is `tools/factory-view.html`. It changes only through a source job. A
 tools/release-view.sh evidence/jobs/job-NAME
 ```
 
-It runs the WebKit check on the accepted bytes with live data, installs exactly those bytes, checks the installed app and writes a release record. Nothing is installed unless the check passes.
+A gate whose first lines contain `// TAIK: release tools/release-view.sh` makes the service run this step itself after acceptance. It runs the WebKit check on the accepted bytes with live data, installs exactly those bytes, checks the installed app and writes a release record. Nothing is installed unless the check passes.
 
 ## What has been measured
 

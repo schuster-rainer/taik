@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Template. Replace CHECKOUT and TOOLS_PATH, then copy to ~/Library/LaunchAgents/.
+     This is the one timer around the Factory: GitHub cannot wake a local service, so the intake asks every ten minutes.
+     The Factory service itself stays event driven. -->
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>local.taik.issues</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>CHECKOUT/tools/issues-sync.sh</string>
+		<string>apply</string>
+	</array>
+	<key>WorkingDirectory</key>
+	<string>CHECKOUT</string>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>PATH</key>
+		<string>TOOLS_PATH:/usr/bin:/bin:/usr/sbin:/sbin</string>
+	</dict>
+	<key>StartInterval</key>
+	<integer>600</integer>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>StandardOutPath</key>
+	<string>CHECKOUT/evidence/issues/sync.log</string>
+	<key>StandardErrorPath</key>
+	<string>CHECKOUT/evidence/issues/sync.log</string>
+</dict>
+</plist>

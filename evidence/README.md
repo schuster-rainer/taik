@@ -74,6 +74,7 @@
 - [Startup-Reflexion über den eingestellten Worker](jobs/job-backend/round-03.run)
 - [Patch-Format und aufbauende Aufträge](jobs/job-backend/round-07.run) und [Lease mit Heartbeat statt starrer Zeitgrenze](jobs/job-backend/round-08.run)
 - [Nebenläufige Aufträge](jobs/job-backend/round-09.run), [formatneutraler Worker-Auftrag und sofort besetzte Plätze](jobs/job-backend/round-10.run) und [Messung am Dienst](jobs/job-dienst-durchsatz/summary.run)
+- [Freigabeschritt durch den Dienst](jobs/job-backend/round-12.run)
 - [Drosselung des Gates unter launchd, gemessen](jobs/job-dienst-drosselung/summary.run)
 - [Dauerprozess gegen Start bei Bedarf, gemessen](jobs/job-dienst-form/summary.run)
 
@@ -109,6 +110,7 @@
 
 - [Neumorphe Ansicht mit ausgezeichneten Prüfprotokollen](jobs/job-factory-neomorph/round-01.html), [Auftrag](jobs/job-factory-neomorph/round-01.brief.md) und [Entscheidung](jobs/job-factory-neomorph/round-01.run)
 - [Bildmarke in der Kopfzeile](jobs/job-factory-neomorph/round-02.run) und [Aufnahme der installierten Ansicht](jobs/job-factory-neomorph/round-02.screenshot.png)
+- [Änderung der Ansicht ohne Agent bis zur Installation](jobs/job-ansicht-fragment/observation.run), mit [Runde](jobs/job-ansicht-fragment/round-01.run) und [Freigabe](jobs/job-ansicht-fragment/release-round-01.run)
 - [Ein Werkstück-Feld und belebter Ablauf, von der Factory gebaut](jobs/job-ansicht-werkstueck/round-02.run), [Freigabe](jobs/job-ansicht-werkstueck/release-round-02.run), [Aufnahme](jobs/job-ansicht-werkstueck/round-02.screenshot.png) und [Auswertung](jobs/job-ansicht-werkstueck/observation.run)
 - [Token- und Zeitfluss je Runde, von der Factory selbst als Patch gebaut](jobs/job-ansicht-tokenfluss/round-01.run), [Aufnahme](jobs/job-ansicht-tokenfluss/round-01.screenshot.png) und [Auswertung](jobs/job-ansicht-tokenfluss/observation.run)
 - [Parallele Plätze einstellbar](jobs/job-factory-ansicht-2/round-04.run), im Dienst mit [Runde 11](jobs/job-backend/round-11.run)

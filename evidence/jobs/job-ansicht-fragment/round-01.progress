@@ -1,0 +1,7 @@
+195	start	Factory hat den Auftrag übernommen
+843	worker	Savant erhält Auftrag und akzeptierten Ausgangsstand
+1885779	worker	worker_model=subq-savant-1.4 worker_input_tokens=16979 worker_output_tokens=495 worker_cost_usd=0.001945 worker_duration_ms=1884 
+1885883	evaluate	Unabhängiges, gespeichertes Prüfgate ausführen
+1887383	worker	Patch mit 1 Blöcken auf den angenommenen Stand angewendet
+1959295	checks	PASS: host contract, offline isolation, 17 token shadows without glow, contrast 5.12–13.04, lossless .run highlighting, token flow per round, one workpiece pane with live draft, animated flow
+1970405	accepted	Retain the accepted artifact. No further work was authorized by this round.

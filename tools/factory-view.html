@@ -360,7 +360,7 @@
 
     /*WORKPIECE_BEGIN*/
     function workpieceState(job, mode) {
-      const isDocument = text => /^\s*<(?:!doctype|html|style)/i.test(text ?? '');
+      const isDocument = text => /^\s*<(?:!doctype|html)/i.test(text ?? '');
       if (!job || (!job.draft && !job.preview)) return { show: 'empty', unverified: false };
       if (job.draft) {
         const show = mode === 'source' ? 'source'
