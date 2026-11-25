@@ -1,0 +1,20 @@
+decision=rejected
+kind=software
+procedure=
+tags=
+identity=round-02
+intent=Das Orchestrator-Widget: Der Nutzer spricht mit dem Orchestrator, und der zeigt je Wunsch seinen Plan.
+baseline=/Users/rainer/projects/ideas/talk/evidence/jobs/job-ansicht-orchestrator/round-01.html
+worker=claude-fable-attached
+limits=4 rounds; worker lease 60s without ceiling; verifier 15s; 512KiB source
+gate_sha256=317eb6e3bec188e8eeb76e8925f1b185f5fd5a5a0d66045d59c4b3b83c5fe8d0
+gate_ms=56
+patch_blocks=
+checks=AssertionError [ERR_ASSERTION]: a plan is not cut off
+artifact=
+rejected_candidate=
+feedback=
+follow_up=
+continuation=Manual source round ended. Inspect the gate evidence before another submission.
+advance=false
+end

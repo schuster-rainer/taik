@@ -1,0 +1,30 @@
+127	start	Factory hat den Auftrag übernommen
+603	worker	Eingehängter Worker claude-fable liefert Quellcode
+657	worker	4096 Bytes Quellcode empfangen
+675	worker	8192 Bytes Quellcode empfangen
+690	worker	12288 Bytes Quellcode empfangen
+707	worker	16384 Bytes Quellcode empfangen
+722	worker	20480 Bytes Quellcode empfangen
+735	worker	24576 Bytes Quellcode empfangen
+750	worker	28672 Bytes Quellcode empfangen
+765	worker	32768 Bytes Quellcode empfangen
+801	worker	36864 Bytes Quellcode empfangen
+815	worker	40960 Bytes Quellcode empfangen
+828	worker	45056 Bytes Quellcode empfangen
+841	worker	49152 Bytes Quellcode empfangen
+857	worker	53248 Bytes Quellcode empfangen
+871	worker	57344 Bytes Quellcode empfangen
+884	worker	61440 Bytes Quellcode empfangen
+898	worker	65536 Bytes Quellcode empfangen
+915	worker	69632 Bytes Quellcode empfangen
+929	worker	73728 Bytes Quellcode empfangen
+943	worker	77824 Bytes Quellcode empfangen
+957	worker	81920 Bytes Quellcode empfangen
+974	worker	86016 Bytes Quellcode empfangen
+988	worker	90112 Bytes Quellcode empfangen
+1003	worker	94208 Bytes Quellcode empfangen
+1017	worker	98304 Bytes Quellcode empfangen
+1035	worker	101464 Bytes Quellcode empfangen
+1046	evaluate	Unabhängiges, gespeichertes Prüfgate ausführen
+81035	checks	PASS: host contract, offline isolation, 32 token shadows without glow, contrast 5.12–13.04, lossless .run highlighting, token flow per round, one workpiece pane with live draft, animated flow, ticket board in one group at a time, crew with agents and harnesses, conversation in the ticket, one ticket with the full history, tickets opened in the viewer, the whole stock on the board, top-down state and changes, analysis of a rejection, dialog of an agent session, a reason for every waiting ticket, the orchestrator and its plans
+91191	accepted	Retain the accepted artifact. No further work was authorized by this round.

@@ -1,0 +1,20 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-03
+intent=Das Orchestrator-Widget: Der Nutzer spricht mit dem Orchestrator, und der zeigt je Wunsch seinen Plan.
+baseline=/Users/rainer/projects/ideas/talk/evidence/jobs/job-ansicht-orchestrator/round-01.html
+worker=claude-fable-attached
+limits=4 rounds; worker lease 60s without ceiling; verifier 15s; 512KiB source
+gate_sha256=317eb6e3bec188e8eeb76e8925f1b185f5fd5a5a0d66045d59c4b3b83c5fe8d0
+gate_ms=69
+patch_blocks=
+checks=PASS: host contract, offline isolation, 32 token shadows without glow, contrast 5.12–13.04, lossless .run highlighting, token flow per round, one workpiece pane with live draft, animated flow, ticket board in one group at a time, crew with agents and harnesses, conversation in the ticket, one ticket with the full history, tickets opened in the viewer, the whole stock on the board, top-down state and changes, analysis of a rejection, dialog of an agent session, a reason for every waiting ticket, the orchestrator and its plans
+artifact=round-03.html
+rejected_candidate=
+feedback=
+follow_up=
+continuation=Retain the accepted artifact. No further work was authorized by this round.
+advance=false
+end

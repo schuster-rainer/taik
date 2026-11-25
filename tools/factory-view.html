@@ -207,8 +207,8 @@
   #taik-live .new-ticket { margin-top: 14px; }
   #taik-live .plans { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 10px; }
   #taik-live .plans .ticket { width: 100%; text-align: left; }
-  #taik-live .plans .title { display: block; font-weight: 600; overflow-wrap: anywhere; }
-  #taik-live .plans .meta { display: block; margin-top: 4px; overflow-wrap: anywhere; }
+  #taik-live .plans .plan-title { display: block; font-size: .9rem; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; }
+  #taik-live .plans .plan-reason { display: block; margin-top: 4px; font-size: .78rem; line-height: 1.4; color: var(--quiet); overflow-wrap: anywhere; }
   #taik-live .new-ticket .actions { align-items: center; }
   #taik-live .new-ticket .actions .sub { margin-right: auto; }
   #taik-live .ticket-detail .actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
@@ -1004,8 +1004,8 @@
           <div class="actions"><span class="sub" id="taik-new-ticket-note">${newTicketNote}</span>
           <button type="button" class="send" id="taik-new-ticket">Senden</button></div></div>
         ${(feed => feed.length ? `<ol class="plans">${feed.slice(0, 5).map(entry => `<li><button type="button" class="ticket" data-ticket="${escape(entry.key)}" data-job="">
-          <span class="title">${escape(entry.title)}</span><span class="why">${escape(entry.line)}</span>
-          ${entry.reason ? `<span class="meta">${escape(entry.reason)}</span>` : ''}</button></li>`).join('')}</ol>` : '')(orchestratorFeed(snapshot))}</section>`;
+          <span class="plan-title">${escape(entry.title)}</span><span class="why">${escape(entry.line)}</span>
+          ${entry.reason ? `<span class="plan-reason">${escape(entry.reason)}</span>` : ''}</button></li>`).join('')}</ol>` : '')(orchestratorFeed(snapshot))}</section>`;
     }
 
     function ticketDetail(entry) {

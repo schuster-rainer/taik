@@ -190,6 +190,8 @@ async function runDesignGate(requireOpen) {
       requireFact(rendered(plans) && plans.textContent.includes('Sitzung auf taik · Gate @savant · Arbeit @standard') && plans.textContent.includes('Der Orchestrator plant.'), 'The orchestrator does not show its plans');
       requireFact(ticket.textContent.includes('Es müssen bestehende Dateien geändert werden.'), 'The proposal does not show the plan of the orchestrator');
       requireFact(plans.scrollWidth <= plans.clientWidth + 1, 'A plan leaves the orchestrator card');
+      const clipped = [...plans.querySelectorAll('.plan-title, .why, .plan-reason')].filter(el => el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1);
+      requireFact(!clipped.length, 'A plan is cut off: ' + clipped.map(el => el.textContent.slice(0, 30)).join(' | '));
       find('.new-ticket textarea').value = '';
       find('.new-ticket textarea').dispatchEvent(new Event('input', { bubbles: true }));
       window.updateFactory(snapshot);

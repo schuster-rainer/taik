@@ -375,7 +375,8 @@ private final class FactoryMonitor {
         let field: (String, String) -> String = { text, key in
             text.split(separator: "\n").first { $0.hasPrefix(key + "=") }.map { String($0.dropFirst(key.count + 1)) } ?? ""
         }
-        return entries.filter { $0.pathExtension == "run" && $0.lastPathComponent.hasPrefix("ticket-") }
+        return entries.filter { $0.pathExtension == "run" && $0.lastPathComponent.hasPrefix("ticket-")
+                && !$0.deletingPathExtension().lastPathComponent.contains(".") }
             .sorted { $0.lastPathComponent < $1.lastPathComponent }.compactMap { url in
             let name = url.deletingPathExtension().lastPathComponent
             guard !FileManager.default.fileExists(atPath: state.appendingPathComponent("proposals/" + name).path),

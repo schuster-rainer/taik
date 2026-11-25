@@ -1,0 +1,30 @@
+112	start	Factory hat den Auftrag übernommen
+547	worker	Eingehängter Worker claude-fable liefert Quellcode
+587	worker	4096 Bytes Quellcode empfangen
+605	worker	8192 Bytes Quellcode empfangen
+619	worker	12288 Bytes Quellcode empfangen
+636	worker	16384 Bytes Quellcode empfangen
+652	worker	20480 Bytes Quellcode empfangen
+665	worker	24576 Bytes Quellcode empfangen
+678	worker	28672 Bytes Quellcode empfangen
+695	worker	32768 Bytes Quellcode empfangen
+728	worker	36864 Bytes Quellcode empfangen
+742	worker	40960 Bytes Quellcode empfangen
+756	worker	45056 Bytes Quellcode empfangen
+771	worker	49152 Bytes Quellcode empfangen
+787	worker	53248 Bytes Quellcode empfangen
+801	worker	57344 Bytes Quellcode empfangen
+815	worker	61440 Bytes Quellcode empfangen
+829	worker	65536 Bytes Quellcode empfangen
+847	worker	69632 Bytes Quellcode empfangen
+862	worker	73728 Bytes Quellcode empfangen
+876	worker	77824 Bytes Quellcode empfangen
+891	worker	81920 Bytes Quellcode empfangen
+909	worker	86016 Bytes Quellcode empfangen
+924	worker	90112 Bytes Quellcode empfangen
+939	worker	94208 Bytes Quellcode empfangen
+954	worker	98304 Bytes Quellcode empfangen
+972	worker	101425 Bytes Quellcode empfangen
+984	evaluate	Unabhängiges, gespeichertes Prüfgate ausführen
+57669	checks	AssertionError [ERR_ASSERTION]: a plan is not cut off
+68799	rejected	Manual source round ended. Inspect the gate evidence before another submission.
