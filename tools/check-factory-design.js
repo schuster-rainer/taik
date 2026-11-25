@@ -136,6 +136,24 @@ async function runDesignGate(requireOpen) {
       await delayFrame();
       requireFact(!find('#taik-ticket').textContent.includes(question), 'The question stayed after the snapshot changed');
     }
+    // A proposal of the Factory is a ticket too: a click shows it with approval and comment.
+    {
+      const proposed = structuredClone(snapshot);
+      proposed.proposals = [{ name: 'probe-vorschlag', intent: 'Einen Vorschlag als Ticket zeigen', origin: 'job-floorplanner' }];
+      window.updateFactory(proposed);
+      await delayFrame();
+      find('button[data-board-tab="open"]').click();
+      await delayFrame();
+      find('#taik-board button[data-ticket="proposal:probe-vorschlag"]').click();
+      await delayFrame();
+      const ticket = find('#taik-ticket');
+      requireFact(ticket?.dataset.proposal === 'probe-vorschlag', 'A click on a proposal did not open it as the ticket');
+      requireFact(rendered(ticket.querySelector('button[data-proposal="probe-vorschlag"]')) && rendered(ticket.querySelector('textarea')), 'The proposal ticket lacks approval or comment');
+      requireFact(find('#taik-board button[data-ticket="proposal:probe-vorschlag"]').getAttribute('aria-current') === 'true', 'The shown proposal is not marked in the list');
+      window.updateFactory(snapshot);
+      await delayFrame();
+      await chooseTicket('job-floorplanner');
+    }
     // Crew: a new agent is typed while the snapshot refreshes. The draft and the focus survive.
     const crew = find('#taik-crew');
     if (crew) {
