@@ -15,7 +15,26 @@ use crate::{Outcome, Progress, Result, record};
 
 pub const LIMIT: usize = 96 * 1024;
 const ROUNDS: usize = 4;
-const WORKER_TIMEOUT: Duration = Duration::from_secs(150);
+// A worker holds a lease that every piece of output renews. Silence beyond the lease ends the call
+// as stalled, and no call runs past the ceiling. The job lock keeps a second worker off the job.
+const WORKER_LEASE: Duration = Duration::from_secs(60);
+const WORKER_CEILING: Duration = Duration::from_secs(900);
+const HEARTBEAT: Duration = Duration::from_secs(15);
+
+fn duration_from(variable: &str, default: Duration) -> Duration {
+    env::var(variable)
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .map_or(default, Duration::from_millis)
+}
+
+fn worker_lease() -> Duration {
+    duration_from("TAIK_WORKER_LEASE_MS", WORKER_LEASE)
+}
+
+fn worker_ceiling() -> Duration {
+    duration_from("TAIK_WORKER_CEILING_MS", WORKER_CEILING)
+}
 const GATE_TIMEOUT: Duration = Duration::from_secs(15);
 pub const REQUEST: &str = "decision=accepted\nkind=software\nprocedure=\ntags=\nend\n";
 pub const FOLLOW_UP_SUFFIX: &str = "-folgeauftrag";
@@ -302,6 +321,8 @@ fn run_round(
     let mut claude_called = false;
     let mut gate_ms = None;
     let mut patch_blocks = None;
+    let mut beat = Instant::now();
+    let mut heartbeats: Vec<usize> = Vec::new();
     let execution = (|| -> Result<_> {
         let html = if persisted.try_exists()? {
             progress.event(
@@ -318,7 +339,8 @@ fn run_round(
             );
             let bytes = read_bytes(
                 libc::STDIN_FILENO,
-                Instant::now() + WORKER_TIMEOUT,
+                Instant::now() + worker_ceiling(),
+                Some(worker_lease()),
                 LIMIT,
                 |data| {
                     show_draft(draft.as_mut(), data);
@@ -366,6 +388,10 @@ fn run_round(
                 claude_called = true;
                 let (html, usage) = claude(&program, &workspace, path, &prompt, |text| {
                     show_draft(draft.as_mut(), text.as_bytes());
+                    if beat.elapsed() >= HEARTBEAT {
+                        beat = Instant::now();
+                        heartbeats.push(text.len());
+                    }
                 })?;
                 progress.event("worker", format_args!("{}", single_line(&usage)));
                 second_worker = usage;
@@ -377,6 +403,10 @@ fn run_round(
                 );
                 codex(&workspace, path, &prompt, &mut progress, |text| {
                     show_draft(draft.as_mut(), text.as_bytes());
+                    if beat.elapsed() >= HEARTBEAT {
+                        beat = Instant::now();
+                        heartbeats.push(text.len());
+                    }
                 })
             };
             match (first, env::var(SECOND_WORKER)) {
@@ -392,6 +422,10 @@ fn run_round(
                     second_worker = format!("worker_fallback={reason}\n");
                     let (html, usage) = claude(&program, &workspace, path, &prompt, |text| {
                         show_draft(draft.as_mut(), text.as_bytes());
+                        if beat.elapsed() >= HEARTBEAT {
+                            beat = Instant::now();
+                            heartbeats.push(text.len());
+                        }
                     })?;
                     progress.event("worker", format_args!("{}", single_line(&usage)));
                     second_worker.push_str(&usage);
@@ -400,6 +434,15 @@ fn run_round(
                 (first, _) => first?,
             }
         };
+        if let Some(last) = heartbeats.last() {
+            progress.event(
+                "worker",
+                format_args!(
+                    "Lease durch laufende Ausgabe gehalten, {} Herzschläge, zuletzt bei {last} Zeichen",
+                    heartbeats.len()
+                ),
+            );
+        }
         progress.event(
             "evaluate",
             format_args!("Unabhängiges, gespeichertes Prüfgate ausführen"),
@@ -499,7 +542,7 @@ fn run_round(
     let feedback_record = feedback.map_or("", |feedback| feedback.record.as_str());
     let further = further.as_deref().unwrap_or("");
     let report = format!(
-        "decision={decision}\nkind=software\nprocedure=\ntags=\nidentity={stem}\nintent={intent}\nbaseline={baseline}\nworker={worker}\n{second_worker}{worker_observation}limits={budget} rounds; worker 150s; verifier 15s; 96KiB source\n\
+        "decision={decision}\nkind=software\nprocedure=\ntags=\nidentity={stem}\nintent={intent}\nbaseline={baseline}\nworker={worker}\n{second_worker}{worker_observation}limits={budget} rounds; worker lease 60s up to 900s; verifier 15s; 96KiB source\n\
          gate_sha256={digest}\ngate_ms={}\npatch_blocks={}\nchecks={checks}\nartifact={artifact}\nrejected_candidate={rejected_candidate}\nfeedback={feedback_record}\nfollow_up={further}\ncontinuation={continuation}\nadvance={advance}\nend\n",
         gate_ms.map_or_else(String::new, |ms| ms.to_string()),
         patch_blocks.map_or_else(String::new, |blocks: usize| blocks.to_string()),
@@ -706,7 +749,7 @@ pub(crate) fn codex(
             .arg(&result)
             .arg("--")
             .arg(prompt),
-        WORKER_TIMEOUT,
+        worker_ceiling(),
         "execute",
         execution_started,
         |data| {
@@ -953,7 +996,7 @@ fn savant(
         "-N",
         "--fail-with-body",
         "--max-time",
-        "150",
+        "900",
         "-K",
         "request.conf",
         "-d",
@@ -966,7 +1009,7 @@ fn savant(
     let mut done = false;
     let response = run_worker_limited(
         &mut command,
-        WORKER_TIMEOUT,
+        worker_ceiling(),
         STREAM_LIMIT,
         "execute",
         started,
@@ -1099,7 +1142,7 @@ fn claude(
     let mut account = String::new();
     let response = run_worker_limited(
         &mut command,
-        WORKER_TIMEOUT,
+        worker_ceiling(),
         STREAM_LIMIT,
         "execute",
         started,
@@ -1249,9 +1292,12 @@ fn run_worker_limited(
     started: Instant,
     update: impl FnMut(&[u8]),
 ) -> Result<ChildResult> {
-    let result = run_child_limited(command, timeout, limit, update).map_err(|error| {
+    // A timeout at the ceiling means a leased worker call. Shorter calls such as a login have no lease.
+    let lease = (timeout == worker_ceiling()).then(worker_lease);
+    let result = run_child_limited(command, timeout, lease, limit, update).map_err(|error| {
         let kind = match error.downcast_ref::<ProcessLimit>() {
             Some(ProcessLimit::Deadline) => "timeout",
+            Some(ProcessLimit::Stalled) => "stalled",
             Some(ProcessLimit::Output) => "output-limit",
             None => "process-error",
         };
@@ -1314,6 +1360,7 @@ pub(crate) struct ChildResult {
 #[derive(Debug)]
 enum ProcessLimit {
     Deadline,
+    Stalled,
     Output,
 }
 
@@ -1321,6 +1368,7 @@ impl Display for ProcessLimit {
     fn fmt(&self, output: &mut fmt::Formatter<'_>) -> fmt::Result {
         output.write_str(match self {
             Self::Deadline => "process deadline exceeded",
+            Self::Stalled => "worker sent nothing within its lease",
             Self::Output => "worker output exceeded byte limit",
         })
     }
@@ -1377,12 +1425,13 @@ pub(crate) fn run_child(
     timeout: Duration,
     update: impl FnMut(&[u8]),
 ) -> Result<ChildResult> {
-    run_child_limited(command, timeout, 4 * LIMIT, update)
+    run_child_limited(command, timeout, None, 4 * LIMIT, update)
 }
 
 fn run_child_limited(
     command: &mut Command,
     timeout: Duration,
+    lease: Option<Duration>,
     limit: usize,
     update: impl FnMut(&[u8]),
 ) -> Result<ChildResult> {
@@ -1413,7 +1462,7 @@ fn run_child_limited(
             .as_ref()
             .ok_or("missing worker output")?
             .as_raw_fd();
-        let bytes = read_bytes(fd, deadline, limit, update)?;
+        let bytes = read_bytes(fd, deadline, lease, limit, update)?;
         let status = loop {
             if let Some(status) = child.try_wait()? {
                 break status;
@@ -1444,15 +1493,31 @@ fn run_child_limited(
 fn read_bytes(
     fd: RawFd,
     deadline: Instant,
+    lease: Option<Duration>,
     limit: usize,
     mut update: impl FnMut(&[u8]),
 ) -> Result<Vec<u8>> {
     let mut all = Vec::new();
     let mut buffer = [0u8; 4096];
+    let mut renewed = Instant::now();
     loop {
-        let remaining = deadline.saturating_duration_since(Instant::now());
+        let lease_end = lease.map(|lease| renewed + lease);
+        let stalls_first = lease_end.is_some_and(|end| end < deadline);
+        let until = if stalls_first {
+            lease_end.unwrap_or(deadline)
+        } else {
+            deadline
+        };
+        let expired = || {
+            if stalls_first {
+                ProcessLimit::Stalled
+            } else {
+                ProcessLimit::Deadline
+            }
+        };
+        let remaining = until.saturating_duration_since(Instant::now());
         if remaining.is_zero() {
-            return Err(ProcessLimit::Deadline.into());
+            return Err(expired().into());
         }
         let mut signal = libc::pollfd {
             fd,
@@ -1461,7 +1526,7 @@ fn read_bytes(
         };
         let ready = unsafe { libc::poll(&mut signal, 1, remaining.as_millis().max(1) as i32) };
         if ready == 0 {
-            return Err(ProcessLimit::Deadline.into());
+            return Err(expired().into());
         }
         if ready < 0 {
             let error = io::Error::last_os_error();
@@ -1486,6 +1551,7 @@ fn read_bytes(
             return Err(ProcessLimit::Output.into());
         }
         all.extend_from_slice(&buffer[..size]);
+        renewed = Instant::now();
         update(&all);
     }
 }

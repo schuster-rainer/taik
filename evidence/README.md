@@ -42,6 +42,7 @@
 
 - [Versuch mit und ohne wiederverwendetes Ergebnis, mit Auswertung](jobs/job-galaxy-quellcode/summary.run)
 - [Nachfolgeauftrag von Grund auf gegen aufbauend auf dem angenommenen Stand](jobs/job-galaxy-quellcode/summary-02.run)
+- [Wiederholung über den Dienst mit Patch-Angebot](jobs/job-galaxy-quellcode/summary-03.run)
 - [Gemeinsames Gate](jobs/job-galaxy-quellcode/gate.mjs), [Auftrag ohne](jobs/job-galaxy-quellcode/brief-ohne.md) und [mit Wiederverwendung](jobs/job-galaxy-quellcode/brief-mit.md)
 
 ## Supermarkt-Floorplanner
@@ -71,6 +72,7 @@
 - [Erste Entscheidung der Factory über ihren Nachfolger](jobs/job-backend/round-01.run) und [Prüfungen](jobs/job-backend/round-01.checks.log)
 - [Tagesgrenze für Worker-Kosten](jobs/job-backend/round-02.run)
 - [Startup-Reflexion über den eingestellten Worker](jobs/job-backend/round-03.run)
+- [Patch-Format und aufbauende Aufträge](jobs/job-backend/round-07.run) und [Lease mit Heartbeat statt starrer Zeitgrenze](jobs/job-backend/round-08.run)
 - [Drosselung des Gates unter launchd, gemessen](jobs/job-dienst-drosselung/summary.run)
 - [Dauerprozess gegen Start bei Bedarf, gemessen](jobs/job-dienst-form/summary.run)
 

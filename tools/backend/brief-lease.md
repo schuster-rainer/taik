@@ -1,0 +1,3 @@
+Die starre Zeitgrenze des Workers durch eine Lease mit Heartbeat ersetzen.
+
+Beobachtung: Ein Vorschlag über Opus wurde nach 150 s beendet, obwohl der Worker arbeitete. Der Nutzer hat am 2026-11-25 eine Lease verlangt, die ein arbeitender Worker verlängert, ohne dass Arbeit abgewürgt, überholt oder aufgehalten wird. Jede Ausgabe des Workers erneuert eine Lease von 60 s. Bleibt er länger still, endet der Aufruf als `stalled`. Kein Aufruf läuft über die Obergrenze von 900 s. Die Auftragssperre verhindert weiterhin einen zweiten Worker am selben Auftrag. Die Spur vermerkt, dass die Lease gehalten wurde.

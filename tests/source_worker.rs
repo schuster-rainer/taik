@@ -509,3 +509,92 @@ fn a_queued_job_builds_on_an_accepted_source_through_a_patch() {
     assert!(!job.join("round-01.html").exists());
     assert!(job.join("round-02.run").exists() && !job.join("round-03.run").exists());
 }
+
+#[test]
+fn a_worker_keeps_its_lease_by_output_and_loses_it_by_silence() {
+    let root = tempfile::Builder::new()
+        .prefix("taik-lease-")
+        .tempdir_in("/tmp")
+        .unwrap();
+    let brief = root.path().join("brief.md");
+    fs::write(&brief, "Deliver a marked document\n").unwrap();
+    let gate = root.path().join("verify.mjs");
+    fs::write(&gate, "console.log('PASS: any');\n").unwrap();
+    let worker = root.path().join("lead");
+    let delta = r#"{"type":"stream_event","event":{"delta":{"type":"text_delta","text":"x"}}}"#;
+    let result = r#"{"type":"result","is_error":false,"result":"<!doctype html><p>ok</p>","usage":{"output_tokens":1},"total_cost_usd":0,"modelUsage":{"m":{}}}"#;
+    let cases = [
+        // Output every 0.3 s for 1.8 s: longer than the lease of 1 s, shorter than the ceiling.
+        (
+            "working",
+            format!(
+                "for i in 1 2 3 4 5 6; do echo '{delta}'; sleep 0.3; done; echo '{result}'"
+            ),
+            Some(0),
+            "",
+        ),
+        // Silent for longer than the lease.
+        (
+            "silent",
+            format!("sleep 3; echo '{result}'"),
+            Some(1),
+            "stalled",
+        ),
+        // Output without end: the ceiling of 2.5 s ends it.
+        (
+            "endless",
+            format!("while true; do echo '{delta}'; sleep 0.2; done"),
+            Some(1),
+            "timeout",
+        ),
+    ];
+    for (name, body, expected, failure) in cases {
+        fs::write(&worker, format!("#!/bin/sh\n{body}\n")).unwrap();
+        fs::set_permissions(&worker, fs::Permissions::from_mode(0o700)).unwrap();
+        let state = root.path().join(name);
+        let queued = factory()
+            .arg("queue-source")
+            .arg(&state)
+            .arg(name)
+            .arg(&brief)
+            .arg(&gate)
+            .output()
+            .unwrap();
+        assert!(queued.status.success(), "{queued:?}");
+        let started = std::time::Instant::now();
+        let outcome = factory()
+            .arg("drain")
+            .arg(&state)
+            .env("TAIK_LEAD_WORKER", &worker)
+            .env("TAIK_WORKER_LEASE_MS", "1000")
+            .env("TAIK_WORKER_CEILING_MS", "2500")
+            .env_remove("TAIK_SECOND_WORKER")
+            .env_remove("TAIK_AUTO_PROPOSE")
+            .output()
+            .unwrap();
+        let elapsed = started.elapsed();
+        let record =
+            fs::read_to_string(state.join(format!("jobs/job-{name}/round-01.run"))).unwrap();
+        assert_eq!(outcome.status.code(), expected, "{name}: {record}");
+        if failure.is_empty() {
+            assert!(record.starts_with("decision=accepted\n"), "{record}");
+            assert!(
+                elapsed.as_millis() >= 1700,
+                "{name} ended early: {elapsed:?}"
+            );
+        } else {
+            assert!(
+                record.contains(&format!("\nworker_failure={failure}\n")),
+                "{name}: {record}"
+            );
+            assert!(
+                elapsed.as_secs() < 6,
+                "{name} was not stopped in time: {elapsed:?}"
+            );
+        }
+        // A finished round leaves the job free: a second drain neither repeats nor overtakes it.
+        let again = factory().arg("drain").arg(&state).output().unwrap();
+        assert_eq!(again.status.code(), Some(0), "{name}: {again:?}");
+        assert!(!state.join(format!("jobs/job-{name}/round-02.run")).exists());
+    }
+}

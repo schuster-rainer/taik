@@ -1,0 +1,20 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-08
+intent=Die starre Zeitgrenze des Workers durch eine Lease mit Heartbeat ersetzen.
+baseline=taik-seed d47a62a41beb6566e9b527486d99a797c5a7c979df194a9ae36092d94557e365
+worker=claude-fable
+decided_by=the installed taik-seed d47a62a41beb6566e9b527486d99a797c5a7c979df194a9ae36092d94557e365 at /Users/rainer/.local/state/taik-factory/taik-seed
+limits=99 rounds; gate 900s; candidate checks 10s each
+gate_sha256=76b41170f51fa7e1a5424ba01f903bcf2276b8f8f19e4d87f952e88d18b6b0ce
+gate_ms=13821
+checks=PASS: Rust tests, Clippy with warnings denied, release build; candidate seeded, rejected an invalid procedure without touching the accepted record, and extended it
+evidence=round-08.checks.log
+artifact=round-08-taik-seed
+artifact_sha256=540c34255a55ec257aa306fc7c4ded201f0435cc8582dbd10b126acfe75f4880
+rollback=round-08.rollback-taik-seed
+continuation=Restart the service so that it runs the accepted binary.
+advance=false
+end

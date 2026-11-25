@@ -1,0 +1,25 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-02
+intent=Prüfbefund aus round-01.run bearbeiten
+baseline=/Users/rainer/projects/ideas/talk/evidence/jobs/job-mc2-dienst-patch-2/submission.seed.html
+worker=savant
+worker_model=subq-savant-1.4
+worker_input_tokens=10806
+worker_output_tokens=13586
+worker_cost_usd=0.007874
+worker_duration_ms=35107
+limits=4 rounds; worker 150s; verifier 15s; 96KiB source
+gate_sha256=1f145e2fe33ff4dac32b0804163e6161f3f2c1b84159ac6d05cf41a89b810dd0
+gate_ms=954
+patch_blocks=
+checks=PASS: 116 Verhaltensprüfungen bestanden
+artifact=round-02.html
+rejected_candidate=
+feedback=round-01.run
+follow_up=
+continuation=Retain the accepted artifact. No further work was authorized by this round.
+advance=false
+end

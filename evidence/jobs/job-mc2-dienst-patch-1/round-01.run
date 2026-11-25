@@ -1,0 +1,25 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=# MiniCalc 2
+baseline=/Users/rainer/projects/ideas/talk/evidence/jobs/job-mc2-dienst-patch-1/submission.seed.html
+worker=savant
+worker_model=subq-savant-1.4
+worker_input_tokens=5563
+worker_output_tokens=22871
+worker_cost_usd=0.011992
+worker_duration_ms=60056
+limits=4 rounds; worker 150s; verifier 15s; 96KiB source
+gate_sha256=1f145e2fe33ff4dac32b0804163e6161f3f2c1b84159ac6d05cf41a89b810dd0
+gate_ms=2055
+patch_blocks=
+checks=PASS: 116 Verhaltensprüfungen bestanden
+artifact=round-01.html
+rejected_candidate=
+feedback=
+follow_up=
+continuation=Retain the accepted artifact. No further work was authorized by this round.
+advance=false
+end

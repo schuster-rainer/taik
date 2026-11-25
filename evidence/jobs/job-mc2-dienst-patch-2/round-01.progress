@@ -1,0 +1,6 @@
+147	start	Factory hat den Auftrag übernommen
+550	worker	Savant erhält Auftrag und akzeptierten Ausgangsstand
+38758499	worker	worker_model=subq-savant-1.4 worker_input_tokens=5563 worker_output_tokens=14934 worker_cost_usd=0.008023 worker_duration_ms=38757 
+38758575	evaluate	Unabhängiges, gespeichertes Prüfgate ausführen
+39033990	checks	AssertionError [ERR_ASSERTION]: rustc ist fehlgeschlagen:
+39046134	rejected	Revise the retained source using the gate diagnosis, then run the same gate.

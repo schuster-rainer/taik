@@ -34,6 +34,8 @@ This is a running seed, not a product. What the evidence supports today:
 4. The Factory writes a **`.run` record** with the decision, the worker, the gate digest, the checks and the continuation. Records are create-only.
 5. A job has at most four source rounds. A rejected candidate with an actionable assertion goes back to the worker with the diagnosis.
 
+A worker holds a lease of 60 s that each piece of its output renews. A worker that stays silent longer ends as `stalled`. No call runs longer than 900 s. A lock on the job keeps a second worker away. When an accepted source exists, the worker may return a patch of SEARCH/REPLACE blocks instead of the whole document. The gate always judges the complete result.
+
 ## Build and try
 
 Requires Rust with edition 2024 and a filesystem with hard links. Software jobs need macOS and Node.js.
@@ -69,7 +71,7 @@ taik-seed source evidence/jobs/job-NAME brief.md verify.mjs --attached=NAME < ca
 A queued job, worked by the service without supervision:
 
 ```sh
-taik-seed queue-source STATE NAME brief.md verify.mjs
+taik-seed queue-source STATE NAME brief.md verify.mjs [accepted-source]
 ```
 
 `STATE` is the service's state directory. The command snapshots brief and gate into `STATE/jobs/job-NAME` and wakes the service.
@@ -186,7 +188,7 @@ taik-seed propose STATE NAME RECORD.run
 taik-seed approve STATE NAME
 taik-seed experiment BASELINE.run OUTPUT_DIRECTORY
 taik-seed queue STATE BASELINE.run
-taik-seed queue-source STATE NAME BRIEF GATE
+taik-seed queue-source STATE NAME BRIEF GATE [ACCEPTED_SOURCE]
 taik-seed queue-self STATE
 taik-seed drain|serve STATE
 taik-seed serve STATE --reflect

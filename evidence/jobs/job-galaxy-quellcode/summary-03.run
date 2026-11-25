@@ -1,0 +1,13 @@
+decision=observed
+identity=galaxy-quellcode-03
+intent=Den Nachfolgeauftrag über den Dienst wiederholen, mit der Möglichkeit, nur einen Patch zu liefern.
+scope=MiniCalc 2 with the same brief and gate as in summary-02.run. Six queued jobs on the live service with Savant 1.4, alternating: three without a source, three with the accepted interpreter as the starting source and the patch offer in the prompt. Costs come from the round records.
+scratch=../job-mc2-dienst-neu-1 to -3: all accepted in round 1. 122 s, 34 s, 88 s. 0.0175, 0.0076, 0.0152 USD. Output tokens 34497, 14664, 29948.
+reuse=../job-mc2-dienst-patch-1 to -3: rounds 1, 2, 1. 60 s, 74 s, 63 s. 0.0120, 0.0159, 0.0084 USD. One first round was rejected because the candidate did not compile.
+patch_use=None. The worker returned a complete document in all four reuse rounds. The patch path ran only in the tests.
+observation=Means 0.0121 USD and 66 s with the accepted source, 0.0134 USD and 81 s without. The difference is inside the spread of single runs. Together with summary-02.run: nine runs per side would be needed at least to see an effect of this size.
+interpretation=The extension touches most of the interpreter, so rewriting is the natural answer and reuse cannot save output. A patch can only pay where a small change meets a large artifact.
+g03=Not established for this task.
+i03=Not established for this task.
+continuation=Test the patch path where it fits: a small change to the viewer, about 50 KiB, queued with the installed viewer as the starting source and its pinned gate.
+end
