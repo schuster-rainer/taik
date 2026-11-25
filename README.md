@@ -18,7 +18,7 @@ This is a running seed, not a product. What the evidence supports today:
 | A rejected candidate leaves the accepted result intact | Shown |
 | Accepted work survives a restart and is reused by later rounds | Shown |
 | The Factory changes its own procedures and viewer through its own gate | Shown for the search procedure and the viewer |
-| The Factory judges and installs its own backend | Not yet. Backend rounds were decided by their authors. See [the process reflection](evidence/jobs/job-prozess-reflexion/summary.run) |
+| The Factory judges and installs its own backend | Shown once. The installed binary ran the pinned gate, checked the candidate itself and replaced itself in [job-backend](evidence/jobs/job-backend/round-01.run). The thirteen rounds before were decided by their authors |
 | Reusing a result across jobs lowers cost (G-03, I-03) | Not supported on software jobs. See [the experiment](evidence/jobs/job-galaxy-quellcode/summary.run) |
 | The seed derives its own learning procedure (I-01) | Not shown. Every learning rule so far was written by an external agent |
 
@@ -99,17 +99,30 @@ cp tools/service/local.taik.factory.plist ~/Library/LaunchAgents/
 launchctl bootstrap "gui/$(id -u)" ~/Library/LaunchAgents/local.taik.factory.plist
 ```
 
+The template sets `ProcessType` to `Interactive`. Without it launchd throttled the gate process to between 2.5 and 13.8 s instead of 90 ms.
+
 Whether the service should stay a persistent process is open. A cold `drain` over the current 22 jobs takes about 5 ms. The in-memory cache of completed jobs pays off from a few hundred archived jobs.
+
+## Changing the backend
+
+The installed binary judges its successor:
+
+```sh
+installed="$state/taik-seed"
+"$installed" promote evidence/jobs/job-backend brief.md tools/backend/gate.sh "$installed" AUTHOR
+```
+
+Only the installed binary may run this. It pins the gate, runs it in the checkout to test and build the candidate, then exercises the candidate with seed, reject and extend checks of its own. On acceptance it keeps candidate and predecessor in the job folder, replaces itself and writes the record. A running service notices the replacement and leaves the next job to its successor.
 
 ## The viewer
 
-<img src="evidence/jobs/job-factory-neomorph/round-01.screenshot.png" alt="TAIK Factory viewer" width="820">
+<img src="evidence/jobs/job-factory-neomorph/round-02.screenshot.png" alt="TAIK Factory viewer" width="820">
 
 `./tools/open-factory-view.sh` builds and installs **TAIK Factory.app** into `~/Applications`. The window follows the job with the latest activity and updates on filesystem events. It makes no model calls.
 
 - Left: the goal and the history of the selected job. **Arbeitsschritte** shows the trace of a round, **Prüfprotokoll** its decision record with keys, outcomes, digests, file names and quantities marked.
 - Right, top: the published Floorplanner, running in a script-only sandbox without network.
-- Right, bottom: the selected job. During a round it renders the draft without scripts above its source, next to the live progress.
+- Right, bottom: the selected job. During a round it renders the draft without scripts above its source, next to the live progress. The Claude worker streams, so the draft grows while it writes.
 
 The viewer is `tools/factory-view.html`. It changes only through a source job. Before installing, check a snapshot:
 
@@ -125,6 +138,7 @@ The viewer is `tools/factory-view.html`. It changes only through a source job. B
 | Reordering the tag procedure | 14 to 9 bytes sent to lowercasing, 4 to 3 items sorted, same output | [job-tag-prozedur](evidence/jobs/job-tag-prozedur/08-local-reduce.run) |
 | Time to the first result with 2000 archived jobs | 239.8 ms to 50.2 ms, median of 8 | [round 9](evidence/jobs/job-rust-entrypoint/round-09.run) |
 | Unattended round without a working worker | rejected, then accepted after a second worker was configured | [before](evidence/jobs/job-worker-verfuegbarkeit/round-01.run), [after](evidence/jobs/job-worker-verfuegbarkeit-2/round-01.run) |
+| Gate process under launchd | 2.5 to 13.8 s with the default process type, 75 to 90 ms with `Interactive`, four runs each | [summary](evidence/jobs/job-dienst-drosselung/summary.run) |
 | Reuse of an accepted operator in another software job | no benefit: 0.122 against 0.100 USD mean, all four runs accepted in round 1 | [summary](evidence/jobs/job-galaxy-quellcode/summary.run) |
 | Reuse including setup on tag batches | slower than both comparators at that sample size | [summary](evidence/jobs/job-galaxy-intelligence/summary.run) |
 
@@ -145,6 +159,7 @@ taik-seed reject|refine BASELINE.run OUTPUT.run
 taik-seed evolve BASELINE.run OUTPUT.run
 taik-seed evaluate BASELINE.run OUTPUT.run ORDER
 taik-seed source JOB BRIEF GATE [--attached[=WORKER]]
+taik-seed promote JOB BRIEF GATE INSTALLED_BINARY WORKER
 taik-seed experiment BASELINE.run OUTPUT_DIRECTORY
 taik-seed queue STATE BASELINE.run
 taik-seed queue-source STATE NAME BRIEF GATE

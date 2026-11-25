@@ -26,6 +26,8 @@ const SEED: &str = "submission.seed.html";
 const SECOND_WORKER: &str = "TAIK_SECOND_WORKER";
 // Absolute path of a Claude CLI that does the work first. Codex is not called while this is set.
 const LEAD_WORKER: &str = "TAIK_LEAD_WORKER";
+// A streamed answer wraps each few characters in an event, so it is far larger than the document.
+const STREAM_LIMIT: usize = 64 * LIMIT;
 const POLICY: &str = r#"(version 1) (allow default) (deny file-write*)
     (allow file-write* (subpath (param "WORK")))
     (deny file-read* (subpath (param "PROJECT")))
@@ -337,9 +339,10 @@ fn run_round(
                     format_args!("Claude erhält Auftrag und akzeptierten Ausgangsstand"),
                 );
                 claude_called = true;
-                let (html, usage) = claude(&program, &workspace, path, &prompt)?;
+                let (html, usage) = claude(&program, &workspace, path, &prompt, |text| {
+                    show_draft(draft.as_mut(), text.as_bytes());
+                })?;
                 progress.event("worker", format_args!("{}", single_line(&usage)));
-                show_draft(draft.as_mut(), html.as_bytes());
                 second_worker = usage;
                 Ok(html)
             } else {
@@ -362,9 +365,10 @@ fn run_round(
                     fs::create_dir(&workspace)?;
                     claude_called = true;
                     second_worker = format!("worker_fallback={reason}\n");
-                    let (html, usage) = claude(&program, &workspace, path, &prompt)?;
+                    let (html, usage) = claude(&program, &workspace, path, &prompt, |text| {
+                        show_draft(draft.as_mut(), text.as_bytes());
+                    })?;
                     progress.event("worker", format_args!("{}", single_line(&usage)));
-                    show_draft(draft.as_mut(), html.as_bytes());
                     second_worker.push_str(&usage);
                     html
                 }
@@ -714,7 +718,13 @@ fn unfenced(source: &str) -> Option<String> {
 }
 
 // A second worker without tools. It sees the prompt and nothing of the project or the job.
-fn claude(program: &str, scratch: &Path, job: &Path, prompt: &str) -> Result<(String, String)> {
+fn claude(
+    program: &str,
+    scratch: &Path,
+    job: &Path,
+    prompt: &str,
+    mut show_code: impl FnMut(&str),
+) -> Result<(String, String)> {
     let started = Instant::now();
     let named = |mut failure: WorkerFailure| {
         failure.worker = "Claude";
@@ -736,21 +746,50 @@ fn claude(program: &str, scratch: &Path, job: &Path, prompt: &str) -> Result<(St
             "--setting-sources",
             "",
             "--output-format",
-            "json",
+            "stream-json",
+            "--verbose",
+            "--include-partial-messages",
             "--system-prompt",
             "You are a code worker. Reply with the requested document only.",
             "--",
         ])
         .arg(prompt);
-    let response = run_worker(&mut command, WORKER_TIMEOUT, "execute", started, |_| {}).map_err(
-        |error| match error.downcast::<WorkerFailure>() {
-            Ok(failure) => named(*failure).into(),
-            Err(error) => error,
+    // Each text delta extends the draft that the viewer shows while the worker writes.
+    let mut next_line = 0;
+    let mut written = String::new();
+    let response = run_worker_limited(
+        &mut command,
+        WORKER_TIMEOUT,
+        STREAM_LIMIT,
+        "execute",
+        started,
+        |data| {
+            while let Some(newline) = data[next_line..].iter().position(|byte| *byte == b'\n') {
+                let end = next_line + newline;
+                if let Ok(event) =
+                    serde_json::from_slice::<serde_json::Value>(&data[next_line..end])
+                    && let Some(text) = event["event"]["delta"]["text"].as_str()
+                    && event["event"]["delta"]["type"] == "text_delta"
+                {
+                    written.push_str(text);
+                    show_code(&written);
+                }
+                next_line = end + 1;
+            }
         },
-    )?;
+    )
+    .map_err(|error| match error.downcast::<WorkerFailure>() {
+        Ok(failure) => named(*failure).into(),
+        Err(error) => error,
+    })?;
     let invalid = || named(WorkerFailure::new("output", "invalid-response", started));
-    let report: serde_json::Value =
-        serde_json::from_slice(&response.stdout).map_err(|_| invalid())?;
+    let report = response
+        .stdout
+        .split(|byte| *byte == b'\n')
+        .rev()
+        .filter_map(|line| serde_json::from_slice::<serde_json::Value>(line).ok())
+        .find(|event| event["type"] == "result")
+        .ok_or_else(invalid)?;
     if report["is_error"].as_bool() != Some(false) {
         return Err(invalid().into());
     }
@@ -847,7 +886,18 @@ fn run_worker(
     started: Instant,
     update: impl FnMut(&[u8]),
 ) -> Result<ChildResult> {
-    let result = run_child(command, timeout, update).map_err(|error| {
+    run_worker_limited(command, timeout, 4 * LIMIT, stage, started, update)
+}
+
+fn run_worker_limited(
+    command: &mut Command,
+    timeout: Duration,
+    limit: usize,
+    stage: &'static str,
+    started: Instant,
+    update: impl FnMut(&[u8]),
+) -> Result<ChildResult> {
+    let result = run_child_limited(command, timeout, limit, update).map_err(|error| {
         let kind = match error.downcast_ref::<ProcessLimit>() {
             Some(ProcessLimit::Deadline) => "timeout",
             Some(ProcessLimit::Output) => "output-limit",
@@ -975,6 +1025,15 @@ pub(crate) fn run_child(
     timeout: Duration,
     update: impl FnMut(&[u8]),
 ) -> Result<ChildResult> {
+    run_child_limited(command, timeout, 4 * LIMIT, update)
+}
+
+fn run_child_limited(
+    command: &mut Command,
+    timeout: Duration,
+    limit: usize,
+    update: impl FnMut(&[u8]),
+) -> Result<ChildResult> {
     let deadline = Instant::now() + timeout;
     let mut stderr = tempfile::tempfile()?;
     command
@@ -1002,7 +1061,7 @@ pub(crate) fn run_child(
             .as_ref()
             .ok_or("missing worker output")?
             .as_raw_fd();
-        let bytes = read_bytes(fd, deadline, 4 * LIMIT, update)?;
+        let bytes = read_bytes(fd, deadline, limit, update)?;
         let status = loop {
             if let Some(status) = child.try_wait()? {
                 break status;

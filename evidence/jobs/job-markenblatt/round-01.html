@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TAIK – Markenblatt</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --base: light-dark(#e4e8ee, #21262e);
+  --ink: light-dark(#1b2330, #e9eef5);
+  --accent: light-dark(#0d6b5f, #6fd0bf);
+  --muted: light-dark(#5b6676, #9aa5b4);
+  --rule: light-dark(#c9d0da, #353c47);
+  --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html { background: var(--base); color: var(--ink); }
+body {
+  margin: 0;
+  font: 16px/1.6 var(--font);
+  background: var(--base);
+  color: var(--ink);
+}
+main {
+  max-width: 56rem;
+  margin: 0 auto;
+  padding: 6rem 2rem 8rem;
+}
+header { margin-bottom: 5rem; }
+h1 {
+  margin: 0 0 1rem;
+  font-size: 2.5rem;
+  font-weight: 600;
+  letter-spacing: .3em;
+  line-height: 1.1;
+}
+.lead { margin: 0; max-width: 34rem; font-size: 1.125rem; color: var(--muted); }
+section {
+  padding: 3.5rem 0;
+  border-top: 1px solid var(--rule);
+}
+h2 {
+  margin: 0 0 2rem;
+  font-size: .75rem;
+  font-weight: 600;
+  letter-spacing: .25em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+p { margin: 0 0 1rem; max-width: 38rem; }
+.panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+.panel {
+  padding: 3rem 2rem;
+  border-radius: 4px;
+}
+.panel.light { background: #e4e8ee; color: #1b2330; --a: #0d6b5f; --m: #5b6676; border: 1px solid #c9d0da; }
+.panel.dark { background: #21262e; color: #e9eef5; --a: #6fd0bf; --m: #9aa5b4; border: 1px solid #353c47; }
+.sizes {
+  display: flex;
+  align-items: flex-end;
+  gap: 2.5rem;
+}
+.sizes figure { margin: 0; text-align: center; }
+.sizes figcaption, .label {
+  margin-top: .75rem;
+  font: 11px/1.4 var(--mono);
+  color: var(--m, var(--muted));
+}
+svg.mark { display: block; fill: currentColor; }
+svg.mark .core { fill: var(--a); }
+.wordmark {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+.wordmark .text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  text-transform: uppercase;
+  letter-spacing: .3em;
+}
+.wordmark .taik { font-weight: 600; font-size: 1.5rem; }
+.wordmark .factory { font-weight: 400; font-size: .8125rem; color: var(--m); letter-spacing: .38em; }
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+.swatch { margin: 0; }
+.chip {
+  height: 5rem;
+  border-radius: 4px;
+  border: 1px solid var(--rule);
+}
+.swatch dt { margin-top: .75rem; font-size: .875rem; font-weight: 600; }
+.swatch dd { margin: 0; font: 13px/1.5 var(--mono); color: var(--muted); }
+.name {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1.5rem;
+}
+.name li {
+  display: grid;
+  grid-template-columns: 7rem 1fr;
+  gap: 1.5rem;
+  align-items: baseline;
+}
+.name .key {
+  font-weight: 600;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  font-size: 1.125rem;
+}
+.name .key b { color: var(--accent); font-weight: 600; }
+.rules {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+  align-items: start;
+}
+.rules ul { margin: 0; padding: 0; list-style: none; }
+.rules li { padding: .6rem 0; border-bottom: 1px solid var(--rule); }
+.rules li:first-child { border-top: 1px solid var(--rule); }
+.zone {
+  display: inline-block;
+  padding: 48px;
+  border: 1px dashed var(--muted);
+  position: relative;
+  color: var(--ink);
+}
+.zone svg.mark .core { fill: var(--accent); }
+.zone .inner { outline: 1px solid var(--rule); }
+footer {
+  padding-top: 3rem;
+  border-top: 1px solid var(--rule);
+  font-size: .8125rem;
+  color: var(--muted);
+}
+code { font: .875em var(--mono); }
+@media (max-width: 40rem) {
+  .panels, .rules { grid-template-columns: 1fr; }
+  .swatches { grid-template-columns: 1fr 1fr; }
+  .name li { grid-template-columns: 1fr; gap: .25rem; }
+  .sizes { gap: 1.5rem; }
+}
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <h1>TAIK</h1>
+  <p class="lead">TAIK ist eine Software-Factory, die ihren eigenen Prozess auf sich selbst anwendet.</p>
+</header>
+
+<section aria-labelledby="h-mark">
+  <h2 id="h-mark">Bildmarke</h2>
+  <p>Drei Kammern umschließen einen Kern. Die Kammern tragen die Schriftfarbe, der Kern die Akzentfarbe. Die Marke wird nur als Ganzes und nur in diesen Farben verwendet.</p>
+  <div class="panels">
+    <div class="panel light">
+      <div class="sizes">
+        <figure>
+          <svg class="mark" viewBox="0 0 64 64" width="128" height="128" role="img" aria-label="TAIK Bildmarke, 128 px, hell"><path d="M26.22 14.55A17.35 17.35 0 1 1 18.13 43.58A15.72 15.72 0 1 0 26.22 14.55Z M16.43 31.11A10.96 10.96 0 1 1 36.03 35.93A10.1 10.1 0 1 0 16.43 31.11Z M22.27 37.25A6.47 6.47 0 1 1 32.15 29.67A7.04 7.04 0 0 0 22.27 37.25Z"/><path class="core" d="M26.6 39.95A4.95 4.95 0 1 1 34.1 34.52A5.32 5.32 0 0 0 26.6 39.95Z"/></svg>
+          <figcaption>128 px</figcaption>
+        </figure>
+        <figure>
+          <svg class="mark" viewBox="0 0 64 64" width="48" height="48" role="img" aria-label="TAIK Bildmarke, 48 px, hell"><path d="M26.22 14.55A17.35 17.35 0 1 1 18.13 43.58A15.72 15.72 0 1 0 26.22 14.55Z M16.43 31.11A10.96 10.96 0 1 1 36.03 35.93A10.1 10.1 0 1 0 16.43 31.11Z M22.27 37.25A6.47 6.47 0 1 1 32.15 29.67A7.04 7.04 0 0 0 22.27 37.25Z"/><path class="core" d="M26.6 39.95A4.95 4.95 0 1 1 34.1 34.52A5.32 5.32 0 0 0 26.6 39.95Z"/></svg>
+          <figcaption>48 px</figcaption>
+        </figure>
+        <figure>
+          <svg class="mark" viewBox="0 0 64 64" width="20" height="20" role="img" aria-label="TAIK Bildmarke, 20 px, hell"><path d="M26.22 14.55A17.35 17.35 0 1 1 18.13 43.58A15.72 15.72 0 1 0 26.22 14.55Z M16.43 31.11A10.96 10.96 0 1 1 36.03 35.93A10.1 10.1 0 1 0 16.43 31.11Z M22.27 37.25A6.47 6.47 0 1 1 32.15 29.67A7.04 7.04 0 0 0 22.27 37.25Z"/><path class="core" d="M26.6 39.95A4.95 4.95 0 1 1 34.1 34.52A5.32 5.32 0 0 0 26.6 39.95Z"/></svg>
+          <figcaption>20 px</figcaption>
+        </figure>
+      </div>
+      <div class="label">auf #e4e8ee</div>
+    </div>
+    <div class="panel dark">
+      <div class="sizes">
+        <figure>
+          <svg class="mark" viewBox="0 0 64 64" width="128" height="128" role="img" aria-label="TAIK Bildmarke, 128 px, dunkel"><path d="M26.22 14.55A17.35 17.35 0 1 1 18.13 43.58A15.72 15.72 0 1 0 26.22 14.55Z M16.43 31.11A10.96 10.96 0 1 1 36.03 35.93A10.1 10.1 0 1 0 16.43 31.11Z M22.27 37.25A6.47 6.47 0 1 1 32.15 29.67A7.04 7.04 0 0 0 22.27 37.25Z"/><path class="core" d="M26.6 39.95A4.95 4.95 0 1 1 34.1 34.52A5.32 5.32 0 0 0 26.6 39.95Z"/></svg>
+          <figcaption>128 px</figcaption>
+        </figure>
+        <figure>
+          <svg class="mark" viewBox="0 0 64 64" width="48" height="48" role="img" aria-label="TAIK Bildmarke, 48 px, dunkel"><path d="M26.22 14.55A17.35 17.35 0 1 1 18.13 43.58A15.72 15.72 0 1 0 26.22 14.55Z M16.43 31.11A10.96 10.96 0 1 1 36.03 35.93A10.1 10.1 0 1 0 16.43 31.11Z M22.27 37.25A6.47 6.47 0 1 1 32.15 29.67A7.04 7.04 0 0 0 22.27 37.25Z"/><path class="core" d="M26.6 39.95A4.95 4.95 0 1 1 34.1 34.52A5.32 5.32 0 0 0 26.6 39.95Z"/></svg>
+          <figcaption>48 px</figcaption>
+        </figure>
+        <figure>
+          <svg class="mark" viewBox="0 0 64 64" width="20" height="20" role="img" aria-label="TAIK Bildmarke, 20 px, dunkel"><path d="M26.22 14.55A17.35 17.35 0 1 1 18.13 43.58A15.72 15.72 0 1 0 26.22 14.55Z M16.43 31.11A10.96 10.96 0 1 1 36.03 35.93A10.1 10.1 0 1 0 16.43 31.11Z M22.27 37.25A6.47 6.47 0 1 1 32.15 29.67A7.04 7.04 0 0 0 22.27 37.25Z"/><path class="core" d="M26.6 39.95A4.95 4.95 0 1 1 34.1 34.52A5.32 5.32 0 0 0 26.6 39.95Z"/></svg>
+          <figcaption>20 px</figcaption>
+        </figure>
+      </div>
+      <div class="label">auf #21262e</div>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="h-word">
+  <h2 id="h-word">Wortmarke</h2>
+  <p><strong>TAIK</strong> steht halbfett (600), <strong>FACTORY</strong> normal (400) und gedämpft. Beide stehen in Versalien mit weitem Zeichenabstand (etwa 0,3&nbsp;em). Die Wortmarke steht rechts neben der Bildmarke oder allein.</p>
+  <div class="panels">
+    <div class="panel light">
+      <div class="wordmark">
+        <svg class="mark" viewBox="0 0 64 64" width="48" height="48" aria-hidden="true"><path d="M26.22 14.55A17.35 17.35 0 1 1 18.13 43.58A15.72 15.72 0 1 0 26.22 14.55Z M16.43 31.11A10.96 10.96 0 1 1 36.03 35.93A10.1 10.1 0 1 0 16.43 31.11Z M22.27 37.25A6.47 6.47 0 1 1 32.15 29.67A7.04 7.04 0 0 0 22.27 37.25Z"/><path class="core" d="M26.6 39.95A4.95 4.95 0 1 1 34.1 34.52A5.32 5.32 0 0 0 26.6 39.95Z"/></svg>
+        <div class="text"><span class="taik">TAIK</span><span class="factory">FACTORY</span></div>
+      </div>
+    </div>
+    <div class="panel dark">
+      <div class="wordmark">
+        <svg class="mark" viewBox="0 0 64 64" width="48" height="48" aria-hidden="true"><path d="M26.22 14.55A17.35 17.35 0 1 1 18.13 43.58A15.72 15.72 0 1 0 26.22 14.55Z M16.43 31.11A10.96 10.96 0 1 1 36.03 35.93A10.1 10.1 0 1 0 16.43 31.11Z M22.27 37.25A6.47 6.47 0 1 1 32.15 29.67A7.04 7.04 0 0 0 22.27 37.25Z"/><path class="core" d="M26.6 39.95A4.95 4.95 0 1 1 34.1 34.52A5.32 5.32 0 0 0 26.6 39.95Z"/></svg>
+        <div class="text"><span class="taik">TAIK</span><span class="factory">FACTORY</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="h-color">
+  <h2 id="h-color">Farben</h2>
+  <dl class="swatches">
+    <div class="swatch"><div class="chip" style="background:#e4e8ee"></div><dt>Grund hell</dt><dd>#e4e8ee</dd></div>
+    <div class="swatch"><div class="chip" style="background:#1b2330"></div><dt>Schrift hell</dt><dd>#1b2330</dd></div>
+    <div class="swatch"><div class="chip" style="background:#0d6b5f"></div><dt>Akzent hell</dt><dd>#0d6b5f</dd></div>
+    <div class="swatch"><div class="chip" style="background:#21262e"></div><dt>Grund dunkel</dt><dd>#21262e</dd></div>
+    <div class="swatch"><div class="chip" style="background:#e9eef5"></div><dt>Schrift dunkel</dt><dd>#e9eef5</dd></div>
+    <div class="swatch"><div class="chip" style="background:#6fd0bf"></div><dt>Akzent dunkel</dt><dd>#6fd0bf</dd></div>
+  </dl>
+</section>
+
+<section aria-labelledby="h-name">
+  <h2 id="h-name">Der Name</h2>
+  <ul class="name">
+    <li><span class="key">TAIK</span><span>Ein Wortbild zu <em>talk</em> wie in Smalltalk, nur nicht small.</span></li>
+    <li><span class="key">Teig</span><span>Der Klang des deutschen Wortes <em>Teig</em>.</span></li>
+    <li><span class="key">T<b>AI</b>K</span><span><em>talk</em> mit <strong>AI</strong> in der Mitte.</span></li>
+  </ul>
+</section>
+
+<section aria-labelledby="h-rules">
+  <h2 id="h-rules">Regeln</h2>
+  <div class="rules">
+    <ul>
+      <li>Flach und matt.</li>
+      <li>Kein Glow.</li>
+      <li>Kein Verlauf.</li>
+      <li>Kein Schlagschatten auf der Marke.</li>
+      <li>Schutzraum rundum: eine halbe Markenbreite.</li>
+      <li>Pfade nicht verändern, nicht verzerren, nicht umfärben.</li>
+    </ul>
+    <figure style="margin:0">
+      <div class="zone">
+        <svg class="mark inner" viewBox="0 0 64 64" width="96" height="96" role="img" aria-label="Schutzraum: eine halbe Markenbreite rundum"><path d="M26.22 14.55A17.35 17.35 0 1 1 18.13 43.58A15.72 15.72 0 1 0 26.22 14.55Z M16.43 31.11A10.96 10.96 0 1 1 36.03 35.93A10.1 10.1 0 1 0 16.43 31.11Z M22.27 37.25A6.47 6.47 0 1 1 32.15 29.67A7.04 7.04 0 0 0 22.27 37.25Z"/><path class="core" d="M26.6 39.95A4.95 4.95 0 1 1 34.1 34.52A5.32 5.32 0 0 0 26.6 39.95Z"/></svg>
+      </div>
+      <figcaption class="label">Marke 96 px, Schutzraum 48 px</figcaption>
+    </figure>
+  </div>
+</section>
+
+<footer>
+  TAIK Markenblatt · Bildmarke <code>viewBox="0 0 64 64"</code>
+</footer>
+
+</main>
+</body>
+</html>

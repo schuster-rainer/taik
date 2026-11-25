@@ -28,7 +28,9 @@
 
   /* Header */
   #taik-header { display: flex; justify-content: space-between; align-items: center; gap: 12px 20px; flex-wrap: wrap; padding: 2px 4px; }
-  #taik-live h1 { font-size: 1.02rem; font-weight: 680; letter-spacing: .22em; text-transform: uppercase; }
+  #taik-live h1 { font-size: 1.02rem; font-weight: 680; letter-spacing: .22em; text-transform: uppercase; display: flex; align-items: center; gap: 12px; }
+  #taik-live .mark { width: 36px; height: 36px; margin: -6px -4px -6px -6px; flex: none; fill: currentColor; }
+  #taik-live .mark .core { fill: var(--active); }
   #taik-live h1 span { font-weight: 400; color: var(--quiet); }
   #taik-live .header-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
   #taik-live .status { display: flex; align-items: center; gap: 9px; padding: 7px 14px; border-radius: 999px;
@@ -101,8 +103,8 @@
   #taik-live .events, #taik-live .run-record, #taik-live #taik-job-content[data-mode="code"] {
     border-radius: 13px; box-shadow: var(--nm-inset); background: var(--nm-base); }
   #taik-live .events { list-style: none; margin: 8px 0 0; padding: 9px 13px; }
-  #taik-live .events li { display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 11px; margin: 5px 0; align-items: baseline; }
-  #taik-live .events time { color: var(--quiet); font: .7rem var(--mono); text-align: right; font-variant-numeric: tabular-nums; }
+  #taik-live .events li { display: grid; grid-template-columns: 62px minmax(0, 1fr); gap: 11px; margin: 5px 0; align-items: baseline; }
+  #taik-live .events time { color: var(--quiet); font: .7rem var(--mono); text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
   #taik-live .events .event-name { font-size: .81rem; font-weight: 580; }
   #taik-live .events code { display: block; color: var(--quiet); font-size: .73rem; line-height: 1.45; }
   #taik-live .events li:last-child .event-name { color: var(--active); }
@@ -511,7 +513,7 @@
       const [tone, status] = readiness(snapshot);
       const appearanceOptions = Object.entries(appearances).map(([value, label]) =>
         `<option value="${value}"${appearance === value ? ' selected' : ''}>${label}</option>`).join('');
-      setHeader(`<h1>TAIK <span>Factory</span></h1><div class="header-controls">
+      setHeader(`<h1><svg class="mark" viewBox="0 0 64 64" aria-hidden="true"><path d="M26.22 14.55A17.35 17.35 0 1 1 18.13 43.58A15.72 15.72 0 1 0 26.22 14.55Z M16.43 31.11A10.96 10.96 0 1 1 36.03 35.93A10.1 10.1 0 1 0 16.43 31.11Z M22.27 37.25A6.47 6.47 0 1 1 32.15 29.67A7.04 7.04 0 0 0 22.27 37.25Z"/><path class="core" d="M26.6 39.95A4.95 4.95 0 1 1 34.1 34.52A5.32 5.32 0 0 0 26.6 39.95Z"/></svg>TAIK <span>Factory</span></h1><div class="header-controls">
         <div class="status" role="status"><span class="dot ${tone}" aria-hidden="true"></span>${status}</div>
         <label class="appearance">Darstellung <select id="taik-appearance">${appearanceOptions}</select></label>
       </div>`);

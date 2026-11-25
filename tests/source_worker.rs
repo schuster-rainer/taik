@@ -154,13 +154,13 @@ fn a_configured_second_worker_takes_over_and_is_named_in_the_record() {
     let answers = [
         (
             "takes-over",
-            r#"printf '%s' '{"is_error":false,"result":"<!doctype html><p>second</p>","usage":{"output_tokens":7},"total_cost_usd":0.25,"modelUsage":{"model-x":{}}}'"#,
+            r#"printf '%s\n' '{"type":"stream_event","event":{"delta":{"type":"text_delta","text":"<!doctype"}}}' 'not json' '{"type":"result","is_error":false,"result":"<!doctype html><p>second</p>","usage":{"output_tokens":7},"total_cost_usd":0.25,"modelUsage":{"model-x":{}}}'"#,
             Some(0),
         ),
         ("also-fails", "printf 'synthetic-secret\n' >&2; exit 3", Some(1)),
-        ("reports-an-error", r#"printf '%s' '{"is_error":true,"result":"<p>second</p>"}'"#, Some(1)),
+        ("reports-an-error", r#"printf '%s' '{"type":"result","is_error":true,"result":"<p>second</p>"}'"#, Some(1)),
     ];
-    script("lead", r#"printf '%s' '{"is_error":false,"result":"<!doctype html><p>second</p>","usage":{"output_tokens":3},"total_cost_usd":0.5,"modelUsage":{"model-y":{}}}'"#);
+    script("lead", r#"printf '%s' '{"type":"result","is_error":false,"result":"<!doctype html><p>second</p>","usage":{"output_tokens":3},"total_cost_usd":0.5,"modelUsage":{"model-y":{}}}'"#);
     let state = root.path().join("lead");
     let queued = factory()
         .arg("queue-source")

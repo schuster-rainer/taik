@@ -6,3 +6,4 @@ source.lock
 service.lock
 # Accepted backend binaries stay local. Each record carries the SHA-256 of its binary.
 /evidence/jobs/job-rust-entrypoint/*-taik-seed
+/evidence/jobs/job-backend/*-taik-seed

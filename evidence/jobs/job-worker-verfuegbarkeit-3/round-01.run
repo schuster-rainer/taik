@@ -1,0 +1,23 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=Prüfen, ob der unbeaufsichtigte Code-Worker des Dienstes einen kleinen Auftrag liefern kann.
+baseline=(empty)
+worker=claude-cli
+worker_model=claude-opus-5-5
+worker_output_tokens=147
+worker_cost_usd=0.009716
+worker_duration_ms=41546
+limits=4 rounds; worker 150s; verifier 15s; 96KiB source
+gate_sha256=c1d47eff4ddd4e3cd943623d2c4ee0ba469838f5fdd150bc5d744375e16684f6
+gate_ms=2518
+checks=PASS: inert probe document with heading and paragraph
+artifact=round-01.html
+rejected_candidate=
+feedback=
+follow_up=
+continuation=Retain the accepted artifact. No further work was authorized by this round.
+advance=false
+end

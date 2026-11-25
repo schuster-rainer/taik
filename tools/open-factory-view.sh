@@ -21,6 +21,17 @@ bundle="$staging/TAIK Factory.app"
 mkdir -p "$bundle/Contents/MacOS" "$bundle/Contents/Resources"
 /usr/bin/swiftc -O -warnings-as-errors "$source_dir/factory-view.swift" -o "$bundle/Contents/MacOS/factory-view"
 cp "$source_dir/factory-view.html" "$bundle/Contents/Resources/factory-view.html"
+icon_source="$source_dir/../assets/taik-mark-dark.png"
+if [ -f "$icon_source" ]; then
+  iconset="$staging/TAIK.iconset"
+  mkdir "$iconset"
+  for size in 16 32 128 256 512; do
+    /usr/bin/sips -z "$size" "$size" "$icon_source" --out "$iconset/icon_${size}x${size}.png" >/dev/null
+    /usr/bin/sips -z "$((size * 2))" "$((size * 2))" "$icon_source" --out "$iconset/icon_${size}x${size}@2x.png" >/dev/null
+  done
+  /usr/bin/iconutil -c icns "$iconset" -o "$bundle/Contents/Resources/TAIK.icns"
+  rm -rf "$iconset"
+fi
 cat > "$bundle/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -28,6 +39,7 @@ cat > "$bundle/Contents/Info.plist" <<'PLIST'
   <key>CFBundleName</key><string>TAIK Factory</string>
   <key>CFBundleIdentifier</key><string>local.taik.factory.view</string>
   <key>CFBundleExecutable</key><string>factory-view</string>
+  <key>CFBundleIconFile</key><string>TAIK</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleVersion</key><string>1</string>
   <key>NSHighResolutionCapable</key><true/>

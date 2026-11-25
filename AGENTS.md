@@ -46,7 +46,7 @@ state="$HOME/.local/state/taik-factory"
 
 - Attribute work to its real author. A record names the worker that supplied the source. Do not describe an agent's change as learning by the seed (section 7.2).
 - A check that did not run is reported as not run (S-04, T-06).
-- The service runs under launchd as `local.taik.factory`. Replace its binary only with one accepted by a `job-rust-entrypoint` round, and keep the rollback archive.
+- The service runs under launchd as `local.taik.factory`. Its binary changes only through `taik-seed promote` in `evidence/jobs/job-backend`, run by the installed binary with `tools/backend/gate.sh`. Never copy a binary into place by hand.
 - The viewer is `tools/factory-view.html`. It changes only through a source job and is installed with `tools/open-factory-view.sh`. Run `swift tools/check-factory-design.swift --require-open` on a snapshot before installing.
 - Git records the checkout, `origin` is the public repository `taik` on GitHub. Commit after each accepted round. Never commit secrets, tokens or anything from outside this folder. Rollbacks of installed artifacts still live in the job folders.
 - Records in `evidence/jobs/` are create-only. Do not rewrite a published `.run`.

@@ -1,0 +1,15 @@
+decision=observed
+identity=dienst-drosselung-01
+intent=Klären, warum das Gate im Dienst Sekunden braucht und in der Shell Millisekunden.
+scope=Unattended rounds on the live service on 2026-11-25. gate_ms is the duration of the gate process alone, recorded since round 12 of job-rust-entrypoint.
+gate_ms_default_process_type=13822 (job-markenblatt), 2518, 135, 3249 (job-worker-verfuegbarkeit-3 to -5)
+gate_ms_interactive_process_type=90, 90, 75, 86 (job-worker-verfuegbarkeit-6 to -9)
+gate_ms_shell=35 for the gate alone, 77 to 97 through an attached round
+change=ProcessType Interactive in the LaunchAgent of the service. Same binary, same gate, same worker, same probe brief.
+observation=With the default process type three of four gate runs took 2.5 s or more and one came within 1.2 s of the 15 s verifier limit. With Interactive all four took 75 to 90 ms. The earlier 3 s intervals of the protokoll-leser jobs fit the same pattern.
+interpretation=launchd runs an agent without a process type under background resource limits. They fell on the gate child that starts after a long worker run. The mechanism inside macOS was not examined.
+earlier_test=Six attached rounds per setting from a temporary launchd job did not show the effect. They ran no worker before the gate.
+decided_by=claude-fable. A configuration change outside the binary, kept because the measurement supports it. rollback.plist holds the previous LaunchAgent.
+limitations=Four runs per setting with a small gate. The slow default runs include one job with a larger gate. No run with Adaptive or Standard was made.
+continuation=Keep Interactive. A gate that nears its limit under throttling would have been rejected for a reason unrelated to the candidate, so watch gate_ms in further rounds.
+end

@@ -66,9 +66,18 @@
 - [Zweiter unbeaufsichtigter Worker](jobs/job-rust-entrypoint/round-10.run), [Ausfall vorher](jobs/job-worker-verfuegbarkeit/round-01.run) und [Annahme danach](jobs/job-worker-verfuegbarkeit-2/round-01.run)
 - [Opus als führender Worker](jobs/job-rust-entrypoint/round-11.run) und [Zuschreibung bei Fehlschlag, Gate-Dauer](jobs/job-rust-entrypoint/round-12.run)
 
+- [Promotion durch die installierte Factory eingeführt](jobs/job-rust-entrypoint/round-13.run)
+- [Erste Entscheidung der Factory über ihren Nachfolger](jobs/job-backend/round-01.run) und [Prüfungen](jobs/job-backend/round-01.checks.log)
+- [Drosselung des Gates unter launchd, gemessen](jobs/job-dienst-drosselung/summary.run)
+
+## Marke
+
+- [Markenblatt](jobs/job-markenblatt/round-01.html), [Auftrag](jobs/job-markenblatt/submission.brief.md) und [Entscheidung](jobs/job-markenblatt/round-01.run)
+
 ## Factory-Ansicht
 
 - [Neumorphe Ansicht mit ausgezeichneten Prüfprotokollen](jobs/job-factory-neomorph/round-01.html), [Auftrag](jobs/job-factory-neomorph/round-01.brief.md) und [Entscheidung](jobs/job-factory-neomorph/round-01.run)
+- [Bildmarke in der Kopfzeile](jobs/job-factory-neomorph/round-02.run) und [Aufnahme der installierten Ansicht](jobs/job-factory-neomorph/round-02.screenshot.png)
 - [Aufnahme des Kandidaten](jobs/job-factory-neomorph/round-01.screenshot.png), [WebKit-Prüfung](jobs/job-factory-neomorph/round-01.webkit.log) und [vorheriger Stand](jobs/job-factory-neomorph/rollback.factory-view.html)
 
 Die Dateien eines Auftrags liegen in seinem Ordner unter `jobs/`. Dateien mit gleichem Rundennamen gehören zusammen. `.brief.md` beschreibt den Auftrag, `.progress` hält die Schritte fest und `.run` die Entscheidung. `artifact=` in der `.run` benennt das akzeptierte Ergebnis.

@@ -22,6 +22,9 @@
 		<key>TAIK_LEAD_WORKER</key>
 		<string>CLAUDE</string>
 	</dict>
+	<!-- Without this, launchd throttles the gate child: 2.5 to 13.8 s instead of 90 ms. See evidence/jobs/job-dienst-drosselung. -->
+	<key>ProcessType</key>
+	<string>Interactive</string>
 	<key>RunAtLoad</key>
 	<true/>
 	<key>KeepAlive</key>
