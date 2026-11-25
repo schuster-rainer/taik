@@ -105,6 +105,7 @@
 
 - [Neumorphe Ansicht mit ausgezeichneten Prüfprotokollen](jobs/job-factory-neomorph/round-01.html), [Auftrag](jobs/job-factory-neomorph/round-01.brief.md) und [Entscheidung](jobs/job-factory-neomorph/round-01.run)
 - [Bildmarke in der Kopfzeile](jobs/job-factory-neomorph/round-02.run) und [Aufnahme der installierten Ansicht](jobs/job-factory-neomorph/round-02.screenshot.png)
+- [Token- und Zeitfluss je Runde, von der Factory selbst als Patch gebaut](jobs/job-ansicht-tokenfluss/round-01.run), [Aufnahme](jobs/job-ansicht-tokenfluss/round-01.screenshot.png) und [Auswertung](jobs/job-ansicht-tokenfluss/observation.run)
 - [Parallele Plätze einstellbar](jobs/job-factory-ansicht-2/round-04.run), im Dienst mit [Runde 11](jobs/job-backend/round-11.run)
 - [Kosten je Auftrag und Diff beim Ergebnis](jobs/job-factory-ansicht-2/round-03.run)
 - [Agentenanzeige über Hooks](jobs/job-factory-ansicht-2/round-02.run) und [Aufnahme](jobs/job-factory-ansicht-2/round-02.screenshot.png)

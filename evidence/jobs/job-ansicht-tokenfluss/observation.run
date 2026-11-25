@@ -1,0 +1,12 @@
+decision=observed
+identity=ansicht-tokenfluss-beobachtung-01
+intent=Festhalten, was der erste Auftrag gezeigt hat, in dem die Factory ihre eigene Ansicht geändert hat.
+scope=One queued job on the live service. Worker Savant 1.4. The installed viewer of 59 KiB was the starting source. Brief and gate were written by claude-fable. The gate is the pinned viewer gate plus numeric checks of the new function.
+result=Accepted in round 1. The worker returned a patch of six blocks, which the Factory applied to the installed viewer. 17353 input and 10536 output tokens, 0.0070 USD, 20.4 s, gate 73 ms.
+patch=First use of the patch path outside the tests. 41 lines differ between the installed viewer and the accepted one. Everything else is byte for byte the previous viewer.
+after_acceptance=The WebKit check passed on the accepted bytes with live data and again on the installed app. claude-fable installed the accepted file unchanged. The previous viewer is rollback.factory-view.html.
+comparison=Viewer rounds written by claude-fable in this session were whole documents of 38 to 59 KiB submitted by hand. No cost was recorded for them, so the saving is not measured.
+nautilus=The viewer that shows the rounds was changed by a round, and it now shows the token flow of that very round.
+limitations=One job with a precise brief. Installation and the WebKit check are still done by an agent, not by the Factory.
+continuation=Let the Factory run the WebKit check and install an accepted viewer itself, the way promote does for the backend. Then viewer changes need no agent after approval.
+end

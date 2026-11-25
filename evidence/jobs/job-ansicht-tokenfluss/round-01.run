@@ -1,0 +1,25 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=In der Factory-Ansicht den Token- und Zeitfluss jeder Runde als Balken zeigen.
+baseline=/Users/rainer/projects/ideas/talk/evidence/jobs/job-ansicht-tokenfluss/submission.seed.html
+worker=savant
+worker_model=subq-savant-1.4
+worker_input_tokens=17353
+worker_output_tokens=10536
+worker_cost_usd=0.007003
+worker_duration_ms=20412
+limits=4 rounds; worker lease 60s up to 900s; verifier 15s; 96KiB source
+gate_sha256=4f185549f90c5f5b10c3eb1993ce927886d36b3c2bafa210e2b240d4c3406a29
+gate_ms=73
+patch_blocks=6
+checks=PASS: host contract, offline isolation, 17 token shadows without glow, contrast 5.12–13.04, lossless .run highlighting, token flow per round
+artifact=round-01.html
+rejected_candidate=
+feedback=
+follow_up=
+continuation=Retain the accepted artifact. No further work was authorized by this round.
+advance=false
+end

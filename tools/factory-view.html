@@ -143,6 +143,9 @@
   #taik-live .metric-track { height: 8px; border-radius: 4px; box-shadow: var(--nm-inset-sm); overflow: hidden; }
   #taik-live .metric-bar { display: block; height: 100%; border-radius: 4px; background: var(--active); }
   #taik-live .metric-bar.before { background: var(--quiet); }
+  #taik-live .token-flow { display: flex; height: 8px; margin-top: 8px; border-radius: 4px; box-shadow: var(--nm-inset-sm); overflow: hidden; }
+  #taik-live .token-flow .in { background: var(--quiet); }
+  #taik-live .token-flow .out { background: var(--active); }
 
   #taik-live .proposals { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 12px; }
   #taik-live .proposals li { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 11px 14px;
@@ -439,6 +442,33 @@
 
     const money = value => Number(value) > 0 ? `${Number(value).toFixed(Number(value) < 0.1 ? 3 : 2).replace('.', ',')} $` : '';
 
+    /*TOKEN_FLOW_BEGIN*/
+    function tokenFlow(rounds) {
+      const read = value => {
+        const number = Number(value);
+        return Number.isFinite(number) && number > 0 ? number : 0;
+      };
+      const entries = rounds.map(fields => {
+        const input = read(fields?.worker_input_tokens);
+        const output = read(fields?.worker_output_tokens);
+        return { input, output, cost: read(fields?.worker_cost_usd), seconds: read(fields?.worker_duration_ms) / 1000 };
+      });
+      const largest = entries.reduce((max, entry) => Math.max(max, entry.input + entry.output), 0);
+      return entries.map(entry => ({
+        ...entry,
+        widthIn: largest ? entry.input / largest * 100 : 0,
+        widthOut: largest ? entry.output / largest * 100 : 0,
+      }));
+    }
+    /*TOKEN_FLOW_END*/
+    const tokenCount = value => String(Math.round(value)).replace(/\B(?=(\d{3})+(?!\d))/g, '\u202f');
+    const secondsText = value => value >= 10 ? `${Math.round(value)} s` : `${value.toFixed(1).replace('.', ',')} s`;
+    const tokenLine = flow => [
+      `${tokenCount(flow.input)} → ${tokenCount(flow.output)} Tokens`,
+      secondsText(flow.seconds),
+      money(flow.cost),
+    ].filter(Boolean).join(' · ');
+
     // Line diff of two texts as hunks with two lines of context. Computed here, without any model.
     function diffLines(before, after) {
       const a = before.split('\n'), b = after.split('\n');
@@ -601,7 +631,7 @@
       return groups ? `<section aria-label="Gemessene Änderung"><h2>Aufwand im Prüflauf</h2><div class="measures">${groups}</div></section>` : '';
     }
 
-    function renderRound(round, index, job) {
+    function renderRound(round, index, job, flow) {
       const fields = round.fields;
       const rejected = fields.decision === 'rejected';
       const name = `${job.id}/${round.name}`;
@@ -620,6 +650,8 @@
       return `<li class="round${rejected ? ' rejected' : ''}"><div class="rail" aria-hidden="true"><span class="node"></span><span class="groove"></span></div>
         <div class="round-body"><div class="round-meta"><span class="index">Runde ${String(index + 1).padStart(2, '0')}</span>
         <span class="result${rejected ? ' rejected' : ''}">${decision}${fields.worker_cost_usd ? ' · ' + money(fields.worker_cost_usd) : ''}</span></div>
+        ${flow && flow.input + flow.output > 0 ? `<div class="token-flow" title="${escape(round.name)}"><span class="in" style="width:${flow.widthIn}%"></span><span class="out" style="width:${flow.widthOut}%"></span></div>
+        <p class="sub">${tokenLine(flow)}</p>` : ''}
         <h3>${escape(description)}</h3>
         ${events.length ? `<details data-round="${escape(eventKey)}" data-initial-open="${eventsOpen}"${eventsOpen ? ' open' : ''}>
           <summary>Arbeitsschritte (${events.length})</summary>${eventList(events)}</details>` : ''}
@@ -710,13 +742,18 @@
         ? `<button type="button" data-artifact="${escape(artifact)}" data-job="${escape(job.id)}">${job.id === 'job-floorplanner' ? 'Floorplanner öffnen' : artifact.endsWith('-taik-seed') ? 'taik-seed im Finder zeigen' : 'Ergebnis öffnen'}</button>`
         : '<span class="sub">Der erste geprüfte Stand steht aus.</span>'}</div></section>` : search ? `<section><h2>Akzeptierte Suchprozedur</h2><p class="lead">${policy}</p></section>` : `<section><h2>Akzeptierte Prozedur</h2><ol class="steps">${steps}</ol>
         <div class="tags"><span class="sub">Ergebnis</span>${tags || '<span class="sub">Leere Tag-Liste</span>'}</div></section>`;
-      const rounds = job.rounds.length ? `<ol class="rounds">${job.rounds.map((round, index) => renderRound(round, index, job)).join('')}</ol>`
+      const flows = tokenFlow(job.rounds.map(round => round.fields));
+      const tokenTotals = flows.reduce((sum, entry) => ({ input: sum.input + entry.input, output: sum.output + entry.output, seconds: sum.seconds + entry.seconds }), { input: 0, output: 0, seconds: 0 });
+      const totalsLine = tokenTotals.input + tokenTotals.output > 0
+        ? `<p class="sub">Gesamt ${tokenCount(tokenTotals.input)} → ${tokenCount(tokenTotals.output)} Tokens · ${secondsText(tokenTotals.seconds)} · ${job.rounds.length} ${job.rounds.length === 1 ? 'Runde' : 'Runden'}</p>` : '';
+      const rounds = job.rounds.length ? `<ol class="rounds">${job.rounds.map((round, index) => renderRound(round, index, job, flows[index])).join('')}</ol>`
         : '<p class="sub lead">Die Factory hat den Auftrag erhalten. Die erste Runde steht noch aus.</p>';
       const options = snapshot.jobs.map(entry => `<option value="${escape(entry.id)}"${selected === entry.id ? ' selected' : ''}>${escape(entry.id)} · ${jobStatus(entry)}${entry.cost > 0 ? ' · ' + money(entry.cost) : ''}</option>`).join('');
       setContent(`${working}${waiting}${goal}<section aria-label="Auftragsverlauf">
         <div class="section-heading"><h2>Auftragsverlauf</h2><span class="sub">${escape(job.id)} · ${jobStatus(job)}${job.cost > 0 ? ' · ' + money(job.cost) : ''}</span></div>
         <div class="job-control"><label for="taik-live-job">Auftrag</label>
         <select id="taik-live-job"><option value="latest"${selected === 'latest' ? ' selected' : ''}>Neuester Auftrag</option>${options}</select></div>
+        ${totalsLine}
         ${rounds}</section>${isPending(job) ? progressPanel(job) : ''}${results}${comparison(job, accepted)}`);
     }
 

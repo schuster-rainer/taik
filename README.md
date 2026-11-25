@@ -18,6 +18,7 @@ This is a running seed, not a product. What the evidence supports today:
 | A rejected candidate leaves the accepted result intact | Shown |
 | Accepted work survives a restart and is reused by later rounds | Shown |
 | Unattended rounds build software that is not HTML | Shown twice: a Rust tool as one file and as a Cargo project of four files, compiled and run by their gates. See [job-taik-stats](evidence/jobs/job-taik-stats/observation.run) |
+| The Factory changes its own viewer without an agent writing the code | Shown once: the service worker patched the installed viewer in six blocks, accepted in round 1. An agent still ran the WebKit check and installed it. See [the observation](evidence/jobs/job-ansicht-tokenfluss/observation.run) |
 | The Factory writes its next job itself | Shown once, with the user's approval: brief and gate derived from an observation, accepted in round 1. See [the observation](evidence/jobs/job-mehrdatei-programm/observation.run) |
 | The Factory changes its own procedures and viewer through its own gate | Shown for the search procedure and the viewer |
 | The Factory judges and installs its own backend | Shown once. The installed binary ran the pinned gate, checked the candidate itself and replaced itself in [job-backend](evidence/jobs/job-backend/round-01.run). The thirteen rounds before were decided by their authors |
@@ -137,7 +138,7 @@ Only the installed binary may run this. It pins the gate, runs it in the checkou
 
 ## The viewer
 
-<img src="evidence/jobs/job-factory-neomorph/round-02.screenshot.png" alt="TAIK Factory viewer" width="820">
+<img src="evidence/jobs/job-ansicht-tokenfluss/round-01.screenshot.png" alt="TAIK Factory viewer" width="820">
 
 `./tools/open-factory-view.sh` builds and installs **TAIK Factory.app** into `~/Applications`. The window follows the job with the latest activity and updates on filesystem events. It makes no model calls.
 
