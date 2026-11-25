@@ -1,0 +1,10 @@
+# Paths an agent session may not change in a copy of this repository. A commit that touches one of
+# them is rejected before its gate runs. They change only through their own procedure (AGENTS.md).
+TAIK-FACTORY-SEED-v0.4.md
+.taik/
+evidence/jobs/
+tools/backend/gate.sh
+tools/factory-view.html
+tools/factory-view-
+tools/check-factory-design
+tools/release-view.sh
