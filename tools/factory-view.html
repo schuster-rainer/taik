@@ -183,7 +183,6 @@
   #taik-live .board-column[hidden] { display: none; }
   #taik-live .board-list { list-style: none; margin: 0 -6px; padding: 6px; display: grid; gap: 10px; max-height: 15.5rem; overflow-y: auto; }
   #taik-live .board-list > li { min-width: 0; display: grid; gap: 8px; }
-  #taik-live .board-list:has(.ticket-detail) { max-height: 40rem; }
   #taik-live .board-empty { color: var(--quiet); font-size: .8rem; padding: 6px 2px; }
   #taik-live .ticket { display: grid; gap: 4px; width: 100%; min-width: 0; padding: 10px 13px; border: 0; border-radius: 13px;
     box-shadow: var(--nm-raised-sm); background: var(--nm-base); text-align: left; font: inherit; color: inherit; cursor: pointer; }
@@ -199,7 +198,7 @@
     letter-spacing: .02em; color: var(--quiet); white-space: nowrap; }
   #taik-live .flag.antwort, #taik-live .flag.entscheidung, #taik-live .flag.in-arbeit { color: var(--active); }
   #taik-live .flag.frage, #taik-live .flag.abgelehnt { color: var(--bad); }
-  #taik-live .ticket-detail { display: grid; gap: 8px; min-width: 0; padding: 10px 12px 12px; border-radius: 13px; box-shadow: var(--nm-inset-sm); }
+  #taik-live .ticket-detail { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; min-width: 0; padding: 10px 12px 12px; border-radius: 13px; box-shadow: var(--nm-inset-sm); }
   #taik-live .ticket-detail[hidden] { display: none; }
   #taik-live .ticket-detail textarea { font: inherit; font-size: .82rem; color: var(--ink); border: 0; border-radius: 10px;
     min-height: 62px; resize: vertical; padding: 8px 11px; background: var(--nm-base); box-shadow: var(--nm-inset-sm); }
@@ -223,18 +222,26 @@
   #taik-live .diff-del { color: var(--bad); }
   #taik-live .diff-same, #taik-live .diff-gap { color: var(--quiet); }
 
+  /* The ticket: everything about one job */
+  #taik-live .ticket-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-top: 12px; }
+  #taik-live .ticket-title { font-size: 1.04rem; font-weight: 620; line-height: 1.4; min-width: 0; overflow-wrap: anywhere; }
+  #taik-live .ticket-top button { flex: none; }
+  #taik-live #taik-ticket .ticket-brief { margin-top: 10px; }
+  #taik-live #taik-ticket .ticket-brief pre { max-height: 16rem; padding: 10px 13px; border-radius: 12px; box-shadow: var(--nm-inset-sm); }
+  #taik-live .round-checks { margin-top: 5px; color: var(--quiet); font-size: .8rem; line-height: 1.45; overflow-wrap: anywhere; }
+  #taik-live .round.rejected .round-checks { color: var(--bad); }
+  #taik-live .rounds .thread-message { margin: 0 0 16px 34px; font-size: .86rem; line-height: 1.5; overflow-wrap: anywhere; }
+  #taik-live .rounds .thread-message.user { margin-left: 22%; }
+  #taik-live .rounds .thread-message.agent { margin-right: 14%; }
+  #taik-live #taik-ticket .ticket-detail { margin-top: 14px; }
+
   /* The conversation of a ticket */
-  #taik-live .thread { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; max-height: 17rem; overflow-y: auto; }
-  #taik-live .thread li { min-width: 0; font-size: .82rem; line-height: 1.45; overflow-wrap: anywhere; }
+  #taik-live .thread { margin-top: 12px; min-width: 0; }
   #taik-live .thread .who { display: block; font-size: .68rem; font-weight: 640; letter-spacing: .12em; text-transform: uppercase; color: var(--quiet); }
   #taik-live .thread-message { padding: 8px 11px; border-radius: 11px; box-shadow: var(--nm-raised-sm); white-space: pre-wrap; }
   #taik-live .thread-message.user { margin-left: 18%; }
   #taik-live .thread-message.agent { margin-right: 18%; }
   #taik-live .thread-message.agent .who { color: var(--active); }
-  #taik-live .thread-round { display: flex; gap: 8px; align-items: baseline; color: var(--quiet); font-size: .76rem; }
-  #taik-live .thread-round strong { color: var(--good); font-weight: 600; white-space: nowrap; }
-  #taik-live .thread-round.rejected strong { color: var(--bad); }
-  #taik-live .thread-round span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #taik-live .ticket-brief > summary { font-size: .78rem; }
   #taik-live .ticket-brief pre { margin-top: 6px; max-height: 11rem; overflow: auto; white-space: pre-wrap; font: .74rem/1.5 var(--mono); }
 
@@ -435,8 +442,8 @@
     let lastHeader = '';
     let workpieceMode = 'view';
     let workpieceKey = '';
-    let openTicket = '';
     let chosenBoardTab = '';
+    let selectedProposal = '';
     let waitingBefore = null;
     let agentDraft = null;
     let agentProblem = '';
@@ -823,17 +830,17 @@
           <button type="button" data-agent-cancel>Abbrechen</button><button type="button" class="save" data-agent-save>Speichern</button></div></div>`;
     }
 
-    function renderBoard() {
+    function renderBoard(shownKey) {
       const columns = boardTickets(snapshot);
       const waiting = columns.open.length;
       const tab = boardTab(columns, chosenBoardTab);
       const ticket = entry => {
-        const shown = openTicket === entry.key;
+        const shown = entry.key === shownKey;
         return `<li><button type="button" class="ticket${entry.column === 'open' ? ' wait' : ''}" data-ticket="${escape(entry.key)}"
-          data-job="${escape(entry.job ?? '')}" aria-expanded="${shown}" aria-current="${!!entry.job && entry.job === selected}">
+          data-job="${escape(entry.job ?? '')}" aria-current="${shown}">
           <span class="ticket-head"><span class="title" title="${escape(entry.title)}">${escape(entry.title)}</span>
           <span class="flag ${entry.flag.toLowerCase().replace(/\s+/g, '-')}">${escape(entry.flag)}</span></span>
-          <span class="meta">${escape(entry.proposal ? entry.proposal + ' · ' + entry.meta : entry.meta)}</span></button>${shown ? ticketDetail(entry) : ''}</li>`;
+          <span class="meta">${escape(entry.proposal ? entry.proposal + ' · ' + entry.meta : entry.meta)}</span></button></li>`;
       };
       const groups = [['open', 'Wartet', 'Wartet auf Antwort', 'Nichts wartet auf dich.'], ['run', 'Läuft', 'Läuft', 'Gerade läuft nichts.'],
         ['decision', 'Entschieden', 'Entschieden', 'Noch nichts entschieden.']];
@@ -852,16 +859,9 @@
       const agents = crewOf(snapshot).agents.filter(agent => !agent.error);
       const chooser = job ? `<label class="ticket-agent">Agent der nächsten Runde<select data-ticket-agent="${escape(job.id)}">
           <option value="">Standard des Dienstes</option>${agents.map(agent => `<option value="${escape(agent.name)}"${job.agent === agent.name ? ' selected' : ''}>@${escape(agent.name)} · ${escape(agentLine(agent))}</option>`).join('')}</select></label>` : '';
-      const told = ticketThread(job).map(item => item.kind === 'round'
-        ? `<li class="thread-round${item.decision === 'rejected' ? ' rejected' : ''}"><strong>Runde ${item.number} ${item.decision === 'accepted' ? 'angenommen' : item.decision === 'rejected' ? 'abgelehnt' : escape(item.decision)}</strong>
-            <span title="${escape(item.checks)}">${escape(item.checks)}${item.cost ? ' · ' + money(item.cost) : ''}</span></li>`
-        : `<li class="thread-message ${item.author === 'user' ? 'user' : 'agent'}"><span class="who">${item.author === 'user' ? 'Du' : 'Agent'}</span>${escape(item.text)}</li>`).join('');
-      const description = job?.brief ? `<details class="ticket-brief"><summary>Auftrag</summary><pre>${escape(job.brief)}</pre></details>` : '';
-      const thread = told ? `<ol class="thread">${told}</ol>` : '';
-      return `<div class="ticket-detail" data-detail="${escape(entry.key)}">${description}${thread}${chooser}
+      return `<div class="ticket-detail" data-detail="${escape(entry.key)}">${chooser}
         <textarea aria-label="Kommentar zu ${escape(entry.key)}" placeholder="Antwort oder Frage an die Factory. Mit @name übernimmt ein Agent die nächste Runde.">${escape(draft)}</textarea>
         <div class="actions">${entry.proposal ? `<button type="button" data-proposal="${escape(entry.proposal)}">Freigeben</button>` : ''}
-          <button type="button" data-ticket-close>Später</button>
           <button type="button" class="send" data-ticket-send="${escape(entry.key)}">Senden</button></div></div>`;
     }
 
@@ -927,6 +927,7 @@
         ${flow && flow.input + flow.output > 0 ? `<div class="token-flow" title="${escape(round.name)}"><span class="in" style="width:${flow.widthIn}%"></span><span class="out" style="width:${flow.widthOut}%"></span></div>
         <p class="sub">${tokenLine(flow)}</p>` : ''}
         <h3>${escape(ticketTitle(description))}</h3>
+        ${fields.checks ? `<p class="round-checks">${escape(fields.checks)}</p>` : ''}
         ${events.length ? `<details data-round="${escape(eventKey)}" data-initial-open="${eventsOpen}"${eventsOpen ? ' open' : ''}>
           <summary>Arbeitsschritte (${events.length})</summary>${eventList(events)}</details>` : ''}
         <details data-round="${escape(name)}" data-initial-open="${checksOpen}"${checksOpen ? ' open' : ''}>
@@ -984,7 +985,9 @@
         setContent(`<section><h2>Aufträge</h2><p class="sub lead">Hier erscheinen die Aufträge, sobald die Factory sie annimmt.</p></section>`);
         return;
       }
-      const board = renderBoard();
+      const proposal = (snapshot.proposals ?? []).find(entry => entry.name === selectedProposal);
+      if (!proposal) selectedProposal = '';
+      const board = renderBoard(proposal ? 'proposal:' + proposal.name : job.id);
       const waitingNow = boardTickets(snapshot).open.length;
       if (waitingBefore !== null && waitingNow > waitingBefore) window.webkit?.messageHandlers?.attention?.postMessage(waitingNow);
       waitingBefore = waitingNow;
@@ -1000,7 +1003,6 @@
       }).join('');
       const working = agents ? `<section aria-label="Sitzungen"><div class="section-heading"><h2>Sitzungen</h2>
           <span class="sub">gemeldet über Hooks, ohne Modellaufruf</span></div><ul class="agents">${agents}</ul></section>` : '';
-      const goal = job.goal ? `<section class="goal" aria-labelledby="taik-goal"><h2 id="taik-goal">Auftragsziel</h2><p>${escape(ticketTitle(job.goal))}</p></section>` : '';
       const accepted = latestAccepted(job);
       renderPreview(job);
       const initialOrder = order(job.baseline.fields.procedure);
@@ -1011,23 +1013,34 @@
       const software = job.baseline.fields.kind === 'software';
       const search = job.baseline.fields.kind === 'search';
       const policy = escape(searchPolicies[accepted.fields.policy ?? accepted.fields.procedure]);
-      const results = software ? `<section><div class="section-heading"><h2>Software-Auftrag</h2>${artifact
-        ? `<button type="button" data-artifact="${escape(artifact)}" data-job="${escape(job.id)}">${job.id === 'job-floorplanner' ? 'Floorplanner öffnen' : artifact.endsWith('-taik-seed') ? 'taik-seed im Finder zeigen' : 'Ergebnis öffnen'}</button>`
-        : '<span class="sub">Der erste geprüfte Stand steht aus.</span>'}</div></section>` : search ? `<section><h2>Akzeptierte Suchprozedur</h2><p class="lead">${policy}</p></section>` : `<section><h2>Akzeptierte Prozedur</h2><ol class="steps">${steps}</ol>
+      const artifactButton = software && artifact
+        ? `<button type="button" data-artifact="${escape(artifact)}" data-job="${escape(job.id)}">${artifact.endsWith('-taik-seed') ? 'Im Finder zeigen' : 'Ergebnis öffnen'}</button>` : '';
+      const results = software ? '' : search ? `<section><h2>Akzeptierte Suchprozedur</h2><p class="lead">${policy}</p></section>` : `<section><h2>Akzeptierte Prozedur</h2><ol class="steps">${steps}</ol>
         <div class="tags"><span class="sub">Ergebnis</span>${tags || '<span class="sub">Leere Tag-Liste</span>'}</div></section>`;
       const flows = tokenFlow(job.rounds.map(round => round.fields));
       const tokenTotals = flows.reduce((sum, entry) => ({ input: sum.input + entry.input, output: sum.output + entry.output, seconds: sum.seconds + entry.seconds }), { input: 0, output: 0, seconds: 0 });
       const totalsLine = tokenTotals.input + tokenTotals.output > 0
         ? `<p class="sub">Gesamt ${tokenCount(tokenTotals.input)} → ${tokenCount(tokenTotals.output)} Tokens · ${secondsText(tokenTotals.seconds)} · ${job.rounds.length} ${job.rounds.length === 1 ? 'Runde' : 'Runden'}</p>` : '';
-      const rounds = job.rounds.length ? `<ol class="rounds">${job.rounds.map((round, index) => renderRound(round, index, job, flows[index])).join('')}</ol>`
-        : '<p class="sub lead">Die Factory hat den Auftrag erhalten. Die erste Runde steht noch aus.</p>';
-      const options = snapshot.jobs.map(entry => `<option value="${escape(entry.id)}"${selected === entry.id ? ' selected' : ''}>${escape(entry.id)} · ${jobStatus(entry)}${entry.cost > 0 ? ' · ' + money(entry.cost) : ''}</option>`).join('');
-      setContent(`${board}${renderCrew()}${working}${goal}<section aria-label="Auftragsverlauf">
-        <div class="section-heading"><h2>Auftragsverlauf</h2><span class="sub">${escape(job.id)} · ${jobStatus(job)}${job.cost > 0 ? ' · ' + money(job.cost) : ''}</span></div>
-        <div class="job-control"><label for="taik-live-job">Auftrag</label>
-        <select id="taik-live-job"><option value="latest"${selected === 'latest' ? ' selected' : ''}>Neuester Auftrag</option>${options}</select></div>
-        ${totalsLine}
-        ${rounds}</section>${isPending(job) ? progressPanel(job) : ''}${results}${comparison(job, accepted)}`);
+      const told = ticketThread(job).map(item => item.kind === 'round'
+        ? renderRound(job.rounds[item.number - 1], item.number - 1, job, flows[item.number - 1])
+        : `<li class="thread-message ${item.author === 'user' ? 'user' : 'agent'}"><span class="who">${item.author === 'user' ? 'Du' : 'Agent'}</span>${escape(item.text)}</li>`).join('');
+      const briefKey = `${job.id}/brief`;
+      const briefOpen = openRounds.get(briefKey) ?? true;
+      const ticket = proposal
+        ? `<section id="taik-ticket" aria-label="Ticket" data-proposal="${escape(proposal.name)}">
+          <div class="section-heading"><h2>Ticket</h2><span class="sub">Vorschlag der Factory · wartet auf deine Freigabe</span></div>
+          <div class="ticket-top"><h3 class="ticket-title">${escape(ticketTitle(proposal.intent))}</h3></div>
+          <p class="sub">${escape(proposal.name)}${proposal.origin ? ' · aus ' + escape(proposal.origin.replace(/^job-/, '')) : ''}</p>
+          ${ticketDetail({ key: 'proposal:' + proposal.name, proposal: proposal.name })}</section>`
+        : `<section id="taik-ticket" aria-label="Ticket" data-job="${escape(job.id)}">
+          <div class="section-heading"><h2>Ticket</h2><span class="sub">${escape(job.id)} · ${jobStatus(job)}${job.agent ? ' · @' + escape(job.agent) : ''}${job.cost > 0 ? ' · ' + money(job.cost) : ''}</span></div>
+          <div class="ticket-top"><h3 class="ticket-title">${escape(ticketTitle(job.goal) || job.id)}</h3>${artifactButton}</div>
+          ${job.brief ? `<details class="ticket-brief" data-round="${escape(briefKey)}" data-initial-open="${briefOpen}"${briefOpen ? ' open' : ''}><summary>Beschreibung</summary><pre>${escape(job.brief)}</pre></details>` : ''}
+          <div class="thread" aria-label="Auftragsverlauf">${totalsLine}
+          ${told ? `<ol class="rounds">${told}</ol>` : '<p class="sub lead">Die Factory hat den Auftrag erhalten. Die erste Runde steht noch aus.</p>'}</div>
+          ${isPending(job) ? progressPanel(job) : ''}
+          ${ticketDetail({ key: job.id, job: job.id })}</section>`;
+      setContent(`${board}${ticket}${renderCrew()}${working}${results}${comparison(job, accepted)}`);
     }
 
     function setHeader(html) {
@@ -1054,7 +1067,7 @@
         element.scrollTop = offsets.get(element.parentElement.dataset.round) ?? 0;
       }
       updateElapsed();
-      if (focusId === 'taik-live-job' || focusId?.startsWith('taik-agent-')) {
+      if (focusId?.startsWith('taik-agent-')) {
         const again = document.getElementById(focusId);
         again?.focus({ preventScroll: true });
         if (again && fieldCaret && again.setSelectionRange) again.setSelectionRange(fieldCaret[0], fieldCaret[1]);
@@ -1109,9 +1122,6 @@
         window.webkit?.messageHandlers?.setParallel?.postMessage(Number(event.target.value));
         return;
       }
-      if (event.target.id !== 'taik-live-job') return;
-      selected = event.target.value;
-      render();
     });
     root.addEventListener('click', event => {
       const modeButton = event.target.closest('button[data-workpiece-mode]');
@@ -1171,12 +1181,10 @@
       const boardTabButton = event.target.closest('button[data-board-tab]');
       if (boardTabButton) {
         chosenBoardTab = boardTabButton.dataset.boardTab;
-        openTicket = '';
         render();
         document.querySelector(`button[data-board-tab="${chosenBoardTab}"]`)?.focus();
         return;
       }
-      if (event.target.closest('button[data-ticket-close]')) { openTicket = ''; render(); return; }
       const send = event.target.closest('button[data-ticket-send]');
       if (send) {
         const key = send.dataset.ticketSend;
@@ -1195,8 +1203,8 @@
       const ticketButton = event.target.closest('button[data-ticket]');
       if (ticketButton) {
         const key = ticketButton.dataset.ticket;
-        openTicket = openTicket === key ? '' : key;
-        if (ticketButton.dataset.job) selected = ticketButton.dataset.job;
+        selectedProposal = key.startsWith('proposal:') ? key.slice('proposal:'.length) : '';
+        if (!selectedProposal) selected = key;
         render();
         document.querySelector(`button[data-ticket="${CSS.escape(key)}"]`)?.focus();
         return;

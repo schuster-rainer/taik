@@ -13,6 +13,22 @@ const select = (selector, value) => {
 const evidence = '[design-gate] Prüfbefund im Live-Entwurf';
 const draft = '<html><!-- ' + evidence + ' --><body>Lokaler Prüfentwurf</body></html>';
 
+// A job is reached through its ticket, the way a person does it: find the group that holds it, click it.
+async function chooseTicket(id) {
+  for (const tab of ['open', 'run', 'decision']) {
+    find('button[data-board-tab="' + tab + '"]')?.click();
+    await delayFrame();
+    const ticket = find('#taik-board button[data-ticket="' + id + '"]');
+    if (ticket && rendered(ticket)) {
+      ticket.click();
+      await delayFrame();
+      requireFact(find('#taik-ticket')?.dataset.job === id, 'A click on the ticket did not open it: ' + id);
+      return;
+    }
+  }
+  throw new Error('No ticket for ' + id);
+}
+
 // Contract of the workpiece view: one pane shows the workpiece of the selected job. While a round
 // runs it shows the live draft, marked as unverified, and the accepted result afterwards.
 function renderFacts(mode) {
@@ -37,6 +53,16 @@ function renderFacts(mode) {
     result: rect(result), flow: rect(flow)
   };
   requireFact(facts.result.top >= facts.flow.bottom - 1, 'The workpiece overlaps the flow');
+  // One ticket holds the job: description, conversation, history. There is no second job list.
+  const ticket = find('#taik-ticket');
+  requireFact(rendered(ticket), 'The ticket is not rendered');
+  requireFact(!find('#taik-live-job'), 'The separate job list still exists');
+  requireFact(ticket.contains(history), 'The history is not part of the ticket');
+  requireFact((ticket.querySelector('.ticket-brief')?.textContent.trim().length ?? 0) > 20, 'The ticket lacks its description');
+  const cut = [...ticket.querySelectorAll('.ticket-title, .thread-message, .round-checks, .round h3')]
+    .filter(el => rendered(el) && el.scrollWidth > el.clientWidth + 1).map(el => el.className + ': ' + el.textContent.trim().slice(0, 40));
+  requireFact(!cut.length, 'Text in the ticket is cut off: ' + cut.join(' | '));
+  requireFact(rect(ticket).right <= rect(activity).right + 1, 'The ticket leaves its column');
   // Ticket board: one group at a time, every ticket as wide as its list, compact enough to leave the history in view.
   const board = find('#taik-board');
   if (board) {
@@ -78,7 +104,7 @@ async function runDesignGate(requireOpen) {
   try {
     const snapshot = window.designGateSnapshot;
     requireFact(snapshot?.jobs.some(job => job.id === 'job-floorplanner'), 'Snapshot lacks the verified Floorplanner control');
-    select('#taik-live-job','job-floorplanner');
+    await chooseTicket('job-floorplanner');
     await delayFrame();
     const history = () => find('[aria-label="Auftragsverlauf"]');
     const defaultOpen = history()?.querySelectorAll('details[open]').length ?? 0;
@@ -91,25 +117,24 @@ async function runDesignGate(requireOpen) {
     const result = frame('#taik-result-viewport');
     requireFact(rendered(result), 'Floorplanner is not shown as the workpiece');
     const original = result.srcdoc;
-    // Conversation: a question of the worker puts the job among the waiting tickets, and its ticket tells the thread.
-    if (find('#taik-board')) {
+    // Conversation: a question of the worker puts the job among the waiting tickets, and its ticket tells it in full.
+    {
       const asked = structuredClone(snapshot);
       const asking = asked.jobs.find(entry => entry.id === 'job-floorplanner');
-      asking.messages = [{ author: 'agent', round: asking.rounds.length, text: 'Gate-Frage: welche Breite?' }];
+      const question = 'Gate-Frage: welche Breite soll der Gang zwischen den Regalen haben, und gilt sie auch vor den Kassen?';
+      asking.messages = [{ author: 'agent', round: asking.rounds.length, text: question }];
       window.updateFactory(asked);
       await delayFrame();
-      const waitingTicket = find('#taik-board-open button[data-ticket="job-floorplanner"]');
-      requireFact(rendered(waitingTicket), 'A job whose worker asked is not among the waiting tickets');
-      waitingTicket.click();
-      await delayFrame();
-      const thread = find('#taik-board .thread');
-      requireFact(rendered(thread) && thread.textContent.includes('Gate-Frage: welche Breite?'), 'The ticket does not show the question of the worker');
-      requireFact(thread.querySelectorAll('.thread-round').length === asking.rounds.length, 'The ticket does not tell its rounds');
-      requireFact(rendered(find('#taik-board .ticket-detail textarea')), 'The ticket has no reply field');
-      find('#taik-board-open button[data-ticket="job-floorplanner"]').click();
+      requireFact(!!find('#taik-board-open button[data-ticket="job-floorplanner"]'), 'A job whose worker asked is not among the waiting tickets');
+      const ticket = find('#taik-ticket');
+      requireFact(rendered(ticket) && ticket.textContent.includes(question), 'The ticket does not show the whole question of the worker');
+      const message = ticket.querySelector('.thread-message');
+      requireFact(message.scrollWidth <= message.clientWidth + 1 && message.scrollHeight <= message.clientHeight + 1, 'A message is cut off');
+      requireFact(ticket.querySelectorAll('.rounds .round').length === asking.rounds.length, 'The ticket does not hold its rounds');
+      requireFact(rendered(ticket.querySelector('textarea')), 'The ticket has no reply field');
       window.updateFactory(snapshot);
       await delayFrame();
-      requireFact(!find('#taik-board .thread'), 'The ticket stayed open');
+      requireFact(!find('#taik-ticket').textContent.includes(question), 'The question stayed after the snapshot changed');
     }
     // Crew: a new agent is typed while the snapshot refreshes. The draft and the focus survive.
     const crew = find('#taik-crew');
@@ -150,7 +175,7 @@ async function runDesignGate(requireOpen) {
     await delayFrame();
     requireFact([...history().querySelectorAll('details[open]')].some(el => el.dataset.round === selectedDetail),
       'A live update closed the selected history detail');
-    requireFact(find('#taik-live-job').value === 'job-floorplanner', 'A live update dislodged the selected job');
+    requireFact(find('#taik-ticket')?.dataset.job === 'job-floorplanner', 'A live update dislodged the selected ticket');
     const draftFrame = frame('#taik-draft-viewport');
     requireFact(rendered(draftFrame) && draftFrame.srcdoc.includes(evidence), 'The live draft is not shown as the workpiece');
     requireFact(draftFrame.getAttribute('sandbox') === '', 'The live draft may run scripts');

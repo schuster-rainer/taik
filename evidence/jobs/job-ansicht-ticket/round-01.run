@@ -1,0 +1,20 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=Ein Ticket zeigt seinen ganzen Auftrag, und die zweite Auftragsliste entfällt.
+baseline=(empty)
+worker=claude-fable-attached
+limits=4 rounds; worker lease 60s up to 900s; verifier 15s; 96KiB source
+gate_sha256=eee0116e1911d690d296aceef80d2c198771168f271ae78a64fb2e246230fd6f
+gate_ms=96
+patch_blocks=
+checks=PASS: host contract, offline isolation, 28 token shadows without glow, contrast 5.12–13.04, lossless .run highlighting, token flow per round, one workpiece pane with live draft, animated flow, ticket board in one group at a time, crew with agents and harnesses, conversation in the ticket, one ticket with the full history
+artifact=round-01.html
+rejected_candidate=
+feedback=
+follow_up=
+continuation=Retain the accepted artifact. No further work was authorized by this round.
+advance=false
+end

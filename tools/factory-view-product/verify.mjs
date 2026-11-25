@@ -14,7 +14,7 @@ for (const id of ['taik-live', 'taik-activity', 'taik-preview', 'taik-flow', 'ta
   'taik-result-source', 'taik-result-diff']) {
   assert.equal(count(new RegExp(`id="${id}"`, 'g')), 1, `static element #${id}`);
 }
-for (const hook of ['id="taik-live-job"', 'id="taik-appearance"', 'aria-label="Auftragsverlauf"', 'data-round=',
+for (const hook of ['id="taik-appearance"', 'aria-label="Auftragsverlauf"', 'data-round=',
   'class="rounds"', 'class="round', 'taik-appearance', 'openArtifact', 'setAppearance']) {
   assert(html.includes(hook), `viewer hook ${hook}`);
 }
@@ -306,4 +306,13 @@ assert(asking.decision.some(t => t.job === 'job-erledigt'), 'a reply that a roun
 for (const hook of ['class="thread"', 'attention', 'ticketThread(']) assert(html.includes(hook), `thread hook ${hook}`);
 assert(css.includes('#taik-live .thread'), 'style for the thread');
 
-console.log(`PASS: host contract, offline isolation, ${shadows.length} token shadows without glow, contrast ${Math.min(...measured).toFixed(2)}–${Math.max(...measured).toFixed(2)}, lossless .run highlighting, token flow per round, one workpiece pane with live draft, animated flow, ticket board in one group at a time, crew with agents and harnesses, conversation in the ticket`);
+// 14. One place for a job: the ticket. It holds the description, the conversation and the full history.
+assert.equal(count(/id="taik-ticket"/g) >= 1 && count(/<section id="taik-ticket"/g) <= 2, true, 'the ticket element');
+assert.doesNotMatch(html, /taik-live-job|aria-labelledby="taik-goal"|Software-Auftrag|data-ticket-close/, 'the separate job list, goal card and result card are gone');
+assert(html.indexOf('id="taik-ticket"') > 0 && html.indexOf('id="taik-ticket"') < html.indexOf('aria-label="Auftragsverlauf"'), 'the history is part of the ticket');
+assert.doesNotMatch(html, /<section aria-label="Auftragsverlauf"/, 'the history is no card of its own');
+assert(html.includes('class="ticket-brief"') && html.includes('class="round-checks"'), 'description and the full finding of the gate are shown');
+assert.doesNotMatch(css, /#taik-live \.round-checks \{[^}]*(?:text-overflow|white-space:\s*nowrap|line-clamp)/, 'the finding of the gate is not cut off');
+assert.doesNotMatch(css, /#taik-live \.thread-message \{[^}]*(?:text-overflow|white-space:\s*nowrap|line-clamp)/, 'a message is not cut off');
+
+console.log(`PASS: host contract, offline isolation, ${shadows.length} token shadows without glow, contrast ${Math.min(...measured).toFixed(2)}–${Math.max(...measured).toFixed(2)}, lossless .run highlighting, token flow per round, one workpiece pane with live draft, animated flow, ticket board in one group at a time, crew with agents and harnesses, conversation in the ticket, one ticket with the full history`);
