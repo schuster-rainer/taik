@@ -74,7 +74,7 @@ pub fn reply(state: &Path, name: &str, text: &str) -> Result<PathBuf> {
         return crate::talk::write(&proposal, crate::talk::Author::User, 0, text);
     }
     let job = jobs.join(name);
-    if !job.join("submission.brief.md").is_file() {
+    if !job.join("submission.brief.md").is_file() && !job.join(crate::session::BRIEF).is_file() {
         return Err("replies go to queued software jobs".into());
     }
     let message = crate::talk::write(
@@ -388,7 +388,7 @@ fn drain(
             }
         }
         #[cfg(target_os = "macos")]
-        if job.join("submission.brief.md").is_file() {
+        if job.join("submission.brief.md").is_file() || job.join(crate::session::BRIEF).is_file() {
             source_jobs.push(job);
         }
     }
@@ -423,7 +423,10 @@ fn drain(
             let mut found: Vec<_> = entries
                 .flatten()
                 .map(|entry| entry.path())
-                .filter(|job| job.join("submission.brief.md").is_file())
+                .filter(|job| {
+                    job.join("submission.brief.md").is_file()
+                        || job.join(crate::session::BRIEF).is_file()
+                })
                 .collect();
             found.sort_unstable();
             found
@@ -495,6 +498,17 @@ fn run_source_job(home: &Path, jobs: &Path, job: &Path) -> Result<bool> {
             return Ok(false);
         }
     };
+    // A session job: an agent with file tools in its own copy, judged by commit.
+    #[cfg(target_os = "macos")]
+    if job.join(crate::session::BRIEF).is_file() {
+        let outcome = crate::session::run_queued(home, job, agent.as_ref())?;
+        if outcome == Some(false)
+            && let Err(error) = crate::analysis::of_last_round(job)
+        {
+            eprintln!("{}: analysis: {error}", job.display());
+        }
+        return Ok(outcome.unwrap_or(true));
+    }
     let (mut outcome, follow_up) = crate::source::run_queued(job, agent.as_ref())?;
     if let Some(follow_up) = follow_up {
         let mut name = job

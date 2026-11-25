@@ -1837,8 +1837,8 @@ pub(crate) fn single_line(text: &str) -> String {
 
 pub(crate) struct ChildResult {
     pub(crate) status: ExitStatus,
-    stdout: Vec<u8>,
-    stderr: String,
+    pub(crate) stdout: Vec<u8>,
+    pub(crate) stderr: String,
 }
 
 #[derive(Debug)]
@@ -1902,6 +1902,15 @@ impl ChildResult {
             })
             .map(single_line)
     }
+}
+
+/// A call without a ceiling of its own. It lives as long as it keeps its lease by output.
+pub(crate) fn run_leased(
+    command: &mut Command,
+    lease: Duration,
+    update: impl FnMut(&[u8]),
+) -> Result<ChildResult> {
+    run_child_limited(command, WORKER_CEILING, Some(lease), 128 * LIMIT, update)
 }
 
 pub(crate) fn run_child(

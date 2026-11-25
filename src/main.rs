@@ -23,6 +23,8 @@ mod self_improve;
 #[cfg(unix)]
 mod service;
 #[cfg(target_os = "macos")]
+mod session;
+#[cfg(target_os = "macos")]
 mod source;
 #[cfg(target_os = "macos")]
 mod talk;
@@ -53,6 +55,7 @@ const USAGE: &str = "usage: taik-seed seed OUTPUT.run
        taik-seed reply STATE JOB < MESSAGE
        taik-seed request STATE < REQUEST
        taik-seed analyse JOB
+       taik-seed queue-session STATE NAME BRIEF.md GATE.sh [REPOSITORY]
        taik-seed propose STATE NAME RECORD.run
        taik-seed approve STATE NAME
        taik-seed experiment BASELINE.run OUTPUT_DIRECTORY
@@ -376,6 +379,19 @@ fn run() -> Result<bool> {
                 Some(path) => println!("{}", path.display()),
                 None => println!("nothing to analyse"),
             }
+            Ok(true)
+        }
+        #[cfg(target_os = "macos")]
+        "queue-session" if (3..=4).contains(&rest.len()) => {
+            let name = rest[0].to_str().ok_or("job name must be ASCII")?;
+            let job = session::queue(
+                first,
+                name,
+                Path::new(&rest[1]),
+                Path::new(&rest[2]),
+                rest.get(3).map(Path::new),
+            )?;
+            println!("{}", job.display());
             Ok(true)
         }
         #[cfg(target_os = "macos")]
