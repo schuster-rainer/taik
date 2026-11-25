@@ -169,3 +169,7 @@ taik-seed queue-self STATE
 taik-seed drain|serve STATE
 taik-seed serve STATE --reflect
 ```
+
+## License
+
+[MIT](LICENSE)
