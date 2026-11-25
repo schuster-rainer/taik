@@ -127,6 +127,7 @@
   #taik-live .syntax-string { color: var(--good); }
   #taik-live .syntax-comment { color: var(--quiet); font-style: italic; }
   #taik-live .syntax-keyword { color: var(--bad); }
+  #taik-live .syntax-file { display: inline-block; margin: 10px 0 4px; font-weight: 700; color: var(--ink); }
 
   /* Activity details */
   #taik-live .running { color: var(--quiet); margin-top: 6px; font-size: .8rem; font-variant-numeric: tabular-nums; }
@@ -302,12 +303,12 @@
     syncAppearance();
 
     function highlight(code) {
-      const pattern = /<!--[\s\S]*?(?:-->|$)|<\/?[\w:-]+|"[^"\n]*"|'[^'\n]*'|`[^`\n]*`|\b(?:const|let|function|return|if|else|for|class|true|false|null)\b/g;
+      const pattern = /^=== .+ ===$|\/\/[^\n]*|<!--[\s\S]*?(?:-->|$)|<\/?[\w:-]+|"[^"\n]*"|'[^'\n]*'|`[^`\n]*`|\b(?:const|let|function|return|if|else|for|class|true|false|null|fn|pub|use|mod|struct|enum|impl|match|mut|while|loop)\b/gm;
       let cursor = 0;
       let markup = '';
       for (const token of code.matchAll(pattern)) {
         const value = token[0];
-        const color = value.startsWith('<!--') ? 'comment' : value.startsWith('<') ? 'tag'
+        const color = value.startsWith('=== ') ? 'file' : value.startsWith('<!--') || value.startsWith('//') ? 'comment' : value.startsWith('<') ? 'tag'
           : /^['"\x60]/.test(value) ? 'string' : 'keyword';
         markup += escape(code.slice(cursor, token.index)) + `<span class="syntax-${color}">${escape(value)}</span>`;
         cursor = token.index + value.length;
@@ -316,11 +317,11 @@
     }
 
     function renderPreview(selectedJob) {
-      const resultJob = snapshot.jobs.find(job => job.id === 'job-floorplanner' && job.preview)
-        ?? snapshot.jobs.find(job => job.preview);
+      const shows = job => /^\s*<(?:!doctype|html)\b/i.test(job?.preview ?? '');
+      const resultJob = shows(selectedJob) ? selectedJob : snapshot.jobs.find(shows);
       if (resultJob) {
         const result = latestAccepted(resultJob);
-        resultLabel.textContent = `Freigegeben · ${result.fields.artifact}`;
+        resultLabel.textContent = `${resultJob.id.replace(/^job-/, '')} · freigegeben · ${result.fields.artifact}`;
         resultViewport.show(`${resultJob.id}/${result.name}`, resultJob.preview);
       } else {
         resultLabel.textContent = 'Der erste geprüfte Stand steht aus.';
@@ -352,7 +353,9 @@
       const accepted = job && latestAccepted(job);
       const last = job?.rounds.at(-1);
       const result = last?.fields.checks || accepted?.fields.tags;
-      const code = job?.draft ?? (job?.id === resultJob?.id ? job?.preview : null);
+      const isDocument = text => /^\s*<(?:!doctype\b|html\b|head\b|body\b|style\b)/i.test(text ?? '');
+      const program = job?.preview && !isDocument(job.preview);
+      const code = job?.draft ?? (job?.id === resultJob?.id || program ? job?.preview : null);
       const showArtifact = job?.preview && !code && job.id !== resultJob?.id;
       const key = JSON.stringify([job?.id, accepted?.name, code, !!job?.draft, result, job?.sourceActive]);
       if (key === jobPreviewKey) return;
@@ -368,7 +371,7 @@
         const offset = jobContent.scrollTop;
         const follow = jobContent.scrollHeight - offset - jobContent.clientHeight < 36;
         const status = showDraft ? 'Arbeitsvorschau · Live-Entwurf ohne Skripte'
-          : job.draft ? 'Quellcode · Live-Entwurf' : 'Freigegebener Quellcode';
+          : job.draft ? 'Quellcode · Live-Entwurf' : program ? `Freigegebenes Programm · ${escape(accepted.fields.artifact)}` : 'Freigegebener Quellcode';
         jobContent.dataset.mode = 'code';
         jobContent.innerHTML = `<p class="sub">${status}</p><pre class="source-code"><code>${highlight(code)}</code></pre>`;
         jobContent.scrollTop = job.draft && follow ? jobContent.scrollHeight : offset;

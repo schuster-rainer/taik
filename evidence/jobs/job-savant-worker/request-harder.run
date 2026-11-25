@@ -1,0 +1,6 @@
+decision=observed
+identity=savant-worker-02-request
+intent=Einen deutlich schwereren Programmierauftrag ableiten, an dem sich zwei Code-Worker unterscheiden können.
+observation=Two workers solved a four-file Rust tool that sums fields of key=value records in the first round. That job was too easy to tell them apart.
+continuation=Derive one harder Rust program job with standard library only. It should need real algorithmic care and have several interacting rules and edge cases, so that a careless solution fails some behaviour checks: for example an interpreter for a small expression language with variables, operator precedence, integer overflow rules and precise error messages with positions, or a dependency resolver with cycle reporting. The gate must check at least 25 distinct behaviours, including edge cases stated in the brief, and must finish within 15 seconds including compilation.
+end
