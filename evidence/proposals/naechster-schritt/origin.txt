@@ -1,0 +1,5 @@
+derived_from=/Users/rainer/projects/ideas/talk/evidence/jobs/job-prozess-reflexion/summary-02.run
+intent_from=/Users/rainer/.local/state/taik-factory/jobs/job-prozess-reflexion/summary-02.run
+product=ansicht
+proposed_by=savant
+state=waiting for approval

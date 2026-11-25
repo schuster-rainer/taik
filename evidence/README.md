@@ -92,6 +92,7 @@
 
 ## Vorschläge der Factory
 
+- [Offene Vorhaben und Produkte für die Reflexion](jobs/job-backend/round-18.run) und [erste Reflexion, die ein offenes Vorhaben aufgriff](jobs/job-prozess-reflexion/reflection-naechster-schritt.run)
 - [Reflexion nach jedem Auftrag](jobs/job-backend/round-05.run) und [erste Reflexion im Dienst, mit Halt](jobs/job-worker-verfuegbarkeit-10/reflection-worker-verfuegbarkeit-10-next.run)
 - [Vorschlagsweg eingeführt](jobs/job-backend/round-04.run)
 - Freigegeben und angenommen: [Cargo-Projekt aus vier Dateien](jobs/job-mehrdatei-programm/round-01.run), [vorgeschlagener Auftrag](proposals/mehrdatei-programm/brief.md) und [Gate](proposals/mehrdatei-programm/verify.mjs), abgeleitet aus [dieser Beobachtung](jobs/job-taik-stats/observation.run), mit [Auswertung](jobs/job-mehrdatei-programm/observation.run)

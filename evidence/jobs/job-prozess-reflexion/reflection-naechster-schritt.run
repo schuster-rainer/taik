@@ -1,0 +1,12 @@
+decision=observed
+identity=reflection-naechster-schritt
+derived_from=/Users/rainer/projects/ideas/talk/evidence/jobs/job-prozess-reflexion/summary-02.run
+intent_from=/Users/rainer/.local/state/taik-factory/jobs/job-prozess-reflexion/summary-02.run
+worker=savant
+worker_model=subq-savant-1.4
+worker_input_tokens=2284
+worker_output_tokens=2138
+worker_cost_usd=0.001297
+worker_duration_ms=6903
+outcome=proposal /Users/rainer/.local/state/taik-factory/proposals/naechster-schritt waits for approval
+end

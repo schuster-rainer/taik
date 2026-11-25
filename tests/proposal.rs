@@ -107,6 +107,71 @@ fn a_proposed_job_waits_until_it_is_approved() {
         "{note}"
     );
 
+    // The loop: an open intent of the Factory and a product it may change. The worker takes the
+    // intent and proposes a change of the product. Gate and starting source come from the product.
+    fs::write(
+        state.join("jobs/job-origin/observation.run"),
+        "decision=observed\nidentity=o\ncontinuation=Make the title of the page blue.\nend\n",
+    )
+    .unwrap();
+    let page = root.path().join("page.html");
+    fs::write(&page, "<!doctype html><h1>Titel</h1>\n").unwrap();
+    let page_gate = root.path().join("page-gate.mjs");
+    fs::write(&page_gate, "console.log('PASS: page');\n").unwrap();
+    fs::create_dir_all(state.join("products")).unwrap();
+    fs::write(
+        state.join("products/seite.product"),
+        format!(
+            "about=Eine Seite\nseed={}\ngate={}\nend\n",
+            page.display(),
+            page_gate.display()
+        ),
+    )
+    .unwrap();
+    answer(
+        "INTENT: 1\n=== product seite ===\nDen Titel der Seite blau machen\n\nNur die Farbe ändert sich.\n",
+    );
+    let looped = propose("titel-blau");
+    assert_eq!(looped.status.code(), Some(0), "{looped:?}");
+    let blue = state.join("proposals/titel-blau");
+    assert_eq!(
+        fs::read_to_string(blue.join("brief.md")).unwrap(),
+        "Den Titel der Seite blau machen\n\nNur die Farbe ändert sich.\n"
+    );
+    assert_eq!(
+        fs::read(blue.join("verify.mjs")).unwrap(),
+        fs::read(&page_gate).unwrap()
+    );
+    assert_eq!(
+        fs::read(blue.join("seed.html")).unwrap(),
+        fs::read(&page).unwrap()
+    );
+    let origin = fs::read_to_string(blue.join("origin.txt")).unwrap();
+    assert!(
+        origin.contains("product=seite\n") && origin.contains("observation.run\n"),
+        "{origin}"
+    );
+    let note = fs::read_to_string(state.join("jobs/job-origin/reflection-titel-blau.run")).unwrap();
+    assert!(
+        note.contains("\nintent_from=") && note.contains("observation.run\n"),
+        "{note}"
+    );
+    let queued = factory()
+        .arg("approve")
+        .arg(&state)
+        .arg("titel-blau")
+        .output()
+        .unwrap();
+    assert_eq!(queued.status.code(), Some(0), "{queued:?}");
+    assert_eq!(
+        fs::read(state.join("jobs/job-titel-blau/submission.seed.html")).unwrap(),
+        fs::read(&page).unwrap()
+    );
+    // A product the Factory does not know is refused.
+    answer("=== product unbekannt ===\nEtwas ändern\n");
+    assert_eq!(propose("fremd").status.code(), Some(2));
+    assert!(!state.join("proposals/fremd").exists());
+
     let approved = factory()
         .arg("approve")
         .arg(&state)

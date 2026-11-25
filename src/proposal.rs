@@ -31,6 +31,106 @@ Rules for the gate: check behaviour and results, not the presence of words. Ever
 
 If the record justifies no further job, reply with exactly one line 'STOP: <reason in one German sentence>' and nothing else. Do not invent work.";
 
+const LOOP: &str = "\n\nThe continuation of a round record that says no further work was authorized concerns that round alone. It is not a reason to stop. Choose the next job from the open intents listed below when one of them can be done as one job, and begin your reply with the line 'INTENT: <number>' when you take one.\n\nTo change a listed product instead of writing a new artifact, reply with the INTENT line if any, then the line '=== product <name> ===' and below it only the brief. Write no gate for a product: its own pinned gate applies. A product brief names exactly what changes and says that everything else stays as it is.\n\nReply 'STOP: <reason>' only when no open intent can be done as one job and the record justifies nothing else.";
+
+/// What the Factory itself wrote down as justified next work and nobody has taken up yet: the
+/// continuation of its observation records. Newest first.
+fn open_intents(jobs: &Path) -> Vec<(String, String)> {
+    let mut taken = Vec::new();
+    let mut found: Vec<(std::time::SystemTime, String, String)> = Vec::new();
+    for folder in fs::read_dir(jobs).into_iter().flatten().flatten() {
+        for file in fs::read_dir(folder.path()).into_iter().flatten().flatten() {
+            let name = file.file_name().to_string_lossy().into_owned();
+            if !name.ends_with(".run") {
+                continue;
+            }
+            let Ok(text) = record::read_regular(&file.path(), record::MAX_RECORD_BYTES) else {
+                continue;
+            };
+            if name.starts_with("reflection-") {
+                taken.extend(
+                    text.lines()
+                        .filter_map(|line| line.strip_prefix("intent_from="))
+                        .map(str::to_owned),
+                );
+            } else if (name.starts_with("summary") || name.starts_with("observation"))
+                && text.starts_with("decision=observed\n")
+                && let Some(next) = text
+                    .lines()
+                    .rev()
+                    .find_map(|line| line.strip_prefix("continuation="))
+            {
+                let changed = file
+                    .metadata()
+                    .and_then(|data| data.modified())
+                    .unwrap_or(std::time::UNIX_EPOCH);
+                found.push((
+                    changed,
+                    file.path().display().to_string(),
+                    source::single_line(next),
+                ));
+            }
+        }
+    }
+    found.sort_by(|first, second| second.0.cmp(&first.0));
+    found
+        .into_iter()
+        .filter(|(_, path, _)| !taken.contains(path))
+        .map(|(_, path, text)| (path, text))
+        .take(25)
+        .collect()
+}
+
+/// An existing artifact with its pinned gate that a job may build on, from STATE/products/NAME.product.
+struct Product {
+    name: String,
+    about: String,
+    seed: PathBuf,
+    gate: PathBuf,
+}
+
+fn products(state: &Path) -> Vec<Product> {
+    let mut list = Vec::new();
+    for file in fs::read_dir(state.join("products"))
+        .into_iter()
+        .flatten()
+        .flatten()
+    {
+        let Some(name) = file
+            .file_name()
+            .to_str()
+            .and_then(|name| name.strip_suffix(".product"))
+            .map(str::to_owned)
+        else {
+            continue;
+        };
+        let Ok(text) = record::read_regular(&file.path(), record::MAX_RECORD_BYTES) else {
+            continue;
+        };
+        let field = |key: &str| {
+            text.lines()
+                .find_map(|line| line.strip_prefix(key))
+                .unwrap_or("")
+                .trim()
+                .to_owned()
+        };
+        if crate::worker_name(&name).is_some()
+            && text.ends_with("end\n")
+            && !field("seed=").is_empty()
+            && !field("gate=").is_empty()
+        {
+            list.push(Product {
+                name,
+                about: field("about="),
+                seed: field("seed=").into(),
+                gate: field("gate=").into(),
+            });
+        }
+    }
+    list.sort_by(|first, second| first.name.cmp(&second.name));
+    list
+}
+
 pub fn propose(state: &Path, name: &str, record_path: &Path) -> Result<Option<PathBuf>> {
     let name = crate::worker_name(name).ok_or("invalid proposal name")?;
     let state = state.canonicalize()?;
@@ -59,8 +159,25 @@ pub fn propose(state: &Path, name: &str, record_path: &Path) -> Result<Option<Pa
     let origin_brief =
         record::read_regular(&job.join("submission.brief.md"), record::MAX_RECORD_BYTES)
             .unwrap_or_default();
+    let intents = open_intents(&state.join("jobs"));
+    let products = products(&state);
+    let mut listing =
+        String::from("\n\nOPEN INTENTS OF THE FACTORY, from its own observation records:\n");
+    if intents.is_empty() {
+        listing.push_str("(none)\n");
+    }
+    for (number, (_, text)) in intents.iter().enumerate() {
+        listing.push_str(&format!("{}. {text}\n", number + 1));
+    }
+    listing.push_str("\nPRODUCTS THAT A JOB MAY CHANGE. Such a job starts from the product's accepted source and is judged by the product's own pinned gate:\n");
+    if products.is_empty() {
+        listing.push_str("(none)\n");
+    }
+    for product in &products {
+        listing.push_str(&format!("- {}: {}\n", product.name, product.about));
+    }
     let prompt = format!(
-        "{CONTRACT}\n\nDECISION RECORD ({}):\n{decision}\nBRIEF OF THAT JOB:\n{}",
+        "{CONTRACT}{LOOP}{listing}\n\nDECISION RECORD ({}):\n{decision}\nBRIEF OF THAT JOB:\n{}",
         record_path.display(),
         if origin_brief.is_empty() {
             "(none)"
@@ -74,12 +191,27 @@ pub fn propose(state: &Path, name: &str, record_path: &Path) -> Result<Option<Pa
     fs::create_dir(&workspace)?;
     let (answer, worker) = source::ask(&workspace, job, &prompt, &mut Progress::silent());
     let (answer, usage) = answer?;
+    // An optional first line names the open intent that the worker took up.
+    let mut answer = answer.trim_start().to_owned();
+    let mut intent_from = String::new();
+    if let Some(rest) = answer.strip_prefix("INTENT:") {
+        let (number, tail) = rest.split_once('\n').unwrap_or((rest, ""));
+        if let Some((path, _)) = number
+            .trim()
+            .parse::<usize>()
+            .ok()
+            .and_then(|number| intents.get(number.wrapping_sub(1)))
+        {
+            intent_from = format!("intent_from={path}\n");
+        }
+        answer = tail.trim_start().to_owned();
+    }
     // The reflection is kept beside the record it came from, with its cost.
     let note = |outcome: &str| {
         record::publish_text(
             &job.join(format!("reflection-{name}.run")),
             &format!(
-                "decision=observed\nidentity=reflection-{name}\nderived_from={}\nworker={worker}\n{usage}outcome={}\nend\n",
+                "decision=observed\nidentity=reflection-{name}\nderived_from={}\n{intent_from}worker={worker}\n{usage}outcome={}\nend\n",
                 record_path.display(),
                 source::single_line(outcome),
             ),
@@ -90,8 +222,29 @@ pub fn propose(state: &Path, name: &str, record_path: &Path) -> Result<Option<Pa
         note(&format!("stop: {}", reason.trim()))?;
         return Ok(None);
     }
-    let (brief, gate) =
-        split(&answer).ok_or("the worker did not return brief.md and verify.mjs")?;
+    // A job on a product takes the product's gate and starts from its accepted source.
+    let (brief, gate, seed) = if let Some(rest) = answer.strip_prefix("=== product ") {
+        let (head, text) = rest
+            .split_once('\n')
+            .ok_or("a product proposal without a brief")?;
+        let wanted = head.trim().trim_end_matches('=').trim();
+        let product = products
+            .iter()
+            .find(|product| product.name == wanted)
+            .ok_or("the worker named an unknown product")?;
+        (
+            format!("{}\n", text.trim()),
+            record::read_regular(&product.gate, source::LIMIT)?,
+            Some((
+                product.name.clone(),
+                record::read_regular(&product.seed, source::LIMIT)?,
+            )),
+        )
+    } else {
+        let (brief, gate) =
+            split(&answer).ok_or("the worker did not return brief.md and verify.mjs")?;
+        (brief, gate, None)
+    };
     source::intent(&brief)?;
     if brief.len() > record::MAX_RECORD_BYTES
         || gate.trim().is_empty()
@@ -113,10 +266,15 @@ pub fn propose(state: &Path, name: &str, record_path: &Path) -> Result<Option<Pa
     fs::create_dir_all(&target)?;
     record::publish_text(&target.join("brief.md"), &brief, record::MAX_RECORD_BYTES)?;
     record::publish_text(&target.join("verify.mjs"), &gate, source::LIMIT)?;
+    let mut product_line = String::new();
+    if let Some((product, source_text)) = &seed {
+        record::publish_text(&target.join("seed.html"), source_text, source::LIMIT)?;
+        product_line = format!("product={product}\n");
+    }
     record::publish_text(
         &target.join("origin.txt"),
         &format!(
-            "derived_from={}\nproposed_by={worker}\nstate=waiting for approval\n",
+            "derived_from={}\n{intent_from}{product_line}proposed_by={worker}\nstate=waiting for approval\n",
             record_path.display()
         ),
         record::MAX_RECORD_BYTES,
@@ -173,7 +331,9 @@ pub fn approve(state: &Path, name: &str) -> Result<PathBuf> {
         name,
         &proposal.join("brief.md"),
         &proposal.join("verify.mjs"),
-        None,
+        Some(proposal.join("seed.html"))
+            .filter(|seed| seed.is_file())
+            .as_deref(),
         None,
     )?;
     record::publish_text(

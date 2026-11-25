@@ -157,6 +157,8 @@ taik-seed approve STATE NAME
 
 With `TAIK_AUTO_PROPOSE` set, the service reflects once after each finished software job, at most three times in 24 hours, and either writes a proposal or records why it stops. Waiting proposals appear in the viewer with an approve button.
 
+The reflection reads the open intents of the Factory: the continuation of every observation record that no reflection has taken up yet. It may also propose a change to a product. A product is a file `STATE/products/NAME.product` that names an accepted artifact, its pinned gate and what it is. Such a proposal carries only a brief, and the job starts from the accepted source under the product's own gate.
+
 `propose` asks the worker for a brief and a gate, derived from the continuation of a record. Both wait in `STATE/proposals/NAME`. Nothing runs until `approve` queues the job. The worker that later writes the candidate sees the brief and never the gate.
 
 ## Requests from GitHub issues

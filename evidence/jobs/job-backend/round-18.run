@@ -1,0 +1,20 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-18
+intent=Der Reflexion die offenen Vorhaben der Factory geben und sie Änderungen an einem bestehenden Produkt vorschlagen lassen.
+baseline=taik-seed 222afc82535c08d7121e479234f044af8d95bcf6cf4246523fc3d954e33d6a61
+worker=claude-fable
+decided_by=the installed taik-seed 222afc82535c08d7121e479234f044af8d95bcf6cf4246523fc3d954e33d6a61 at /Users/rainer/.local/state/taik-factory/taik-seed
+limits=99 rounds; gate 900s; candidate checks 10s each
+gate_sha256=76b41170f51fa7e1a5424ba01f903bcf2276b8f8f19e4d87f952e88d18b6b0ce
+gate_ms=26160
+checks=PASS: Rust tests, Clippy with warnings denied, release build; candidate seeded, rejected an invalid procedure without touching the accepted record, and extended it
+evidence=round-18.checks.log
+artifact=round-18-taik-seed
+artifact_sha256=78187b3b1db4b6f9da32bee1b1996b82a3a9b864e7d18391bdfad0a5c4a8c0ad
+rollback=round-18.rollback-taik-seed
+continuation=Restart the service so that it runs the accepted binary.
+advance=false
+end
