@@ -137,7 +137,7 @@ fn derive_requests(home: &Path) {
         .filter_map(|entry| {
             let name = entry.file_name().to_string_lossy().into_owned();
             name.strip_suffix(".run")
-                .filter(|stem| stem.starts_with("ticket-"))
+                .filter(|stem| stem.starts_with("ticket-") && !stem.contains('.'))
                 .map(str::to_owned)
         })
         .collect();
@@ -151,8 +151,17 @@ fn derive_requests(home: &Path) {
         }
         // The orchestrator decides how the request is carried out, then the agent it names writes the gate.
         let request = requests.join(format!("{name}.run"));
-        let derived = crate::orchestrator::plan(home, &name, &request)
-            .and_then(|plan| crate::proposal::propose_planned(home, &name, &request, Some(&plan)));
+        let derived = crate::orchestrator::plan(home, &name, &request).and_then(|plan| {
+            let mut outcome = crate::proposal::propose_planned(home, &name, &request, Some(&plan));
+            // An agent that cannot be reached does not end the request: another one writes the gate.
+            for substitute in crate::orchestrator::substitutes(home, &plan) {
+                let Err(error) = &outcome else { break };
+                eprintln!("request {name}: gate by {}: {error}", plan.gate);
+                outcome =
+                    crate::proposal::propose_planned(home, &name, &request, Some(&substitute));
+            }
+            outcome
+        });
         if let Err(error) = derived {
             eprintln!("request {name}: {error}");
             let _ = fs::write(

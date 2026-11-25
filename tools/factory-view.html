@@ -205,6 +205,10 @@
   #taik-live .ticket-detail textarea { font: inherit; font-size: .82rem; color: var(--ink); border: 0; border-radius: 10px;
     min-height: 62px; resize: vertical; padding: 8px 11px; background: var(--nm-base); box-shadow: var(--nm-inset-sm); }
   #taik-live .new-ticket { margin-top: 14px; }
+  #taik-live .plans { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 10px; }
+  #taik-live .plans .ticket { width: 100%; text-align: left; }
+  #taik-live .plans .title { display: block; font-weight: 600; overflow-wrap: anywhere; }
+  #taik-live .plans .meta { display: block; margin-top: 4px; overflow-wrap: anywhere; }
   #taik-live .new-ticket .actions { align-items: center; }
   #taik-live .new-ticket .actions .sub { margin-right: auto; }
   #taik-live .ticket-detail .actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
@@ -782,6 +786,21 @@
       return { open: columns.open.filter(match), run: columns.run.filter(match), decision: columns.decision.filter(match) };
     }
 
+    // What the orchestrator decided for a request, in one line.
+    function planLine(plan) {
+      if (!plan) return '';
+      return `${plan.kind === 'sitzung' ? 'Sitzung auf ' + plan.repo : 'Dokument'} · Gate @${plan.gate} · Arbeit @${plan.work}`;
+    }
+
+    // The requests the orchestrator is planning or has planned, newest first.
+    function orchestratorFeed(data) {
+      return (data.proposals ?? []).filter(proposal => proposal.plan || proposal.state === 'deriving').map(proposal => ({
+        key: 'proposal:' + proposal.name, title: ticketTitle(proposal.intent) || proposal.name,
+        line: proposal.plan ? planLine(proposal.plan) : 'Der Orchestrator plant.',
+        reason: proposal.plan ? proposal.plan.reason + (proposal.state === 'deriving' ? ' Das Gate wird gerade geschrieben.' : '') : '',
+      })).reverse();
+    }
+
     // The ticket shown before the user chose one: the first of the group that is shown.
     function firstTicket(columns, chosen) {
       return columns[boardTab(columns, chosen)][0]?.key ?? null;
@@ -979,11 +998,14 @@
         <span class="sub"><span id="taik-board-waiting">${waiting}</span> ${waiting === 1 ? 'wartet' : 'warten'} auf dich</span></div>
         <div class="board"><div class="board-tabs" role="group" aria-label="Gruppe">${tabs}
           <input id="taik-board-search" type="search" aria-label="Tickets durchsuchen" placeholder="Suchen" value="${escape(boardSearch)}"></div>${lists}</div></section>
-        <section aria-label="Neues Ticket"><div class="section-heading"><h2>Neues Ticket</h2><span class="sub">in deinen Worten</span></div>
+        <section id="taik-orchestrator" aria-label="Orchestrator"><div class="section-heading"><h2>Orchestrator</h2><span class="sub">verteilt, du gibst frei</span></div>
         <div class="ticket-detail new-ticket" data-detail="new">
-          <textarea aria-label="Neues Ticket" placeholder="Neues Ticket: Was soll entstehen? Die erste Zeile ist der Titel.">${escape(ticketDrafts.get('new') ?? '')}</textarea>
+          <textarea aria-label="Nachricht an den Orchestrator" placeholder="Sag dem Orchestrator, was entstehen soll. Die erste Zeile wird der Titel.">${escape(ticketDrafts.get('new') ?? '')}</textarea>
           <div class="actions"><span class="sub" id="taik-new-ticket-note">${newTicketNote}</span>
-          <button type="button" class="send" id="taik-new-ticket">Ticket anlegen</button></div></div></section>`;
+          <button type="button" class="send" id="taik-new-ticket">Senden</button></div></div>
+        ${(feed => feed.length ? `<ol class="plans">${feed.slice(0, 5).map(entry => `<li><button type="button" class="ticket" data-ticket="${escape(entry.key)}" data-job="">
+          <span class="title">${escape(entry.title)}</span><span class="why">${escape(entry.line)}</span>
+          ${entry.reason ? `<span class="meta">${escape(entry.reason)}</span>` : ''}</button></li>`).join('')}</ol>` : '')(orchestratorFeed(snapshot))}</section>`;
     }
 
     function ticketDetail(entry) {
@@ -1208,6 +1230,7 @@
           <div class="section-heading"><h2>Ticket</h2><span class="sub">${escape(proposal.name)} · ${proposal.state ? proposalState[proposal.state] ?? escape(proposal.state) : 'Vorschlag der Factory, wartet auf deine Freigabe'}</span></div>
           <div class="ticket-top"><h3 class="ticket-title">${escape(ticketTitle(proposal.intent))}</h3></div>
           ${proposal.note ? `<p class="round-checks">${escape(proposal.note)}</p>` : ''}
+          ${proposal.plan ? `<dl class="ticket-state"><div><dt>Plan</dt><dd>${escape(planLine(proposal.plan))}</dd></div><div><dt>Grund</dt><dd>${escape(proposal.plan.reason)}</dd></div></dl>` : ''}
           ${proposal.brief ? `<details class="ticket-brief" data-round="${escape(proposalKey)}" data-initial-open="${proposalOpen}"${proposalOpen ? ' open' : ''}><summary>Beschreibung</summary><pre>${escape(proposal.brief)}</pre></details>` : ''}
           <div class="thread" aria-label="Auftragsverlauf">${(proposal.messages ?? []).length ? `<ol class="rounds">${proposal.messages.map(item =>
             `<li class="thread-message ${item.author === 'user' ? 'user' : 'agent'}"><span class="who">${item.author === 'user' ? 'Du' : 'Agent'}</span>${escape(item.text)}</li>`).join('')}</ol>` : ''}</div>
@@ -1376,7 +1399,7 @@
         if (!text) { field?.focus(); return; }
         window.webkit?.messageHandlers?.newTicket?.postMessage({ text });
         ticketDrafts.delete('new');
-        newTicketNote = 'Angelegt. Die Factory leitet daraus einen Vorschlag ab.';
+        newTicketNote = 'Angekommen. Der Orchestrator plant und meldet sich hier.';
         chosenBoardTab = 'run';
         render();
         return;

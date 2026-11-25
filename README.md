@@ -128,7 +128,8 @@ printf 'Bitte die Überschrift kürzen.' | taik-seed reply STATE job-NAME
 # A job done by an agent session: file tools in a private copy of REPOSITORY, judged by commit.
 # The copy lives in STATE/work/NAME. Paths listed in .taik/protected of the repository may not change.
 taik-seed queue-session STATE NAME BRIEF.md GATE.sh REPOSITORY
-# A request in plain words. The service derives a proposal that waits for approval.
+# A request in plain words. The orchestrator plans it: one document or a session on a repository
+# listed in STATE/repos/NAME.repo, who writes the gate, who does the work. The proposal waits for approval.
 printf 'Eine Seite mit Uhrzeit' | taik-seed request STATE
 ```
 

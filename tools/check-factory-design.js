@@ -164,7 +164,7 @@ async function runDesignGate(requireOpen) {
       requested.proposals = [
         { name: 'ticket-901', intent: 'Ein Rechner für Brotteig', origin: '', brief: 'Ein Rechner für Brotteig\n\nMit Hydration.', messages: [], state: 'deriving' },
         { name: 'ticket-902', intent: 'Unklar', origin: '', brief: 'Unklar', messages: [], state: 'declined', note: 'Der Wunsch nennt nichts Prüfbares.' },
-        { name: 'ticket-903', intent: 'Fertig abgeleitet', origin: 'requests', brief: 'Fertig abgeleitet\n\nVerlangt: ein Titel.', messages: [{ author: 'user', round: 0, text: 'Bitte in Blau.' }] },
+        { name: 'ticket-903', intent: 'Fertig abgeleitet', origin: 'requests', brief: 'Fertig abgeleitet\n\nVerlangt: ein Titel.', messages: [{ author: 'user', round: 0, text: 'Bitte in Blau.' }], plan: { kind: 'sitzung', repo: 'taik', gate: 'savant', work: 'standard', reason: 'Es müssen bestehende Dateien geändert werden.' } },
       ];
       window.updateFactory(requested);
       await delayFrame();
@@ -186,6 +186,10 @@ async function runDesignGate(requireOpen) {
       const ticket = find('#taik-ticket');
       requireFact(ticket.textContent.includes('Verlangt: ein Titel.') && ticket.textContent.includes('Bitte in Blau.'), 'A proposal lacks its description or what was said about it');
       requireFact(rendered(ticket.querySelector('button[data-proposal="ticket-903"]')), 'A finished proposal cannot be approved');
+      const plans = find('#taik-orchestrator .plans');
+      requireFact(rendered(plans) && plans.textContent.includes('Sitzung auf taik · Gate @savant · Arbeit @standard') && plans.textContent.includes('Der Orchestrator plant.'), 'The orchestrator does not show its plans');
+      requireFact(ticket.textContent.includes('Es müssen bestehende Dateien geändert werden.'), 'The proposal does not show the plan of the orchestrator');
+      requireFact(plans.scrollWidth <= plans.clientWidth + 1, 'A plan leaves the orchestrator card');
       find('.new-ticket textarea').value = '';
       find('.new-ticket textarea').dispatchEvent(new Event('input', { bubbles: true }));
       window.updateFactory(snapshot);

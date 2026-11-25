@@ -169,6 +169,8 @@ private struct Proposal: Codable {
     // Set for a request of the user without a proposal: deriving, declined or failed.
     var state: String? = nil
     var note: String? = nil
+    // What the orchestrator decided: kind, repo, gate, work, reason.
+    var plan: [String: String]? = nil
 }
 
 private struct Agent: Codable {
@@ -350,8 +352,19 @@ private final class FactoryMonitor {
                 .split(separator: "\n").first { $0.hasPrefix("derived_from=") }
                 .map { URL(fileURLWithPath: String($0.dropFirst("derived_from=".count))).deletingLastPathComponent().lastPathComponent } ?? ""
             return Proposal(name: url.lastPathComponent, intent: String(intent.prefix(300)), origin: origin,
-                brief: String(brief.prefix(8192)), messages: jobMessages(in: url))
+                brief: String(brief.prefix(8192)), messages: jobMessages(in: url), plan: plan(at: url.appendingPathComponent("plan.txt")))
         } + openRequests()
+    }
+
+    private func plan(at url: URL) -> [String: String]? {
+        guard let data = try? Data(contentsOf: url), data.count <= 2048, let text = String(data: data, encoding: .utf8) else { return nil }
+        var plan: [String: String] = [:]
+        for line in text.split(separator: "\n") {
+            guard let at = line.firstIndex(of: "=") else { continue }
+            let key = String(line[..<at])
+            if ["kind", "repo", "gate", "work", "reason"].contains(key) { plan[key] = String(line[line.index(after: at)...]) }
+        }
+        return plan["gate"] == nil ? nil : plan
     }
 
     // Requests of the user that have no proposal: still being derived, or answered without one during the last day.
@@ -368,7 +381,8 @@ private final class FactoryMonitor {
             guard !FileManager.default.fileExists(atPath: state.appendingPathComponent("proposals/" + name).path),
                   let record = try? String(contentsOf: url, encoding: .utf8) else { return nil }
             let text = [field(record, "intent"), field(record, "observation")].filter { !$0.isEmpty }.joined(separator: "\n\n")
-            var request = Proposal(name: name, intent: String(field(record, "intent").prefix(300)), origin: "", brief: text, state: "deriving")
+            var request = Proposal(name: name, intent: String(field(record, "intent").prefix(300)), origin: "", brief: text, state: "deriving",
+                plan: plan(at: directory.appendingPathComponent(name + ".plan")))
             let answer = directory.appendingPathComponent("reflection-" + name + ".run")
             let failure = directory.appendingPathComponent(name + ".failed")
             for (file, state) in [(answer, "declined"), (failure, "failed")] {

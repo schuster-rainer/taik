@@ -195,6 +195,23 @@ fn parse(answer: &str, crew: &[Member], repositories: &[(String, PathBuf)]) -> R
     })
 }
 
+/// The plans to try when the gate author of a plan fails: every other agent that is not the worker,
+/// in the order of the crew. The reason of such a plan names who dropped out.
+pub fn substitutes(home: &Path, plan: &Plan) -> Vec<Plan> {
+    crew(home)
+        .into_iter()
+        .filter(|member| member.name != plan.gate && member.name != plan.work)
+        .map(|member| Plan {
+            gate: member.name.clone(),
+            reason: format!(
+                "{} @{} fiel als Autor des Gates aus, @{} sprang ein.",
+                plan.reason, plan.gate, member.name
+            ),
+            ..plan.clone()
+        })
+        .collect()
+}
+
 /// Asks the standard worker for the plan of a request and keeps it beside the request.
 pub fn plan(home: &Path, name: &str, request: &Path) -> Result<Plan> {
     let target = request.with_file_name(format!("{name}.plan"));
@@ -332,5 +349,36 @@ mod tests {
         let file = folder.path().join("a.plan");
         fs::write(&file, plan.text()).unwrap();
         assert_eq!(Plan::read(&file), Some(plan));
+    }
+
+    #[test]
+    fn another_agent_steps_in_for_a_gate_author_that_fails() {
+        let home = tempfile::tempdir().unwrap();
+        fs::create_dir(home.path().join("crew")).unwrap();
+        for name in ["anna", "bert"] {
+            fs::write(
+                home.path().join(format!("crew/{name}.agent")),
+                "harness=claude\nmodel=m\neffort=low\npersona=\nend\n",
+            )
+            .unwrap();
+        }
+        let plan = Plan {
+            session: false,
+            repo: None,
+            gate: "anna".into(),
+            work: STANDARD.into(),
+            reason: "Grund.".into(),
+        };
+        let others = substitutes(home.path(), &plan);
+        // Neither the one that failed nor the one that does the work.
+        assert_eq!(others.len(), 1);
+        assert_eq!(
+            (others[0].gate.as_str(), others[0].work.as_str()),
+            ("bert", STANDARD)
+        );
+        assert_eq!(
+            others[0].reason,
+            "Grund. @anna fiel als Autor des Gates aus, @bert sprang ein."
+        );
     }
 }

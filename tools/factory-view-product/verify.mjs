@@ -439,4 +439,24 @@ assert.equal(ticketState({ rounds: [stood('accepted')], messages: [] }).waits, '
 assert.equal(ticketState({ rounds: [stood('rejected', { checks: 'x' })], messages: [], sourceActive: true }).waits, '', 'a job at work does not wait');
 assert.doesNotMatch(css, /#taik-live \.ticket \.why[^{]*\{[^}]*(?:text-overflow|white-space:\s*nowrap|line-clamp)/, 'the reason is not cut off');
 
-console.log(`PASS: host contract, offline isolation, ${shadows.length} token shadows without glow, contrast ${Math.min(...measured).toFixed(2)}–${Math.max(...measured).toFixed(2)}, lossless .run highlighting, token flow per round, one workpiece pane with live draft, animated flow, ticket board in one group at a time, crew with agents and harnesses, conversation in the ticket, one ticket with the full history, tickets opened in the viewer, the whole stock on the board, top-down state and changes, analysis of a rejection, dialog of an agent session, a reason for every waiting ticket`);
+// 21. The orchestrator: the user speaks to it, and it shows for each request what it planned and why.
+for (const hook of ['id="taik-orchestrator"', 'class="plans"', 'planLine(', 'orchestratorFeed(']) assert(html.includes(hook), `orchestrator hook ${hook}`);
+const { planLine, orchestratorFeed } = new Function(boardBlock + '\nreturn { planLine, orchestratorFeed };')();
+assert.equal(planLine({ kind: 'sitzung', repo: 'taik', gate: 'savant', work: 'standard' }), 'Sitzung auf taik · Gate @savant · Arbeit @standard');
+assert.equal(planLine({ kind: 'dokument', repo: '', gate: 'standard', work: 'grok-schnell' }), 'Dokument · Gate @standard · Arbeit @grok-schnell');
+assert.equal(planLine(undefined), '');
+const feed = orchestratorFeed({ proposals: [
+  { name: 'ticket-001', intent: 'Alt und ohne Plan', origin: 'requests' },
+  { name: 'ticket-002', intent: 'Geplant', origin: 'requests', plan: { kind: 'dokument', repo: '', gate: 'savant', work: 'standard', reason: 'Ein neues Dokument.' } },
+  { name: 'ticket-003', intent: 'Wird geplant', origin: '', state: 'deriving' },
+  { name: 'ticket-004', intent: 'In Arbeit beim Gate', origin: '', state: 'deriving', plan: { kind: 'sitzung', repo: 'taik', gate: 'savant', work: 'standard', reason: 'Dateien ändern.' } },
+] });
+assert.deepEqual(feed.map(entry => [entry.key, entry.line, entry.reason]), [
+  ['proposal:ticket-004', 'Sitzung auf taik · Gate @savant · Arbeit @standard', 'Dateien ändern. Das Gate wird gerade geschrieben.'],
+  ['proposal:ticket-003', 'Der Orchestrator plant.', ''],
+  ['proposal:ticket-002', 'Dokument · Gate @savant · Arbeit @standard', 'Ein neues Dokument.'],
+], 'the feed shows planned and pending requests, newest first, and leaves out what has no plan');
+assert.deepEqual(orchestratorFeed({ jobs: [] }), []);
+assert.doesNotMatch(css, /#taik-live \.plans[^{]*\{[^}]*(?:text-overflow|white-space:\s*nowrap|line-clamp)/, 'a plan is not cut off');
+
+console.log(`PASS: host contract, offline isolation, ${shadows.length} token shadows without glow, contrast ${Math.min(...measured).toFixed(2)}–${Math.max(...measured).toFixed(2)}, lossless .run highlighting, token flow per round, one workpiece pane with live draft, animated flow, ticket board in one group at a time, crew with agents and harnesses, conversation in the ticket, one ticket with the full history, tickets opened in the viewer, the whole stock on the board, top-down state and changes, analysis of a rejection, dialog of an agent session, a reason for every waiting ticket, the orchestrator and its plans`);
