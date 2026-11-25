@@ -69,6 +69,7 @@
 - [Promotion durch die installierte Factory eingeführt](jobs/job-rust-entrypoint/round-13.run)
 - [Erste Entscheidung der Factory über ihren Nachfolger](jobs/job-backend/round-01.run) und [Prüfungen](jobs/job-backend/round-01.checks.log)
 - [Tagesgrenze für Worker-Kosten](jobs/job-backend/round-02.run)
+- [Startup-Reflexion über den eingestellten Worker](jobs/job-backend/round-03.run)
 - [Drosselung des Gates unter launchd, gemessen](jobs/job-dienst-drosselung/summary.run)
 - [Dauerprozess gegen Start bei Bedarf, gemessen](jobs/job-dienst-form/summary.run)
 

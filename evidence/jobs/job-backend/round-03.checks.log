@@ -1,0 +1,43 @@
+   Compiling taik-seed v0.1.0 (/Users/rainer/projects/ideas/talk)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.43s
+     Running unittests src/main.rs (target/debug/deps/taik_seed-c3a5d7c891872f43)
+
+running 2 tests
+test procedure::tests::reference_rejects_a_changed_search_decision ... ok
+test procedure::tests::every_admitted_order_agrees_with_the_independent_reference ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/factory.rs (target/debug/deps/factory-005f187fc64c1821)
+
+running 5 tests
+expected a regular file
+test accepted_records_reject_a_fifo_without_blocking ... ok
+test concurrent_publication_has_one_winner ... ok
+test invalid_proposal_and_staging_cannot_replace_or_seed_accepted_work ... ok
+test service_resumes_from_an_accepted_round_and_wakes_for_new_work ... ok
+test queued_source_repairs_an_assertion_and_resumes_from_saved_feedback ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.75s
+
+     Running tests/promote.rs (target/debug/deps/promote-6daf3c57489ac7a9)
+
+running 2 tests
+test a_running_service_leaves_the_next_job_to_a_replaced_binary ... ok
+test the_installed_binary_judges_installs_and_keeps_its_predecessor ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.74s
+
+     Running tests/source_worker.rs (target/debug/deps/source_worker-a39472baf3c16ded)
+
+running 2 tests
+test a_configured_second_worker_takes_over_and_is_named_in_the_record ... ok
+test worker_failure_records_distinguish_phases_without_persisting_stderr ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.02s
+
+    Checking taik-seed v0.1.0 (/Users/rainer/projects/ideas/talk)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.46s
+   Compiling taik-seed v0.1.0 (/Users/rainer/projects/ideas/talk)
+    Finished `release` profile [optimized] target(s) in 3.94s
+PASS: Rust tests, Clippy with warnings denied, release build

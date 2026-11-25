@@ -1,0 +1,20 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-03
+intent=Auch die Startup-Reflexion über den eingestellten Worker laufen lassen.
+baseline=taik-seed 4da8f81957018d69b6a9ddace6e134569f62efe434b6c4ecf9a2d9c0bc2e8c2b
+worker=claude-fable
+decided_by=the installed taik-seed 4da8f81957018d69b6a9ddace6e134569f62efe434b6c4ecf9a2d9c0bc2e8c2b at /Users/rainer/.local/state/taik-factory/taik-seed
+limits=99 rounds; gate 900s; candidate checks 10s each
+gate_sha256=76b41170f51fa7e1a5424ba01f903bcf2276b8f8f19e4d87f952e88d18b6b0ce
+gate_ms=15830
+checks=PASS: Rust tests, Clippy with warnings denied, release build; candidate seeded, rejected an invalid procedure without touching the accepted record, and extended it
+evidence=round-03.checks.log
+artifact=round-03-taik-seed
+artifact_sha256=94e4a29ad4e0962f95b95c4735dd2e635db46e89a3c11fe0b8b9fd8fefb37450
+rollback=round-03.rollback-taik-seed
+continuation=Restart the service so that it runs the accepted binary.
+advance=false
+end

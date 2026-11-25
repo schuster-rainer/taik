@@ -720,6 +720,25 @@ fn unfenced(source: &str) -> Option<String> {
     Some(format!("{answer}\n"))
 }
 
+// One answer from the configured worker, for work that is not a source round.
+pub(crate) fn ask(
+    scratch: &Path,
+    job: &Path,
+    prompt: &str,
+    progress: &mut Progress,
+) -> (Result<String>, &'static str) {
+    match env::var(LEAD_WORKER) {
+        Ok(program) => (
+            claude(&program, scratch, job, prompt, |_| {}).map(|(text, _)| text),
+            "claude-cli",
+        ),
+        Err(_) => (
+            codex(scratch, job, prompt, progress, |_| {}),
+            "codex-subscription",
+        ),
+    }
+}
+
 // Cost that Claude rounds recorded in this queue during the last 24 hours.
 fn recent_worker_cost(job: &Path) -> f64 {
     let Some(jobs) = job.parent().and_then(|jobs| fs::read_dir(jobs).ok()) else {

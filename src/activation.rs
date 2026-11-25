@@ -48,17 +48,17 @@ pub fn reflect(jobs: &Path, table: &SearchTable) -> Result<bool> {
         );
         progress.event(
             "worker",
-            format_args!("Codex wertet die beobachtete Startprüfung aus"),
+            format_args!("Der Worker wertet die beobachtete Startprüfung aus"),
         );
         let workspace = tempfile::tempdir()?;
-        let report = source::codex(
+        let (answer, worker) = source::ask(
             &workspace.path().canonicalize()?,
             &job,
             &prompt,
             &mut progress,
-            |_| {},
-        )
-        .and_then(|text| Ok(serde_json::from_str::<serde_json::Value>(&text)?));
+        );
+        let report =
+            answer.and_then(|text| Ok(serde_json::from_str::<serde_json::Value>(&text)?));
         let (intent, note) = match report {
             Ok(proposal) => match proposal["intent"]
                 .as_str()
@@ -88,7 +88,7 @@ pub fn reflect(jobs: &Path, table: &SearchTable) -> Result<bool> {
             &first,
             &format!(
                 "decision=accepted\nkind=search\nprocedure=precomputed\ntags=\nintent={title}\n\
-             evidence=request.run\nworker=codex-subscription\nstartup_candidate_probes={startup}\n\
+             evidence=request.run\nworker={worker}\nstartup_candidate_probes={startup}\n\
              checks=Measured eager verification on a replay with no tag jobs.\n\
              continuation={note}\nadvance={advance}\nend\n"
             ),

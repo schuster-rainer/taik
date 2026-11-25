@@ -76,7 +76,7 @@ Unattended rounds need a worker command:
 
 | Variable | Effect |
 | --- | --- |
-| `TAIK_LEAD_WORKER` | Path to a Claude CLI. It runs first, without tools, as Opus 5.5 at medium effort. Codex is not called for source rounds. |
+| `TAIK_LEAD_WORKER` | Path to a Claude CLI. It runs first, without tools, as Opus 5.5 at medium effort. Codex is not called. |
 | `TAIK_SECOND_WORKER` | Path to a Claude CLI that takes over when the Codex worker fails before a gate judgement. |
 | neither | The signed-in Codex subscription does the work. |
 | `TAIK_DAILY_BUDGET_USD` | Bound on the cost of Claude rounds within 24 hours, at list price. Default 3. A round beyond it is rejected before the worker is called. |
