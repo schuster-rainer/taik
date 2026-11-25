@@ -1,0 +1,7 @@
+538	start	Factory hat den Auftrag übernommen
+8558	worker	Savant erhält Auftrag und akzeptierten Ausgangsstand
+101700692	worker	worker_model=subq-savant-1.4 worker_input_tokens=2240 worker_output_tokens=37053 worker_cost_usd=0.018750 worker_duration_ms=101692 
+101700742	worker	Lease durch laufende Ausgabe gehalten, 1 Herzschläge, zuletzt bei 2 Zeichen
+101700929	evaluate	Unabhängiges, gespeichertes Prüfgate ausführen
+101799009	checks	AssertionError [ERR_ASSERTION]: Bundle muss genau main.rs enthalten
+101810030	rejected	Revise the retained source using the gate diagnosis, then run the same gate.

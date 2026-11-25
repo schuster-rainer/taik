@@ -1,0 +1,584 @@
+=== main.rs ===
+use std::collections::HashMap;
+use std::io::{Read, Write};
+
+type Pos = (usize, usize);
+type RErr = (usize, usize, &'static str);
+
+#[derive(Clone, PartialEq)]
+enum Tok {
+    Ident(String),
+    Int(i64),
+    Let,
+    Set,
+    Print,
+    If,
+    Else,
+    While,
+    Plus,
+    Minus,
+    Star,
+    Slash,
+    Percent,
+    Assign,
+    EqEq,
+    Ne,
+    Lt,
+    Le,
+    Gt,
+    Ge,
+    Semi,
+    LParen,
+    RParen,
+    LBrace,
+    RBrace,
+    Eof,
+}
+
+#[derive(Clone)]
+struct Token {
+    kind: Tok,
+    line: usize,
+    col: usize,
+}
+
+fn lex(src: &str) -> Result<Vec<Token>, RErr> {
+    let chars: Vec<char> = src.chars().collect();
+    let mut toks: Vec<Token> = Vec::new();
+    let mut i = 0usize;
+    let mut line = 1usize;
+    let mut col = 1usize;
+    while i < chars.len() {
+        let c = chars[i];
+        if c == ' ' || c == '\t' {
+            i += 1;
+            col += 1;
+        } else if c == '\n' {
+            i += 1;
+            line += 1;
+            col = 1;
+        } else if c.is_ascii_alphabetic() || c == '_' {
+            let (sl, sc) = (line, col);
+            let mut s = String::new();
+            while i < chars.len() && (chars[i].is_ascii_alphanumeric() || chars[i] == '_') {
+                s.push(chars[i]);
+                i += 1;
+                col += 1;
+            }
+            let kind = match s.as_str() {
+                "let" => Tok::Let,
+                "set" => Tok::Set,
+                "print" => Tok::Print,
+                "if" => Tok::If,
+                "else" => Tok::Else,
+                "while" => Tok::While,
+                _ => Tok::Ident(s),
+            };
+            toks.push(Token { kind, line: sl, col: sc });
+        } else if c.is_ascii_digit() {
+            let (sl, sc) = (line, col);
+            let mut val: i64 = 0;
+            let mut bad = false;
+            while i < chars.len() && chars[i].is_ascii_digit() {
+                let d = chars[i] as i64 - '0' as i64;
+                match val.checked_mul(10).and_then(|v| v.checked_add(d)) {
+                    Some(v) => val = v,
+                    None => bad = true,
+                }
+                i += 1;
+                col += 1;
+            }
+            if bad {
+                return Err((sl, sc, "LITERAL_RANGE"));
+            }
+            toks.push(Token { kind: Tok::Int(val), line: sl, col: sc });
+        } else {
+            let next = chars.get(i + 1).copied();
+            let (kind, len) = match c {
+                '+' => (Tok::Plus, 1),
+                '-' => (Tok::Minus, 1),
+                '*' => (Tok::Star, 1),
+                '/' => (Tok::Slash, 1),
+                '%' => (Tok::Percent, 1),
+                '=' => {
+                    if next == Some('=') {
+                        (Tok::EqEq, 2)
+                    } else {
+                        (Tok::Assign, 1)
+                    }
+                }
+                '!' => {
+                    if next == Some('=') {
+                        (Tok::Ne, 2)
+                    } else {
+                        return Err((line, col, "BAD_CHAR"));
+                    }
+                }
+                '<' => {
+                    if next == Some('=') {
+                        (Tok::Le, 2)
+                    } else {
+                        (Tok::Lt, 1)
+                    }
+                }
+                '>' => {
+                    if next == Some('=') {
+                        (Tok::Ge, 2)
+                    } else {
+                        (Tok::Gt, 1)
+                    }
+                }
+                ';' => (Tok::Semi, 1),
+                '(' => (Tok::LParen, 1),
+                ')' => (Tok::RParen, 1),
+                '{' => (Tok::LBrace, 1),
+                '}' => (Tok::RBrace, 1),
+                _ => return Err((line, col, "BAD_CHAR")),
+            };
+            toks.push(Token { kind, line, col });
+            i += len;
+            col += len;
+        }
+    }
+    toks.push(Token { kind: Tok::Eof, line, col });
+    Ok(toks)
+}
+
+#[derive(Clone, Copy)]
+enum BinOp {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Rem,
+    Eq,
+    Ne,
+    Lt,
+    Le,
+    Gt,
+    Ge,
+}
+
+enum Expr {
+    Int(i64),
+    Var(String, Pos),
+    Neg(Pos, Box<Expr>),
+    Bin(BinOp, Pos, Box<Expr>, Box<Expr>),
+}
+
+enum Stmt {
+    Let {
+        pos: Pos,
+        name: String,
+        npos: Pos,
+        expr: Expr,
+    },
+    Set {
+        pos: Pos,
+        name: String,
+        npos: Pos,
+        expr: Expr,
+    },
+    Print {
+        pos: Pos,
+        expr: Expr,
+    },
+    If {
+        pos: Pos,
+        cond: Expr,
+        then_b: Vec<Stmt>,
+        else_b: Option<Vec<Stmt>>,
+    },
+    While {
+        pos: Pos,
+        cond: Expr,
+        body: Vec<Stmt>,
+    },
+}
+
+fn stmt_pos(s: &Stmt) -> Pos {
+    match s {
+        Stmt::Let { pos, .. }
+        | Stmt::Set { pos, .. }
+        | Stmt::Print { pos, .. }
+        | Stmt::If { pos, .. }
+        | Stmt::While { pos, .. } => *pos,
+    }
+}
+
+struct Parser {
+    toks: Vec<Token>,
+    i: usize,
+}
+
+impl Parser {
+    fn new(toks: Vec<Token>) -> Self {
+        Parser { toks, i: 0 }
+    }
+
+    fn peek(&self) -> &Token {
+        &self.toks[self.i]
+    }
+
+    fn advance(&mut self) -> Token {
+        let t = self.toks[self.i].clone();
+        if self.i + 1 < self.toks.len() {
+            self.i += 1;
+        }
+        t
+    }
+
+    fn err(&self) -> RErr {
+        let t = self.peek();
+        (t.line, t.col, "SYNTAX")
+    }
+
+    fn expect(&mut self, k: Tok) -> Result<Token, RErr> {
+        if self.peek().kind == k {
+            Ok(self.advance())
+        } else {
+            Err(self.err())
+        }
+    }
+
+    fn parse_program(&mut self) -> Result<Vec<Stmt>, RErr> {
+        let mut v = Vec::new();
+        loop {
+            let t = self.peek().clone();
+            match t.kind {
+                Tok::Eof => break,
+                Tok::Let | Tok::Set | Tok::Print | Tok::If | Tok::While => {
+                    v.push(self.parse_stmt()?)
+                }
+                _ => return Err(self.err()),
+            }
+        }
+        Ok(v)
+    }
+
+    fn parse_stmt(&mut self) -> Result<Stmt, RErr> {
+        let t = self.peek().clone();
+        let pos = (t.line, t.col);
+        match t.kind {
+            Tok::Let => {
+                self.advance();
+                let (name, npos) = self.parse_name()?;
+                self.expect(Tok::Assign)?;
+                let expr = self.parse_expr()?;
+                self.expect(Tok::Semi)?;
+                Ok(Stmt::Let { pos, name, npos, expr })
+            }
+            Tok::Set => {
+                self.advance();
+                let (name, npos) = self.parse_name()?;
+                self.expect(Tok::Assign)?;
+                let expr = self.parse_expr()?;
+                self.expect(Tok::Semi)?;
+                Ok(Stmt::Set { pos, name, npos, expr })
+            }
+            Tok::Print => {
+                self.advance();
+                let expr = self.parse_expr()?;
+                self.expect(Tok::Semi)?;
+                Ok(Stmt::Print { pos, expr })
+            }
+            Tok::If => {
+                self.advance();
+                let cond = self.parse_expr()?;
+                let then_b = self.parse_block()?;
+                let nt = self.peek().clone();
+                let else_b = if nt.kind == Tok::Else {
+                    self.advance();
+                    Some(self.parse_block()?)
+                } else {
+                    None
+                };
+                Ok(Stmt::If { pos, cond, then_b, else_b })
+            }
+            Tok::While => {
+                self.advance();
+                let cond = self.parse_expr()?;
+                let body = self.parse_block()?;
+                Ok(Stmt::While { pos, cond, body })
+            }
+            _ => Err(self.err()),
+        }
+    }
+
+    fn parse_name(&mut self) -> Result<(String, Pos), RErr> {
+        let t = self.peek().clone();
+        match t.kind {
+            Tok::Ident(n) => {
+                self.advance();
+                Ok((n, (t.line, t.col)))
+            }
+            _ => Err(self.err()),
+        }
+    }
+
+    fn parse_block(&mut self) -> Result<Vec<Stmt>, RErr> {
+        self.expect(Tok::LBrace)?;
+        let mut v = Vec::new();
+        loop {
+            let t = self.peek().clone();
+            match t.kind {
+                Tok::RBrace => {
+                    self.advance();
+                    break;
+                }
+                Tok::Let | Tok::Set | Tok::Print | Tok::If | Tok::While => {
+                    v.push(self.parse_stmt()?)
+                }
+                _ => return Err(self.err()),
+            }
+        }
+        Ok(v)
+    }
+
+    fn parse_expr(&mut self) -> Result<Expr, RErr> {
+        self.parse_cmp()
+    }
+
+    fn parse_cmp(&mut self) -> Result<Expr, RErr> {
+        let left = self.parse_add()?;
+        let t = self.peek().clone();
+        let op = match t.kind {
+            Tok::EqEq => Some(BinOp::Eq),
+            Tok::Ne => Some(BinOp::Ne),
+            Tok::Lt => Some(BinOp::Lt),
+            Tok::Le => Some(BinOp::Le),
+            Tok::Gt => Some(BinOp::Gt),
+            Tok::Ge => Some(BinOp::Ge),
+            _ => None,
+        };
+        if let Some(op) = op {
+            self.advance();
+            let right = self.parse_add()?;
+            Ok(Expr::Bin(op, (t.line, t.col), Box::new(left), Box::new(right)))
+        } else {
+            Ok(left)
+        }
+    }
+
+    fn parse_add(&mut self) -> Result<Expr, RErr> {
+        let mut e = self.parse_mul()?;
+        loop {
+            let t = self.peek().clone();
+            let op = match t.kind {
+                Tok::Plus => BinOp::Add,
+                Tok::Minus => BinOp::Sub,
+                _ => break,
+            };
+            self.advance();
+            let r = self.parse_mul()?;
+            e = Expr::Bin(op, (t.line, t.col), Box::new(e), Box::new(r));
+        }
+        Ok(e)
+    }
+
+    fn parse_mul(&mut self) -> Result<Expr, RErr> {
+        let mut e = self.parse_unary()?;
+        loop {
+            let t = self.peek().clone();
+            let op = match t.kind {
+                Tok::Star => BinOp::Mul,
+                Tok::Slash => BinOp::Div,
+                Tok::Percent => BinOp::Rem,
+                _ => break,
+            };
+            self.advance();
+            let r = self.parse_unary()?;
+            e = Expr::Bin(op, (t.line, t.col), Box::new(e), Box::new(r));
+        }
+        Ok(e)
+    }
+
+    fn parse_unary(&mut self) -> Result<Expr, RErr> {
+        let t = self.peek().clone();
+        if t.kind == Tok::Minus {
+            self.advance();
+            let e = self.parse_unary()?;
+            Ok(Expr::Neg((t.line, t.col), Box::new(e)))
+        } else {
+            self.parse_primary()
+        }
+    }
+
+    fn parse_primary(&mut self) -> Result<Expr, RErr> {
+        let t = self.peek().clone();
+        match t.kind {
+            Tok::Int(v) => {
+                self.advance();
+                Ok(Expr::Int(v))
+            }
+            Tok::Ident(n) => {
+                self.advance();
+                Ok(Expr::Var(n, (t.line, t.col)))
+            }
+            Tok::LParen => {
+                self.advance();
+                let e = self.parse_expr()?;
+                self.expect(Tok::RParen)?;
+                Ok(e)
+            }
+            _ => Err(self.err()),
+        }
+    }
+}
+
+struct Interp {
+    vars: HashMap<String, i64>,
+    steps: u64,
+    out: String,
+}
+
+impl Interp {
+    fn new() -> Self {
+        Interp {
+            vars: HashMap::new(),
+            steps: 0,
+            out: String::new(),
+        }
+    }
+
+    fn check_step(&mut self, pos: Pos) -> Result<(), RErr> {
+        if self.steps >= 100_000 {
+            return Err((pos.0, pos.1, "STEP_LIMIT"));
+        }
+        self.steps += 1;
+        Ok(())
+    }
+
+    fn exec_block(&mut self, b: &[Stmt]) -> Result<(), RErr> {
+        for s in b {
+            self.exec_stmt(s)?;
+        }
+        Ok(())
+    }
+
+    fn exec_stmt(&mut self, s: &Stmt) -> Result<(), RErr> {
+        let spos = stmt_pos(s);
+        self.check_step(spos)?;
+        match s {
+            Stmt::Let { name, npos, expr, .. } => {
+                let v = self.eval(expr)?;
+                if self.vars.contains_key(name) {
+                    return Err((npos.0, npos.1, "DUPLICATE"));
+                }
+                self.vars.insert(name.clone(), v);
+            }
+            Stmt::Set { name, npos, expr, .. } => {
+                let v = self.eval(expr)?;
+                if !self.vars.contains_key(name) {
+                    return Err((npos.0, npos.1, "UNDEFINED"));
+                }
+                self.vars.insert(name.clone(), v);
+            }
+            Stmt::Print { expr, .. } => {
+                let v = self.eval(expr)?;
+                self.out.push_str(&v.to_string());
+                self.out.push('\n');
+            }
+            Stmt::If { cond, then_b, else_b, .. } => {
+                let v = self.eval(cond)?;
+                if v != 0 {
+                    self.exec_block(then_b)?;
+                } else if let Some(b) = else_b {
+                    self.exec_block(b)?;
+                }
+            }
+            Stmt::While { cond, body, .. } => loop {
+                let v = self.eval(cond)?;
+                if v == 0 {
+                    break;
+                }
+                self.exec_block(body)?;
+                self.check_step(spos)?;
+            },
+        }
+        Ok(())
+    }
+
+    fn eval(&mut self, e: &Expr) -> Result<i64, RErr> {
+        match e {
+            Expr::Int(v) => Ok(*v),
+            Expr::Var(n, p) => match self.vars.get(n) {
+                Some(v) => Ok(*v),
+                None => Err((p.0, p.1, "UNDEFINED")),
+            },
+            Expr::Neg(p, sub) => {
+                let v = self.eval(sub)?;
+                match v.checked_neg() {
+                    Some(x) => Ok(x),
+                    None => Err((p.0, p.1, "OVERFLOW")),
+                }
+            }
+            Expr::Bin(op, p, l, r) => {
+                let a = self.eval(l)?;
+                let b = self.eval(r)?;
+                match op {
+                    BinOp::Add => a.checked_add(b).ok_or((p.0, p.1, "OVERFLOW")),
+                    BinOp::Sub => a.checked_sub(b).ok_or((p.0, p.1, "OVERFLOW")),
+                    BinOp::Mul => a.checked_mul(b).ok_or((p.0, p.1, "OVERFLOW")),
+                    BinOp::Div => {
+                        if b == 0 {
+                            return Err((p.0, p.1, "DIV_ZERO"));
+                        }
+                        a.checked_div(b).ok_or((p.0, p.1, "OVERFLOW"))
+                    }
+                    BinOp::Rem => {
+                        if b == 0 {
+                            return Err((p.0, p.1, "DIV_ZERO"));
+                        }
+                        a.checked_rem(b).ok_or((p.0, p.1, "OVERFLOW"))
+                    }
+                    BinOp::Eq => Ok(if a == b { 1 } else { 0 }),
+                    BinOp::Ne => Ok(if a != b { 1 } else { 0 }),
+                    BinOp::Lt => Ok(if a < b { 1 } else { 0 }),
+                    BinOp::Le => Ok(if a <= b { 1 } else { 0 }),
+                    BinOp::Gt => Ok(if a > b { 1 } else { 0 }),
+                    BinOp::Ge => Ok(if a >= b { 1 } else { 0 }),
+                }
+            }
+        }
+    }
+}
+
+fn run(src: &str) -> (String, i32) {
+    let toks = match lex(src) {
+        Ok(t) => t,
+        Err((l, c, e)) => return (format!("ERROR {}:{} {}\n", l, c, e), 1),
+    };
+    let prog = match Parser::new(toks).parse_program() {
+        Ok(p) => p,
+        Err((l, c, e)) => return (format!("ERROR {}:{} {}\n", l, c, e), 1),
+    };
+    let mut it = Interp::new();
+    match it.exec_block(&prog) {
+        Ok(()) => (it.out, 0),
+        Err((l, c, e)) => {
+            let mut out = std::mem::take(&mut it.out);
+            out.push_str(&format!("ERROR {}:{} {}\n", l, c, e));
+            (out, 1)
+        }
+    }
+}
+
+fn main() {
+    let mut buf = Vec::new();
+    let _ = std::io::stdin().read_to_end(&mut buf);
+    let src = String::from_utf8_lossy(&buf).into_owned();
+    let handle = std::thread::Builder::new()
+        .stack_size(64 * 1024 * 1024)
+        .spawn(move || run(&src))
+        .unwrap();
+    let (out, code) = match handle.join() {
+        Ok(r) => r,
+        Err(_) => (String::new(), 1),
+    };
+    let stdout = std::io::stdout();
+    let mut lock = stdout.lock();
+    let _ = lock.write_all(out.as_bytes());
+    let _ = lock.flush();
+    std::process::exit(code);
+}

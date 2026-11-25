@@ -1,0 +1,13 @@
+decision=observed
+identity=dienst-durchsatz-01
+intent=Messen, was nebenläufige Aufträge und der formatneutrale Worker-Auftrag am echten Dienst bringen.
+scope=The live service with Savant 1.4 and three slots on 2026-11-25. Job MiniCalc 2 with its pinned gate of 116 behaviour cases, no starting source. Before the changes: nine runs in ../job-minicalc2-neu-1 to -3, ../job-mc2-dienst-neu-1 to -3 and ../job-mc2-parallel-1 to -3. After round 10 of job-backend: six jobs queued at once, ../job-mc2-neutral-1 to -6.
+throughput=Six jobs finished 249 s after queueing. Their worker calls took 575 s in sum, so three slots gave a factor of 2.3 over one after another. Slots refilled when a job ended: job 4 started in the second job 1 was accepted.
+arrival_before=In ../job-mc2-parallel-1 to -3 the first job ran alone for 83 s while two jobs queued seconds later waited for it.
+format_before=Two of nine runs were rejected for the bundle format, five rounds in total. In each the worker had wrapped the Rust bundle in an HTML document, as the fixed sentence of the Factory's prompt asked.
+format_after=None of six runs. All six were accepted in the first round.
+cost_after=0.0084 to 0.0166 USD per job, 0.0734 USD for all six.
+side_effect=Single worker calls took 60 to 133 s with three at once, against 34 to 122 s alone. Whether the API slows under parallel calls was not separated from ordinary spread.
+limitations=Six runs after the change, one task, one worker model. The format failures were rare before, so six clean runs do not prove the cause is gone. The test suite covers side-by-side running and late arrival with a stand-in worker.
+continuation=Keep three slots. Watch format rejections in further program jobs. The next cost to look at is the worker call itself, which is 99 percent of a round.
+end

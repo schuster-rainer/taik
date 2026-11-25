@@ -1,0 +1,752 @@
+=== main.rs ===
+use std::collections::HashMap;
+use std::io::Read;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Pos {
+    line: usize,
+    col: usize,
+}
+
+#[derive(Debug)]
+struct Error {
+    pos: Pos,
+    code: &'static str,
+}
+
+impl Error {
+    fn new(pos: Pos, code: &'static str) -> Self {
+        Error { pos, code }
+    }
+
+    fn syntax(pos: Pos) -> Self {
+        Error::new(pos, "SYNTAX")
+    }
+}
+
+#[derive(Clone, Debug)]
+enum Tok {
+    Ident(String),
+    Int(i64),
+    Let,
+    Print,
+    Set,
+    If,
+    Else,
+    While,
+    Plus,
+    Minus,
+    Star,
+    Slash,
+    Percent,
+    Eq,
+    EqEq,
+    NotEq,
+    Lt,
+    Le,
+    Gt,
+    Ge,
+    Semi,
+    LParen,
+    RParen,
+    LBrace,
+    RBrace,
+    Eof,
+}
+
+#[derive(Clone, Debug)]
+struct Token {
+    kind: Tok,
+    pos: Pos,
+}
+
+struct Lexer {
+    chars: Vec<char>,
+    idx: usize,
+    line: usize,
+    col: usize,
+}
+
+impl Lexer {
+    fn new(src: &str) -> Self {
+        Lexer {
+            chars: src.chars().collect(),
+            idx: 0,
+            line: 1,
+            col: 1,
+        }
+    }
+
+    fn peek(&self) -> Option<char> {
+        self.chars.get(self.idx).copied()
+    }
+
+    fn bump(&mut self) -> Option<char> {
+        let c = self.peek()?;
+        self.idx += 1;
+        if c == '\n' {
+            self.line += 1;
+            self.col = 1;
+        } else {
+            self.col += 1;
+        }
+        Some(c)
+    }
+
+    fn pos(&self) -> Pos {
+        Pos {
+            line: self.line,
+            col: self.col,
+        }
+    }
+
+    fn tokenize(mut self) -> Result<Vec<Token>, Error> {
+        let mut tokens = Vec::new();
+
+        loop {
+            while let Some(c) = self.peek() {
+                if c == ' ' || c == '\t' || c == '\n' {
+                    self.bump();
+                } else {
+                    break;
+                }
+            }
+
+            let pos = self.pos();
+            let c = match self.peek() {
+                Some(c) => c,
+                None => {
+                    tokens.push(Token {
+                        kind: Tok::Eof,
+                        pos,
+                    });
+                    break;
+                }
+            };
+
+            let kind = match c {
+                'a'..='z' | 'A'..='Z' | '_' => {
+                    let mut s = String::new();
+                    while let Some(ch) = self.peek() {
+                        if ch.is_ascii_alphanumeric() || ch == '_' {
+                            s.push(ch);
+                            self.bump();
+                        } else {
+                            break;
+                        }
+                    }
+                    match s.as_str() {
+                        "let" => Tok::Let,
+                        "print" => Tok::Print,
+                        "set" => Tok::Set,
+                        "if" => Tok::If,
+                        "else" => Tok::Else,
+                        "while" => Tok::While,
+                        _ => Tok::Ident(s),
+                    }
+                }
+                '0'..='9' => {
+                    let mut val: u64 = 0;
+                    let mut overflow = false;
+                    while let Some(ch) = self.peek() {
+                        if ch.is_ascii_digit() {
+                            self.bump();
+                            let d = ch.to_digit(10).unwrap() as u64;
+                            if !overflow {
+                                match val.checked_mul(10).and_then(|v| v.checked_add(d)) {
+                                    Some(v) => val = v,
+                                    None => overflow = true,
+                                }
+                            }
+                        } else {
+                            break;
+                        }
+                    }
+                    if overflow || val > i64::MAX as u64 {
+                        return Err(Error::new(pos, "LITERAL_RANGE"));
+                    }
+                    Tok::Int(val as i64)
+                }
+                '+' => {
+                    self.bump();
+                    Tok::Plus
+                }
+                '-' => {
+                    self.bump();
+                    Tok::Minus
+                }
+                '*' => {
+                    self.bump();
+                    Tok::Star
+                }
+                '/' => {
+                    self.bump();
+                    Tok::Slash
+                }
+                '%' => {
+                    self.bump();
+                    Tok::Percent
+                }
+                '=' => {
+                    self.bump();
+                    if self.peek() == Some('=') {
+                        self.bump();
+                        Tok::EqEq
+                    } else {
+                        Tok::Eq
+                    }
+                }
+                '!' => {
+                    self.bump();
+                    if self.peek() == Some('=') {
+                        self.bump();
+                        Tok::NotEq
+                    } else {
+                        return Err(Error::new(pos, "BAD_CHAR"));
+                    }
+                }
+                '<' => {
+                    self.bump();
+                    if self.peek() == Some('=') {
+                        self.bump();
+                        Tok::Le
+                    } else {
+                        Tok::Lt
+                    }
+                }
+                '>' => {
+                    self.bump();
+                    if self.peek() == Some('=') {
+                        self.bump();
+                        Tok::Ge
+                    } else {
+                        Tok::Gt
+                    }
+                }
+                ';' => {
+                    self.bump();
+                    Tok::Semi
+                }
+                '(' => {
+                    self.bump();
+                    Tok::LParen
+                }
+                ')' => {
+                    self.bump();
+                    Tok::RParen
+                }
+                '{' => {
+                    self.bump();
+                    Tok::LBrace
+                }
+                '}' => {
+                    self.bump();
+                    Tok::RBrace
+                }
+                _ => return Err(Error::new(pos, "BAD_CHAR")),
+            };
+
+            tokens.push(Token { kind, pos });
+        }
+
+        Ok(tokens)
+    }
+}
+
+#[derive(Debug)]
+enum Stmt {
+    Let {
+        name: String,
+        name_pos: Pos,
+        value: Expr,
+        start: Pos,
+    },
+    Set {
+        name: String,
+        name_pos: Pos,
+        value: Expr,
+        start: Pos,
+    },
+    Print {
+        value: Expr,
+        start: Pos,
+    },
+    If {
+        cond: Expr,
+        then_block: Vec<Stmt>,
+        else_block: Option<Vec<Stmt>>,
+        start: Pos,
+    },
+    While {
+        cond: Expr,
+        body: Vec<Stmt>,
+        start: Pos,
+    },
+}
+
+impl Stmt {
+    fn start(&self) -> Pos {
+        match self {
+            Stmt::Let { start, .. } => *start,
+            Stmt::Set { start, .. } => *start,
+            Stmt::Print { start, .. } => *start,
+            Stmt::If { start, .. } => *start,
+            Stmt::While { start, .. } => *start,
+        }
+    }
+}
+
+#[derive(Debug)]
+enum Expr {
+    Int(i64),
+    Var(String, Pos),
+    Neg {
+        expr: Box<Expr>,
+        op_pos: Pos,
+    },
+    Binary {
+        op: BinOp,
+        left: Box<Expr>,
+        right: Box<Expr>,
+        op_pos: Pos,
+    },
+}
+
+#[derive(Clone, Copy, Debug)]
+enum BinOp {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Rem,
+    Eq,
+    Ne,
+    Lt,
+    Le,
+    Gt,
+    Ge,
+}
+
+struct Parser {
+    tokens: Vec<Token>,
+    idx: usize,
+}
+
+impl Parser {
+    fn new(tokens: Vec<Token>) -> Self {
+        Parser { tokens, idx: 0 }
+    }
+
+    fn peek(&self) -> &Token {
+        &self.tokens[self.idx]
+    }
+
+    fn advance(&mut self) -> Token {
+        let tok = self.tokens[self.idx].clone();
+        if self.idx + 1 < self.tokens.len() {
+            self.idx += 1;
+        }
+        tok
+    }
+
+    fn same_variant(&self, expected: &Tok) -> bool {
+        std::mem::discriminant(&self.peek().kind) == std::mem::discriminant(expected)
+    }
+
+    fn expect(&mut self, expected: &Tok) -> Result<Token, Error> {
+        if self.same_variant(expected) {
+            Ok(self.advance())
+        } else {
+            Err(Error::syntax(self.peek().pos))
+        }
+    }
+
+    fn expect_ident(&mut self) -> Result<(String, Pos), Error> {
+        let tok = self.peek().clone();
+        let pos = tok.pos;
+        match tok.kind {
+            Tok::Ident(name) => {
+                self.advance();
+                Ok((name, pos))
+            }
+            _ => Err(Error::syntax(pos)),
+        }
+    }
+
+    fn parse_program(&mut self) -> Result<Vec<Stmt>, Error> {
+        let mut stmts = Vec::new();
+        while !matches!(&self.peek().kind, Tok::Eof) {
+            stmts.push(self.parse_stmt()?);
+        }
+        Ok(stmts)
+    }
+
+    fn parse_stmt(&mut self) -> Result<Stmt, Error> {
+        let tok = self.peek().clone();
+        let start = tok.pos;
+
+        match tok.kind {
+            Tok::Let => {
+                self.advance();
+                let (name, name_pos) = self.expect_ident()?;
+                self.expect(&Tok::Eq)?;
+                let value = self.parse_expr()?;
+                self.expect(&Tok::Semi)?;
+                Ok(Stmt::Let {
+                    name,
+                    name_pos,
+                    value,
+                    start,
+                })
+            }
+            Tok::Set => {
+                self.advance();
+                let (name, name_pos) = self.expect_ident()?;
+                self.expect(&Tok::Eq)?;
+                let value = self.parse_expr()?;
+                self.expect(&Tok::Semi)?;
+                Ok(Stmt::Set {
+                    name,
+                    name_pos,
+                    value,
+                    start,
+                })
+            }
+            Tok::Print => {
+                self.advance();
+                let value = self.parse_expr()?;
+                self.expect(&Tok::Semi)?;
+                Ok(Stmt::Print { value, start })
+            }
+            Tok::If => {
+                self.advance();
+                let cond = self.parse_expr()?;
+                let then_block = self.parse_block()?;
+                let else_block = if matches!(&self.peek().kind, Tok::Else) {
+                    self.advance();
+                    Some(self.parse_block()?)
+                } else {
+                    None
+                };
+                Ok(Stmt::If {
+                    cond,
+                    then_block,
+                    else_block,
+                    start,
+                })
+            }
+            Tok::While => {
+                self.advance();
+                let cond = self.parse_expr()?;
+                let body = self.parse_block()?;
+                Ok(Stmt::While { cond, body, start })
+            }
+            _ => Err(Error::syntax(start)),
+        }
+    }
+
+    fn parse_block(&mut self) -> Result<Vec<Stmt>, Error> {
+        self.expect(&Tok::LBrace)?;
+        let mut stmts = Vec::new();
+        while !matches!(&self.peek().kind, Tok::RBrace | Tok::Eof) {
+            stmts.push(self.parse_stmt()?);
+        }
+        self.expect(&Tok::RBrace)?;
+        Ok(stmts)
+    }
+
+    fn parse_expr(&mut self) -> Result<Expr, Error> {
+        self.parse_cmp()
+    }
+
+    fn parse_cmp(&mut self) -> Result<Expr, Error> {
+        let left = self.parse_add()?;
+
+        let is_cmp = matches!(
+            &self.peek().kind,
+            Tok::EqEq | Tok::NotEq | Tok::Lt | Tok::Le | Tok::Gt | Tok::Ge
+        );
+        if !is_cmp {
+            return Ok(left);
+        }
+
+        let op_tok = self.advance();
+        let op_pos = op_tok.pos;
+        let op = match op_tok.kind {
+            Tok::EqEq => BinOp::Eq,
+            Tok::NotEq => BinOp::Ne,
+            Tok::Lt => BinOp::Lt,
+            Tok::Le => BinOp::Le,
+            Tok::Gt => BinOp::Gt,
+            Tok::Ge => BinOp::Ge,
+            _ => unreachable!(),
+        };
+        let right = self.parse_add()?;
+        Ok(Expr::Binary {
+            op,
+            left: Box::new(left),
+            right: Box::new(right),
+            op_pos,
+        })
+    }
+
+    fn parse_add(&mut self) -> Result<Expr, Error> {
+        let mut left = self.parse_mul()?;
+
+        loop {
+            let tok = self.peek().clone();
+            let op = match &tok.kind {
+                Tok::Plus => Some(BinOp::Add),
+                Tok::Minus => Some(BinOp::Sub),
+                _ => None,
+            };
+            let op = match op {
+                Some(op) => op,
+                None => break,
+            };
+            self.advance();
+            let right = self.parse_mul()?;
+            left = Expr::Binary {
+                op,
+                left: Box::new(left),
+                right: Box::new(right),
+                op_pos: tok.pos,
+            };
+        }
+
+        Ok(left)
+    }
+
+    fn parse_mul(&mut self) -> Result<Expr, Error> {
+        let mut left = self.parse_unary()?;
+
+        loop {
+            let tok = self.peek().clone();
+            let op = match &tok.kind {
+                Tok::Star => Some(BinOp::Mul),
+                Tok::Slash => Some(BinOp::Div),
+                Tok::Percent => Some(BinOp::Rem),
+                _ => None,
+            };
+            let op = match op {
+                Some(op) => op,
+                None => break,
+            };
+            self.advance();
+            let right = self.parse_unary()?;
+            left = Expr::Binary {
+                op,
+                left: Box::new(left),
+                right: Box::new(right),
+                op_pos: tok.pos,
+            };
+        }
+
+        Ok(left)
+    }
+
+    fn parse_unary(&mut self) -> Result<Expr, Error> {
+        if matches!(&self.peek().kind, Tok::Minus) {
+            let tok = self.advance();
+            let expr = self.parse_unary()?;
+            Ok(Expr::Neg {
+                expr: Box::new(expr),
+                op_pos: tok.pos,
+            })
+        } else {
+            self.parse_primary()
+        }
+    }
+
+    fn parse_primary(&mut self) -> Result<Expr, Error> {
+        let tok = self.peek().clone();
+        let pos = tok.pos;
+
+        match tok.kind {
+            Tok::Int(v) => {
+                self.advance();
+                Ok(Expr::Int(v))
+            }
+            Tok::Ident(name) => {
+                self.advance();
+                Ok(Expr::Var(name, pos))
+            }
+            Tok::LParen => {
+                self.advance();
+                let expr = self.parse_expr()?;
+                self.expect(&Tok::RParen)?;
+                Ok(expr)
+            }
+            _ => Err(Error::syntax(pos)),
+        }
+    }
+}
+
+struct Interp {
+    env: HashMap<String, i64>,
+    steps: usize,
+}
+
+impl Interp {
+    fn new() -> Self {
+        Interp {
+            env: HashMap::new(),
+            steps: 0,
+        }
+    }
+
+    fn step(&mut self, pos: Pos) -> Result<(), Error> {
+        if self.steps >= 100000 {
+            Err(Error::new(pos, "STEP_LIMIT"))
+        } else {
+            self.steps += 1;
+            Ok(())
+        }
+    }
+
+    fn run(&mut self, stmts: &[Stmt]) -> Result<(), Error> {
+        for stmt in stmts {
+            self.exec(stmt)?;
+        }
+        Ok(())
+    }
+
+    fn exec(&mut self, stmt: &Stmt) -> Result<(), Error> {
+        self.step(stmt.start())?;
+
+        match stmt {
+            Stmt::Let {
+                name,
+                name_pos,
+                value,
+                ..
+            } => {
+                let v = self.eval(value)?;
+                if self.env.contains_key(name) {
+                    return Err(Error::new(*name_pos, "DUPLICATE"));
+                }
+                self.env.insert(name.clone(), v);
+            }
+            Stmt::Set {
+                name,
+                name_pos,
+                value,
+                ..
+            } => {
+                let v = self.eval(value)?;
+                if !self.env.contains_key(name) {
+                    return Err(Error::new(*name_pos, "UNDEFINED"));
+                }
+                self.env.insert(name.clone(), v);
+            }
+            Stmt::Print { value, .. } => {
+                let v = self.eval(value)?;
+                println!("{}", v);
+            }
+            Stmt::If {
+                cond,
+                then_block,
+                else_block,
+                ..
+            } => {
+                let v = self.eval(cond)?;
+                if v != 0 {
+                    self.run(then_block)?;
+                } else if let Some(block) = else_block {
+                    self.run(block)?;
+                }
+            }
+            Stmt::While { cond, body, .. } => {
+                let start = stmt.start();
+                loop {
+                    let v = self.eval(cond)?;
+                    if v == 0 {
+                        break;
+                    }
+                    self.run(body)?;
+                    self.step(start)?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    fn eval(&self, expr: &Expr) -> Result<i64, Error> {
+        match expr {
+            Expr::Int(v) => Ok(*v),
+            Expr::Var(name, pos) => match self.env.get(name) {
+                Some(v) => Ok(*v),
+                None => Err(Error::new(*pos, "UNDEFINED")),
+            },
+            Expr::Neg { expr, op_pos } => {
+                let v = self.eval(expr)?;
+                v.checked_neg()
+                    .ok_or_else(|| Error::new(*op_pos, "OVERFLOW"))
+            }
+            Expr::Binary {
+                op,
+                left,
+                right,
+                op_pos,
+            } => {
+                let l = self.eval(left)?;
+                let r = self.eval(right)?;
+
+                match *op {
+                    BinOp::Add => l
+                        .checked_add(r)
+                        .ok_or_else(|| Error::new(*op_pos, "OVERFLOW")),
+                    BinOp::Sub => l
+                        .checked_sub(r)
+                        .ok_or_else(|| Error::new(*op_pos, "OVERFLOW")),
+                    BinOp::Mul => l
+                        .checked_mul(r)
+                        .ok_or_else(|| Error::new(*op_pos, "OVERFLOW")),
+                    BinOp::Div => {
+                        if r == 0 {
+                            Err(Error::new(*op_pos, "DIV_ZERO"))
+                        } else {
+                            l.checked_div(r)
+                                .ok_or_else(|| Error::new(*op_pos, "OVERFLOW"))
+                        }
+                    }
+                    BinOp::Rem => {
+                        if r == 0 {
+                            Err(Error::new(*op_pos, "DIV_ZERO"))
+                        } else {
+                            l.checked_rem(r)
+                                .ok_or_else(|| Error::new(*op_pos, "OVERFLOW"))
+                        }
+                    }
+                    BinOp::Eq => Ok(if l == r { 1 } else { 0 }),
+                    BinOp::Ne => Ok(if l != r { 1 } else { 0 }),
+                    BinOp::Lt => Ok(if l < r { 1 } else { 0 }),
+                    BinOp::Le => Ok(if l <= r { 1 } else { 0 }),
+                    BinOp::Gt => Ok(if l > r { 1 } else { 0 }),
+                    BinOp::Ge => Ok(if l >= r { 1 } else { 0 }),
+                }
+            }
+        }
+    }
+}
+
+fn main() {
+    let mut src = String::new();
+    let mut stdin = std::io::stdin();
+    stdin.read_to_string(&mut src).unwrap();
+
+    let result = (|| -> Result<(), Error> {
+        let tokens = Lexer::new(&src).tokenize()?;
+        let mut parser = Parser::new(tokens);
+        let program = parser.parse_program()?;
+        let mut interp = Interp::new();
+        interp.run(&program)?;
+        Ok(())
+    })();
+
+    if let Err(err) = result {
+        println!("ERROR {}:{} {}", err.pos.line, err.pos.col, err.code);
+        std::process::exit(1);
+    }
+}

@@ -357,7 +357,7 @@ fn run_round(
                 .map(|path| record::read_regular(path, LIMIT))
                 .transpose()?;
             let mut prompt = format!(
-                "You are the code worker embedded in TAIK. Return one complete standalone HTML document, no fences or explanation.\n\nWORK ORDER:\n{brief}\n\nACCEPTED SOURCE TO BUILD ON:\n{}",
+                "You are the code worker embedded in TAIK. Return exactly the one document the work order asks for, in the format it states, and nothing else: no explanation, no code fences and no wrapper around it.\n\nWORK ORDER:\n{brief}\n\nACCEPTED SOURCE TO BUILD ON:\n{}",
                 previous.as_deref().unwrap_or("(empty)"),
             );
             if previous.is_some() {

@@ -527,9 +527,7 @@ fn a_worker_keeps_its_lease_by_output_and_loses_it_by_silence() {
         // Output every 0.3 s for 1.8 s: longer than the lease of 1 s, shorter than the ceiling.
         (
             "working",
-            format!(
-                "for i in 1 2 3 4 5 6; do echo '{delta}'; sleep 0.3; done; echo '{result}'"
-            ),
+            format!("for i in 1 2 3 4 5 6; do echo '{delta}'; sleep 0.3; done; echo '{result}'"),
             Some(0),
             "",
         ),
@@ -597,4 +595,118 @@ fn a_worker_keeps_its_lease_by_output_and_loses_it_by_silence() {
         assert_eq!(again.status.code(), Some(0), "{name}: {again:?}");
         assert!(!state.join(format!("jobs/job-{name}/round-02.run")).exists());
     }
+}
+
+#[test]
+fn queued_software_jobs_run_side_by_side() {
+    let root = tempfile::Builder::new()
+        .prefix("taik-parallel-")
+        .tempdir_in("/tmp")
+        .unwrap();
+    let brief = root.path().join("brief.md");
+    fs::write(&brief, "Deliver a marked document\n").unwrap();
+    let gate = root.path().join("verify.mjs");
+    fs::write(&gate, "console.log('PASS: any');\n").unwrap();
+    let worker = root.path().join("lead");
+    fs::write(
+        &worker,
+        "#!/bin/sh\nsleep 1.5\necho '{\"type\":\"result\",\"is_error\":false,\"result\":\"<!doctype html><p>ok</p>\",\"usage\":{\"output_tokens\":1},\"total_cost_usd\":0,\"modelUsage\":{\"m\":{}}}'\n",
+    )
+    .unwrap();
+    fs::set_permissions(&worker, fs::Permissions::from_mode(0o700)).unwrap();
+    let mut durations = Vec::new();
+    for (width, state) in [("1", "one-at-a-time"), ("3", "three-at-a-time")] {
+        let state = root.path().join(state);
+        for name in ["a", "b", "c"] {
+            let queued = factory()
+                .arg("queue-source")
+                .arg(&state)
+                .arg(name)
+                .arg(&brief)
+                .arg(&gate)
+                .output()
+                .unwrap();
+            assert!(queued.status.success(), "{queued:?}");
+        }
+        let started = std::time::Instant::now();
+        let outcome = factory()
+            .arg("drain")
+            .arg(&state)
+            .env("TAIK_LEAD_WORKER", &worker)
+            .env("TAIK_PARALLEL", width)
+            .env_remove("TAIK_SECOND_WORKER")
+            .env_remove("TAIK_AUTO_PROPOSE")
+            .output()
+            .unwrap();
+        durations.push(started.elapsed());
+        assert_eq!(outcome.status.code(), Some(0), "{outcome:?}");
+        for name in ["a", "b", "c"] {
+            let record =
+                fs::read_to_string(state.join(format!("jobs/job-{name}/round-01.run"))).unwrap();
+            assert!(record.starts_with("decision=accepted\n"), "{record}");
+            assert!(!state.join(format!("jobs/job-{name}/round-02.run")).exists());
+        }
+    }
+    eprintln!(
+        "one at a time {:?}, three at a time {:?}",
+        durations[0], durations[1]
+    );
+    assert!(durations[0].as_millis() >= 4500, "{durations:?}");
+    assert!(durations[1].as_millis() < 3500, "{durations:?}");
+}
+
+#[test]
+fn a_job_that_arrives_during_work_takes_a_free_slot() {
+    let root = tempfile::Builder::new()
+        .prefix("taik-arrival-")
+        .tempdir_in("/tmp")
+        .unwrap();
+    let brief = root.path().join("brief.md");
+    fs::write(&brief, "Deliver a marked document\n").unwrap();
+    let gate = root.path().join("verify.mjs");
+    fs::write(&gate, "console.log('PASS: any');\n").unwrap();
+    let worker = root.path().join("lead");
+    fs::write(
+        &worker,
+        "#!/bin/sh\nsleep 1.5\necho '{\"type\":\"result\",\"is_error\":false,\"result\":\"<!doctype html><p>ok</p>\",\"usage\":{\"output_tokens\":1},\"total_cost_usd\":0,\"modelUsage\":{\"m\":{}}}'\n",
+    )
+    .unwrap();
+    fs::set_permissions(&worker, fs::Permissions::from_mode(0o700)).unwrap();
+    let state = root.path().join("state");
+    let queue = |name: &str| {
+        let queued = factory()
+            .arg("queue-source")
+            .arg(&state)
+            .arg(name)
+            .arg(&brief)
+            .arg(&gate)
+            .output()
+            .unwrap();
+        assert!(queued.status.success(), "{queued:?}");
+    };
+    queue("first");
+    let started = std::time::Instant::now();
+    let mut drain = factory()
+        .arg("drain")
+        .arg(&state)
+        .env("TAIK_LEAD_WORKER", &worker)
+        .env("TAIK_PARALLEL", "3")
+        .env_remove("TAIK_SECOND_WORKER")
+        .env_remove("TAIK_AUTO_PROPOSE")
+        .spawn()
+        .unwrap();
+    std::thread::sleep(std::time::Duration::from_millis(400));
+    queue("late");
+    assert!(drain.wait().unwrap().success());
+    let elapsed = started.elapsed();
+    for name in ["first", "late"] {
+        let record =
+            fs::read_to_string(state.join(format!("jobs/job-{name}/round-01.run"))).unwrap();
+        assert!(record.starts_with("decision=accepted\n"), "{record}");
+    }
+    // One after the other would take at least 3 s. Side by side the late job ends about 0.4 s later.
+    assert!(
+        elapsed.as_millis() < 2900,
+        "the late job waited: {elapsed:?}"
+    );
 }

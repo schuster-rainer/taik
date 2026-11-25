@@ -1,0 +1,20 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-10
+intent=Den Worker-Auftrag formatneutral stellen und freie Plätze sofort mit neu eingereihten Aufträgen besetzen.
+baseline=taik-seed 3e6358ad7338040c0b2e74de850742a2e90c582ad6dab635f326b365690087f2
+worker=claude-fable
+decided_by=the installed taik-seed 3e6358ad7338040c0b2e74de850742a2e90c582ad6dab635f326b365690087f2 at /Users/rainer/.local/state/taik-factory/taik-seed
+limits=99 rounds; gate 900s; candidate checks 10s each
+gate_sha256=76b41170f51fa7e1a5424ba01f903bcf2276b8f8f19e4d87f952e88d18b6b0ce
+gate_ms=15120
+checks=PASS: Rust tests, Clippy with warnings denied, release build; candidate seeded, rejected an invalid procedure without touching the accepted record, and extended it
+evidence=round-10.checks.log
+artifact=round-10-taik-seed
+artifact_sha256=ece572561235a75ccd0b47bfb5fcc9140cb8c99cd6a1cc5ca0c1d0c25aac2b4c
+rollback=round-10.rollback-taik-seed
+continuation=Restart the service so that it runs the accepted binary.
+advance=false
+end

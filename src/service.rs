@@ -16,6 +16,8 @@ use crate::{
 const MAX_ROUNDS: usize = 20;
 const MAX_CACHED_TAG_JOBS: usize = 4096;
 #[cfg(target_os = "macos")]
+const DEFAULT_PARALLEL: usize = 3;
+#[cfg(target_os = "macos")]
 use crate::source::FOLLOW_UP_SUFFIX;
 
 fn jobs_in(state: &Path) -> Result<PathBuf> {
@@ -225,6 +227,8 @@ fn drain(
         eprintln!("{}: {error}", crate::restart_probe::JOB);
         succeeded = false;
     }
+    #[cfg(target_os = "macos")]
+    let mut source_jobs = Vec::new();
     for entry in entries {
         if !entry.file_type()?.is_dir() {
             continue;
@@ -254,14 +258,93 @@ fn drain(
         }
         #[cfg(target_os = "macos")]
         if job.join("submission.brief.md").is_file() {
-            match run_source_job(jobs, &job) {
-                Ok(accepted) => succeeded &= accepted,
-                Err(error) => {
-                    eprintln!("{}: {error}", job.display());
-                    succeeded = false;
-                }
-            }
+            source_jobs.push(job);
         }
+    }
+    // Software jobs wait on their workers, so several run side by side. Each job has its own lock,
+    // folder and records. A job never runs twice at once.
+    #[cfg(target_os = "macos")]
+    {
+        let width = std::env::var("TAIK_PARALLEL")
+            .ok()
+            .and_then(|value| value.parse::<usize>().ok())
+            .unwrap_or(DEFAULT_PARALLEL)
+            .clamp(1, 8);
+        // Jobs that arrive while others run are picked up by the next free slot.
+        struct Pool {
+            waiting: std::collections::VecDeque<PathBuf>,
+            seen: std::collections::HashSet<PathBuf>,
+            active: usize,
+        }
+        let pool = std::sync::Mutex::new(Pool {
+            seen: source_jobs.iter().cloned().collect(),
+            waiting: source_jobs.into(),
+            active: 0,
+        });
+        let changed = std::sync::Condvar::new();
+        let all_accepted = std::sync::atomic::AtomicBool::new(true);
+        let arrivals = || -> Vec<PathBuf> {
+            let Ok(entries) = fs::read_dir(jobs) else {
+                return Vec::new();
+            };
+            let mut found: Vec<_> = entries
+                .flatten()
+                .map(|entry| entry.path())
+                .filter(|job| job.join("submission.brief.md").is_file())
+                .collect();
+            found.sort_unstable();
+            found
+        };
+        std::thread::scope(|scope| {
+            for _ in 0..width {
+                scope.spawn(|| {
+                    loop {
+                        let job = {
+                            let Ok(mut pool) = pool.lock() else { break };
+                            loop {
+                                if pool.waiting.is_empty() {
+                                    for job in arrivals() {
+                                        if pool.seen.insert(job.clone()) {
+                                            pool.waiting.push_back(job);
+                                        }
+                                    }
+                                }
+                                if let Some(job) = pool.waiting.pop_front() {
+                                    pool.active += 1;
+                                    break Some(job);
+                                }
+                                if pool.active == 0 {
+                                    break None;
+                                }
+                                // Others are still working. Look again when one finishes or after a second.
+                                let Ok((next, _)) =
+                                    changed.wait_timeout(pool, std::time::Duration::from_secs(1))
+                                else {
+                                    return;
+                                };
+                                pool = next;
+                            }
+                        };
+                        let Some(job) = job else {
+                            changed.notify_all();
+                            break;
+                        };
+                        let accepted = run_source_job(jobs, &job).unwrap_or_else(|error| {
+                            eprintln!("{}: {error}", job.display());
+                            false
+                        });
+                        if !accepted {
+                            all_accepted.store(false, std::sync::atomic::Ordering::Relaxed);
+                        }
+                        if let Ok(mut pool) = pool.lock() {
+                            pool.active -= 1;
+                        }
+                        changed.notify_all();
+                    }
+                });
+            }
+        });
+        succeeded &= all_accepted.load(std::sync::atomic::Ordering::Relaxed);
     }
     Ok(succeeded)
 }

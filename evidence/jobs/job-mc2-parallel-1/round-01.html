@@ -1,0 +1,641 @@
+=== main.rs ===
+use std::collections::HashMap;
+use std::io::{self, Read, Write};
+use std::process;
+
+const STEP_LIMIT: u64 = 100_000;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Pos {
+    line: usize,
+    col: usize,
+}
+
+#[derive(Debug)]
+struct Error {
+    pos: Pos,
+    code: &'static str,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum Tok {
+    Ident(String),
+    Int(i64),
+    Let,
+    Print,
+    Set,
+    If,
+    Else,
+    While,
+    Plus,
+    Minus,
+    Star,
+    Slash,
+    Percent,
+    Eq,
+    EqEq,
+    Ne,
+    Lt,
+    Le,
+    Gt,
+    Ge,
+    Semi,
+    LParen,
+    RParen,
+    LBrace,
+    RBrace,
+    Eof,
+}
+
+#[derive(Clone, Debug)]
+struct Token {
+    kind: Tok,
+    pos: Pos,
+}
+
+fn lex(src: &str) -> Result<Vec<Token>, Error> {
+    let chars: Vec<char> = src.chars().collect();
+    let mut i = 0usize;
+    let mut line = 1usize;
+    let mut col = 1usize;
+    let mut toks: Vec<Token> = Vec::new();
+
+    while i < chars.len() {
+        let c = chars[i];
+        if c == ' ' || c == '\t' {
+            i += 1;
+            col += 1;
+            continue;
+        }
+        if c == '\n' {
+            i += 1;
+            line += 1;
+            col = 1;
+            continue;
+        }
+        let pos = Pos { line, col };
+        if c.is_ascii_alphabetic() || c == '_' {
+            let mut s = String::new();
+            while i < chars.len() && (chars[i].is_ascii_alphanumeric() || chars[i] == '_') {
+                s.push(chars[i]);
+                i += 1;
+                col += 1;
+            }
+            let kind = match s.as_str() {
+                "let" => Tok::Let,
+                "print" => Tok::Print,
+                "set" => Tok::Set,
+                "if" => Tok::If,
+                "else" => Tok::Else,
+                "while" => Tok::While,
+                _ => Tok::Ident(s),
+            };
+            toks.push(Token { kind, pos });
+        } else if c.is_ascii_digit() {
+            let mut val: u64 = 0;
+            let mut overflow = false;
+            while i < chars.len() && chars[i].is_ascii_digit() {
+                let d = chars[i] as u64 - '0' as u64;
+                match val.checked_mul(10).and_then(|v| v.checked_add(d)) {
+                    Some(v) => val = v,
+                    None => {
+                        overflow = true;
+                        val = 0;
+                    }
+                }
+                i += 1;
+                col += 1;
+            }
+            if overflow || val > i64::MAX as u64 {
+                return Err(Error {
+                    pos,
+                    code: "LITERAL_RANGE",
+                });
+            }
+            toks.push(Token {
+                kind: Tok::Int(val as i64),
+                pos,
+            });
+        } else {
+            let next = if i + 1 < chars.len() {
+                Some(chars[i + 1])
+            } else {
+                None
+            };
+            let (kind, len) = match c {
+                '+' => (Tok::Plus, 1),
+                '-' => (Tok::Minus, 1),
+                '*' => (Tok::Star, 1),
+                '/' => (Tok::Slash, 1),
+                '%' => (Tok::Percent, 1),
+                '=' => {
+                    if next == Some('=') {
+                        (Tok::EqEq, 2)
+                    } else {
+                        (Tok::Eq, 1)
+                    }
+                }
+                '!' => {
+                    if next == Some('=') {
+                        (Tok::Ne, 2)
+                    } else {
+                        return Err(Error {
+                            pos,
+                            code: "BAD_CHAR",
+                        });
+                    }
+                }
+                '<' => {
+                    if next == Some('=') {
+                        (Tok::Le, 2)
+                    } else {
+                        (Tok::Lt, 1)
+                    }
+                }
+                '>' => {
+                    if next == Some('=') {
+                        (Tok::Ge, 2)
+                    } else {
+                        (Tok::Gt, 1)
+                    }
+                }
+                ';' => (Tok::Semi, 1),
+                '(' => (Tok::LParen, 1),
+                ')' => (Tok::RParen, 1),
+                '{' => (Tok::LBrace, 1),
+                '}' => (Tok::RBrace, 1),
+                _ => {
+                    return Err(Error {
+                        pos,
+                        code: "BAD_CHAR",
+                    })
+                }
+            };
+            i += len;
+            col += len;
+            toks.push(Token { kind, pos });
+        }
+    }
+
+    toks.push(Token {
+        kind: Tok::Eof,
+        pos: Pos { line, col },
+    });
+    Ok(toks)
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum BinOp {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Rem,
+    Eq,
+    Ne,
+    Lt,
+    Le,
+    Gt,
+    Ge,
+}
+
+enum ExprKind {
+    Int(i64),
+    Var(String),
+    Neg(Box<Expr>),
+    Bin(BinOp, Box<Expr>, Box<Expr>),
+}
+
+struct Expr {
+    kind: ExprKind,
+    pos: Pos,
+}
+
+enum StmtKind {
+    Let(String, Pos, Expr),
+    Set(String, Pos, Expr),
+    Print(Expr),
+    If(Expr, Vec<Stmt>, Option<Vec<Stmt>>),
+    While(Expr, Vec<Stmt>),
+}
+
+struct Stmt {
+    kind: StmtKind,
+    pos: Pos,
+}
+
+struct Parser {
+    toks: Vec<Token>,
+    idx: usize,
+}
+
+impl Parser {
+    fn new(toks: Vec<Token>) -> Self {
+        Parser { toks, idx: 0 }
+    }
+
+    fn peek(&self) -> &Token {
+        &self.toks[self.idx]
+    }
+
+    fn advance(&mut self) -> Token {
+        let t = self.toks[self.idx].clone();
+        self.idx += 1;
+        t
+    }
+
+    fn syntax_err<T>(&self) -> Result<T, Error> {
+        Err(Error {
+            pos: self.peek().pos,
+            code: "SYNTAX",
+        })
+    }
+
+    fn expect(&mut self, k: Tok) -> Result<Token, Error> {
+        if std::mem::discriminant(&self.peek().kind) == std::mem::discriminant(&k) {
+            Ok(self.advance())
+        } else {
+            self.syntax_err()
+        }
+    }
+
+    fn parse_program(&mut self) -> Result<Vec<Stmt>, Error> {
+        let mut stmts = Vec::new();
+        while self.peek().kind != Tok::Eof {
+            stmts.push(self.parse_stmt()?);
+        }
+        Ok(stmts)
+    }
+
+    fn parse_block(&mut self) -> Result<Vec<Stmt>, Error> {
+        self.expect(Tok::LBrace)?;
+        let mut stmts = Vec::new();
+        while self.peek().kind != Tok::RBrace {
+            stmts.push(self.parse_stmt()?);
+        }
+        self.expect(Tok::RBrace)?;
+        Ok(stmts)
+    }
+
+    fn parse_stmt(&mut self) -> Result<Stmt, Error> {
+        let t = self.peek().clone();
+        match t.kind {
+            Tok::Let => self.parse_let_set(t.pos, true),
+            Tok::Set => self.parse_let_set(t.pos, false),
+            Tok::Print => {
+                self.advance();
+                let e = self.parse_expr()?;
+                self.expect(Tok::Semi)?;
+                Ok(Stmt {
+                    kind: StmtKind::Print(e),
+                    pos: t.pos,
+                })
+            }
+            Tok::If => {
+                self.advance();
+                let cond = self.parse_expr()?;
+                let then_block = self.parse_block()?;
+                let else_block = if self.peek().kind == Tok::Else {
+                    self.advance();
+                    Some(self.parse_block()?)
+                } else {
+                    None
+                };
+                Ok(Stmt {
+                    kind: StmtKind::If(cond, then_block, else_block),
+                    pos: t.pos,
+                })
+            }
+            Tok::While => {
+                self.advance();
+                let cond = self.parse_expr()?;
+                let body = self.parse_block()?;
+                Ok(Stmt {
+                    kind: StmtKind::While(cond, body),
+                    pos: t.pos,
+                })
+            }
+            _ => self.syntax_err(),
+        }
+    }
+
+    fn parse_let_set(&mut self, kw_pos: Pos, is_let: bool) -> Result<Stmt, Error> {
+        self.advance();
+        let (name, name_pos) = match self.peek().kind.clone() {
+            Tok::Ident(s) => {
+                let p = self.peek().pos;
+                self.advance();
+                (s, p)
+            }
+            _ => return self.syntax_err(),
+        };
+        self.expect(Tok::Eq)?;
+        let e = self.parse_expr()?;
+        self.expect(Tok::Semi)?;
+        let kind = if is_let {
+            StmtKind::Let(name, name_pos, e)
+        } else {
+            StmtKind::Set(name, name_pos, e)
+        };
+        Ok(Stmt { kind, pos: kw_pos })
+    }
+
+    fn parse_expr(&mut self) -> Result<Expr, Error> {
+        self.parse_cmp()
+    }
+
+    fn parse_cmp(&mut self) -> Result<Expr, Error> {
+        let lhs = self.parse_add()?;
+        let op = match &self.peek().kind {
+            Tok::EqEq => Some(BinOp::Eq),
+            Tok::Ne => Some(BinOp::Ne),
+            Tok::Lt => Some(BinOp::Lt),
+            Tok::Le => Some(BinOp::Le),
+            Tok::Gt => Some(BinOp::Gt),
+            Tok::Ge => Some(BinOp::Ge),
+            _ => None,
+        };
+        if let Some(op) = op {
+            let t = self.advance();
+            let rhs = self.parse_add()?;
+            Ok(Expr {
+                kind: ExprKind::Bin(op, Box::new(lhs), Box::new(rhs)),
+                pos: t.pos,
+            })
+        } else {
+            Ok(lhs)
+        }
+    }
+
+    fn parse_add(&mut self) -> Result<Expr, Error> {
+        let mut lhs = self.parse_mul()?;
+        loop {
+            let op = match &self.peek().kind {
+                Tok::Plus => BinOp::Add,
+                Tok::Minus => BinOp::Sub,
+                _ => break,
+            };
+            let t = self.advance();
+            let rhs = self.parse_mul()?;
+            lhs = Expr {
+                kind: ExprKind::Bin(op, Box::new(lhs), Box::new(rhs)),
+                pos: t.pos,
+            };
+        }
+        Ok(lhs)
+    }
+
+    fn parse_mul(&mut self) -> Result<Expr, Error> {
+        let mut lhs = self.parse_unary()?;
+        loop {
+            let op = match &self.peek().kind {
+                Tok::Star => BinOp::Mul,
+                Tok::Slash => BinOp::Div,
+                Tok::Percent => BinOp::Rem,
+                _ => break,
+            };
+            let t = self.advance();
+            let rhs = self.parse_unary()?;
+            lhs = Expr {
+                kind: ExprKind::Bin(op, Box::new(lhs), Box::new(rhs)),
+                pos: t.pos,
+            };
+        }
+        Ok(lhs)
+    }
+
+    fn parse_unary(&mut self) -> Result<Expr, Error> {
+        if self.peek().kind == Tok::Minus {
+            let t = self.advance();
+            let inner = self.parse_unary()?;
+            Ok(Expr {
+                kind: ExprKind::Neg(Box::new(inner)),
+                pos: t.pos,
+            })
+        } else {
+            self.parse_primary()
+        }
+    }
+
+    fn parse_primary(&mut self) -> Result<Expr, Error> {
+        let t = self.peek().clone();
+        match t.kind {
+            Tok::Int(v) => {
+                self.advance();
+                Ok(Expr {
+                    kind: ExprKind::Int(v),
+                    pos: t.pos,
+                })
+            }
+            Tok::Ident(s) => {
+                self.advance();
+                Ok(Expr {
+                    kind: ExprKind::Var(s),
+                    pos: t.pos,
+                })
+            }
+            Tok::LParen => {
+                self.advance();
+                let e = self.parse_expr()?;
+                self.expect(Tok::RParen)?;
+                Ok(e)
+            }
+            _ => self.syntax_err(),
+        }
+    }
+}
+
+struct Interp {
+    env: HashMap<String, i64>,
+    steps: u64,
+    out: String,
+}
+
+impl Interp {
+    fn new() -> Self {
+        Interp {
+            env: HashMap::new(),
+            steps: 0,
+            out: String::new(),
+        }
+    }
+
+    fn exec_program(&mut self, prog: &[Stmt]) -> Result<(), Error> {
+        for s in prog {
+            self.exec_stmt(s)?;
+        }
+        Ok(())
+    }
+
+    fn exec_block(&mut self, block: &[Stmt]) -> Result<(), Error> {
+        for s in block {
+            self.exec_stmt(s)?;
+        }
+        Ok(())
+    }
+
+    fn exec_stmt(&mut self, stmt: &Stmt) -> Result<(), Error> {
+        if self.steps >= STEP_LIMIT {
+            return Err(Error {
+                pos: stmt.pos,
+                code: "STEP_LIMIT",
+            });
+        }
+        self.steps += 1;
+
+        match &stmt.kind {
+            StmtKind::Print(e) => {
+                let v = self.eval(e)?;
+                self.out.push_str(&v.to_string());
+                self.out.push('\n');
+            }
+            StmtKind::Let(name, name_pos, e) => {
+                let v = self.eval(e)?;
+                if self.env.contains_key(name) {
+                    return Err(Error {
+                        pos: *name_pos,
+                        code: "DUPLICATE",
+                    });
+                }
+                self.env.insert(name.clone(), v);
+            }
+            StmtKind::Set(name, name_pos, e) => {
+                let v = self.eval(e)?;
+                match self.env.get_mut(name) {
+                    Some(slot) => *slot = v,
+                    None => {
+                        return Err(Error {
+                            pos: *name_pos,
+                            code: "UNDEFINED",
+                        })
+                    }
+                }
+            }
+            StmtKind::If(cond, then_block, else_block) => {
+                let v = self.eval(cond)?;
+                if v != 0 {
+                    self.exec_block(then_block)?;
+                } else if let Some(eb) = else_block {
+                    self.exec_block(eb)?;
+                }
+            }
+            StmtKind::While(cond, body) => loop {
+                let v = self.eval(cond)?;
+                if v == 0 {
+                    break;
+                }
+                self.exec_block(body)?;
+                if self.steps >= STEP_LIMIT {
+                    return Err(Error {
+                        pos: stmt.pos,
+                        code: "STEP_LIMIT",
+                    });
+                }
+                self.steps += 1;
+            },
+        }
+
+        Ok(())
+    }
+
+    fn eval(&mut self, e: &Expr) -> Result<i64, Error> {
+        match &e.kind {
+            ExprKind::Int(v) => Ok(*v),
+            ExprKind::Var(name) => match self.env.get(name) {
+                Some(v) => Ok(*v),
+                None => Err(Error {
+                    pos: e.pos,
+                    code: "UNDEFINED",
+                }),
+            },
+            ExprKind::Neg(inner) => {
+                let v = self.eval(inner)?;
+                match v.checked_neg() {
+                    Some(r) => Ok(r),
+                    None => Err(Error {
+                        pos: e.pos,
+                        code: "OVERFLOW",
+                    }),
+                }
+            }
+            ExprKind::Bin(op, l, r) => {
+                let a = self.eval(l)?;
+                let b = self.eval(r)?;
+                let res = match *op {
+                    BinOp::Add => a.checked_add(b),
+                    BinOp::Sub => a.checked_sub(b),
+                    BinOp::Mul => a.checked_mul(b),
+                    BinOp::Div => {
+                        if b == 0 {
+                            return Err(Error {
+                                pos: e.pos,
+                                code: "DIV_ZERO",
+                            });
+                        }
+                        a.checked_div(b)
+                    }
+                    BinOp::Rem => {
+                        if b == 0 {
+                            return Err(Error {
+                                pos: e.pos,
+                                code: "DIV_ZERO",
+                            });
+                        }
+                        a.checked_rem(b)
+                    }
+                    BinOp::Eq => Some(if a == b { 1 } else { 0 }),
+                    BinOp::Ne => Some(if a != b { 1 } else { 0 }),
+                    BinOp::Lt => Some(if a < b { 1 } else { 0 }),
+                    BinOp::Le => Some(if a <= b { 1 } else { 0 }),
+                    BinOp::Gt => Some(if a > b { 1 } else { 0 }),
+                    BinOp::Ge => Some(if a >= b { 1 } else { 0 }),
+                };
+                match res {
+                    Some(v) => Ok(v),
+                    None => Err(Error {
+                        pos: e.pos,
+                        code: "OVERFLOW",
+                    }),
+                }
+            }
+        }
+    }
+}
+
+fn run(src: &str) -> Result<String, (String, Error)> {
+    let toks = match lex(src) {
+        Ok(t) => t,
+        Err(e) => return Err((String::new(), e)),
+    };
+    let prog = match Parser::new(toks).parse_program() {
+        Ok(p) => p,
+        Err(e) => return Err((String::new(), e)),
+    };
+    let mut interp = Interp::new();
+    match interp.exec_program(&prog) {
+        Ok(()) => Ok(interp.out),
+        Err(e) => Err((interp.out, e)),
+    }
+}
+
+fn main() {
+    let mut src = String::new();
+    if io::stdin().read_to_string(&mut src).is_err() {
+        process::exit(1);
+    }
+
+    let mut stdout = io::stdout();
+    match run(&src) {
+        Ok(out) => {
+            let _ = stdout.write_all(out.as_bytes());
+            let _ = stdout.flush();
+        }
+        Err((out, err)) => {
+            let _ = stdout.write_all(out.as_bytes());
+            let msg = format!("ERROR {}:{} {}\n", err.pos.line, err.pos.col, err.code);
+            let _ = stdout.write_all(msg.as_bytes());
+            let _ = stdout.flush();
+            process::exit(1);
+        }
+    }
+}

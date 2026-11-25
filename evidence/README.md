@@ -73,6 +73,7 @@
 - [Tagesgrenze für Worker-Kosten](jobs/job-backend/round-02.run)
 - [Startup-Reflexion über den eingestellten Worker](jobs/job-backend/round-03.run)
 - [Patch-Format und aufbauende Aufträge](jobs/job-backend/round-07.run) und [Lease mit Heartbeat statt starrer Zeitgrenze](jobs/job-backend/round-08.run)
+- [Nebenläufige Aufträge](jobs/job-backend/round-09.run), [formatneutraler Worker-Auftrag und sofort besetzte Plätze](jobs/job-backend/round-10.run) und [Messung am Dienst](jobs/job-dienst-durchsatz/summary.run)
 - [Drosselung des Gates unter launchd, gemessen](jobs/job-dienst-drosselung/summary.run)
 - [Dauerprozess gegen Start bei Bedarf, gemessen](jobs/job-dienst-form/summary.run)
 

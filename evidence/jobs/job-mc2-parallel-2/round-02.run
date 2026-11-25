@@ -1,0 +1,25 @@
+decision=rejected
+kind=software
+procedure=
+tags=
+identity=round-02
+intent=Prüfbefund aus round-01.run bearbeiten
+baseline=(empty)
+worker=savant
+worker_model=subq-savant-1.4
+worker_input_tokens=7249
+worker_output_tokens=35961
+worker_cost_usd=0.018705
+worker_duration_ms=102239
+limits=4 rounds; worker lease 60s up to 900s; verifier 15s; 96KiB source
+gate_sha256=1f145e2fe33ff4dac32b0804163e6161f3f2c1b84159ac6d05cf41a89b810dd0
+gate_ms=64
+patch_blocks=
+checks=AssertionError [ERR_ASSERTION]: Bundle muss genau main.rs enthalten
+artifact=
+rejected_candidate=round-02.rejected.txt
+feedback=round-01.run
+follow_up=
+continuation=Revise the retained source using the gate diagnosis, then run the same gate.
+advance=true
+end

@@ -1,0 +1,8 @@
+83	start	Factory hat den Auftrag übernommen
+170	probe	Prüfbefund aus round-01.run: AssertionError [ERR_ASSERTION]: Bundle muss genau main.rs enthalten
+558	worker	Savant erhält Auftrag und akzeptierten Ausgangsstand
+102240528	worker	worker_model=subq-savant-1.4 worker_input_tokens=7249 worker_output_tokens=35961 worker_cost_usd=0.018705 worker_duration_ms=102239 
+102240654	worker	Lease durch laufende Ausgabe gehalten, 1 Herzschläge, zuletzt bei 2 Zeichen
+102240677	evaluate	Unabhängiges, gespeichertes Prüfgate ausführen
+102317701	checks	AssertionError [ERR_ASSERTION]: Bundle muss genau main.rs enthalten
+102327915	rejected	Revise the retained source using the gate diagnosis, then run the same gate.

@@ -1,0 +1,5 @@
+74	start	Die installierte Factory beurteilt ihren Nachfolger
+334	evaluate	Fixiertes Gate ausführen
+14934504	checks	PASS: Rust tests, Clippy with warnings denied, release build
+15162583	compare	candidate seeded, rejected an invalid procedure without touching the accepted record, and extended it
+15190535	accepted	Restart the service so that it runs the accepted binary.

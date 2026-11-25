@@ -1,0 +1,3 @@
+Den Worker-Auftrag formatneutral stellen und freie Plätze sofort mit neu eingereihten Aufträgen besetzen.
+
+Beobachtung aus den Läufen `../job-mc2-parallel-2`, `../job-minicalc2-neu-2` und anderen: Der feste Auftragssatz der Factory verlangte ein HTML-Dokument, auch wenn der Auftrag ein Programm-Bündel war. Der Worker packte das Bündel deshalb mehrfach in HTML, was fünf Runden in zwei Läufen kostete. Der Satz verlangt jetzt das Dokument in dem Format, das der Auftrag nennt. Zweite Beobachtung aus `../job-mc2-parallel-1` bis `-3`: Ein Auftrag, der während laufender Arbeit eintraf, wartete bis zum Ende des Durchlaufs. Freie Plätze sehen jetzt nach neuen Aufträgen, sobald einer frei wird oder nach einer Sekunde, solange gearbeitet wird.

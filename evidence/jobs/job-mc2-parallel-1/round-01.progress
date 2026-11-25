@@ -1,0 +1,7 @@
+303	start	Factory hat den Auftrag übernommen
+11929	worker	Savant erhält Auftrag und akzeptierten Ausgangsstand
+81875832	worker	worker_model=subq-savant-1.4 worker_input_tokens=2240 worker_output_tokens=28993 worker_cost_usd=0.014721 worker_duration_ms=81859 
+81876268	worker	Lease durch laufende Ausgabe gehalten, 1 Herzschläge, zuletzt bei 3 Zeichen
+81876289	evaluate	Unabhängiges, gespeichertes Prüfgate ausführen
+82719271	checks	PASS: 116 Verhaltensprüfungen bestanden
+82728319	accepted	Retain the accepted artifact. No further work was authorized by this round.
