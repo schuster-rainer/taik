@@ -154,6 +154,44 @@ async function runDesignGate(requireOpen) {
       await delayFrame();
       await chooseTicket('job-floorplanner');
     }
+    // A request of the user: the field keeps what is typed, and the request shows where it stands.
+    {
+      const field = find('.new-ticket textarea');
+      requireFact(rendered(field) && rendered(find('#taik-new-ticket')), 'There is no field to open a ticket');
+      field.value = 'Ein Rechner für Brotteig';
+      field.dispatchEvent(new Event('input', { bubbles: true }));
+      const requested = structuredClone(snapshot);
+      requested.proposals = [
+        { name: 'ticket-901', intent: 'Ein Rechner für Brotteig', origin: '', brief: 'Ein Rechner für Brotteig\n\nMit Hydration.', messages: [], state: 'deriving' },
+        { name: 'ticket-902', intent: 'Unklar', origin: '', brief: 'Unklar', messages: [], state: 'declined', note: 'Der Wunsch nennt nichts Prüfbares.' },
+        { name: 'ticket-903', intent: 'Fertig abgeleitet', origin: 'requests', brief: 'Fertig abgeleitet\n\nVerlangt: ein Titel.', messages: [{ author: 'user', round: 0, text: 'Bitte in Blau.' }] },
+      ];
+      window.updateFactory(requested);
+      await delayFrame();
+      requireFact(find('.new-ticket textarea').value === 'Ein Rechner für Brotteig', 'A live update emptied the new ticket');
+      find('button[data-board-tab="run"]').click();
+      await delayFrame();
+      find('#taik-board button[data-ticket="proposal:ticket-901"]').click();
+      await delayFrame();
+      requireFact(find('#taik-ticket').textContent.includes('Mit Hydration.') && !find('#taik-ticket button[data-proposal]'), 'A request being derived shows its text and cannot be approved');
+      find('button[data-board-tab="decision"]').click();
+      await delayFrame();
+      find('#taik-board button[data-ticket="proposal:ticket-902"]').click();
+      await delayFrame();
+      requireFact(find('#taik-ticket').textContent.includes('Der Wunsch nennt nichts Prüfbares.'), 'A declined request does not tell its reason');
+      find('button[data-board-tab="open"]').click();
+      await delayFrame();
+      find('#taik-board button[data-ticket="proposal:ticket-903"]').click();
+      await delayFrame();
+      const ticket = find('#taik-ticket');
+      requireFact(ticket.textContent.includes('Verlangt: ein Titel.') && ticket.textContent.includes('Bitte in Blau.'), 'A proposal lacks its description or what was said about it');
+      requireFact(rendered(ticket.querySelector('button[data-proposal="ticket-903"]')), 'A finished proposal cannot be approved');
+      find('.new-ticket textarea').value = '';
+      find('.new-ticket textarea').dispatchEvent(new Event('input', { bubbles: true }));
+      window.updateFactory(snapshot);
+      await delayFrame();
+      await chooseTicket('job-floorplanner');
+    }
     // Crew: a new agent is typed while the snapshot refreshes. The draft and the focus survive.
     const crew = find('#taik-crew');
     if (crew) {

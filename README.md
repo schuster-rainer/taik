@@ -125,6 +125,8 @@ A job keeps its conversation in its folder: `message-NNN.user.md` and `message-N
 
 ```sh
 printf 'Bitte die Überschrift kürzen.' | taik-seed reply STATE job-NAME
+# A request in plain words. The service derives a proposal that waits for approval.
+printf 'Eine Seite mit Uhrzeit' | taik-seed request STATE
 ```
 
 A reply to a finished job grants exactly one further round, and its worker reads the whole conversation. Each reply grants one round beyond the budget of four, at most eight. A worker may return a question instead of a candidate. Then nothing is judged, the question stands in the job, its cost in a record of its own, and the job waits until the user has answered. The viewer shows description, messages and rounds in the open ticket and plays a sound when a ticket starts to wait.

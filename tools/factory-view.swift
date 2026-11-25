@@ -79,6 +79,11 @@ private struct Proposal: Codable {
     let name: String
     let intent: String
     let origin: String
+    var brief: String = ""
+    var messages: [Message] = []
+    // Set for a request of the user without a proposal: deriving, declined or failed.
+    var state: String? = nil
+    var note: String? = nil
 }
 
 private struct Agent: Codable {
@@ -226,7 +231,36 @@ private final class FactoryMonitor {
             let origin = (try? String(contentsOf: url.appendingPathComponent("origin.txt"), encoding: .utf8))?
                 .split(separator: "\n").first { $0.hasPrefix("derived_from=") }
                 .map { URL(fileURLWithPath: String($0.dropFirst("derived_from=".count))).deletingLastPathComponent().lastPathComponent } ?? ""
-            return Proposal(name: url.lastPathComponent, intent: String(intent.prefix(300)), origin: origin)
+            return Proposal(name: url.lastPathComponent, intent: String(intent.prefix(300)), origin: origin,
+                brief: String(brief.prefix(8192)), messages: jobMessages(in: url))
+        } + openRequests()
+    }
+
+    // Requests of the user that have no proposal: still being derived, or answered without one during the last day.
+    private func openRequests() -> [Proposal] {
+        let directory = state.appendingPathComponent("requests", isDirectory: true)
+        let entries = (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.contentModificationDateKey],
+            options: [.skipsHiddenFiles])) ?? []
+        let field: (String, String) -> String = { text, key in
+            text.split(separator: "\n").first { $0.hasPrefix(key + "=") }.map { String($0.dropFirst(key.count + 1)) } ?? ""
+        }
+        return entries.filter { $0.pathExtension == "run" && $0.lastPathComponent.hasPrefix("ticket-") }
+            .sorted { $0.lastPathComponent < $1.lastPathComponent }.compactMap { url in
+            let name = url.deletingPathExtension().lastPathComponent
+            guard !FileManager.default.fileExists(atPath: state.appendingPathComponent("proposals/" + name).path),
+                  let record = try? String(contentsOf: url, encoding: .utf8) else { return nil }
+            let text = [field(record, "intent"), field(record, "observation")].filter { !$0.isEmpty }.joined(separator: "\n\n")
+            var request = Proposal(name: name, intent: String(field(record, "intent").prefix(300)), origin: "", brief: text, state: "deriving")
+            let answer = directory.appendingPathComponent("reflection-" + name + ".run")
+            let failure = directory.appendingPathComponent(name + ".failed")
+            for (file, state) in [(answer, "declined"), (failure, "failed")] {
+                guard let told = try? String(contentsOf: file, encoding: .utf8) else { continue }
+                let changed = (try? file.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate ?? .distantPast
+                if Date().timeIntervalSince(changed) > 86_400 { return nil }
+                request.state = state
+                request.note = state == "declined" ? String(field(told, "outcome").prefix(600)) : String(told.prefix(600))
+            }
+            return request
         }
     }
 
@@ -467,6 +501,7 @@ private final class FactoryWindow: NSObject, NSApplicationDelegate, WKNavigation
         configuration.userContentController.add(self, name: "setAppearance")
         configuration.userContentController.add(self, name: "approveProposal")
         configuration.userContentController.add(self, name: "commentTicket")
+        configuration.userContentController.add(self, name: "newTicket")
         configuration.userContentController.add(self, name: "setParallel")
         for name in ["saveAgent", "deleteAgent", "setJobAgent", "refreshCrew", "attention"] {
             configuration.userContentController.add(self, name: name)
@@ -617,17 +652,26 @@ private final class FactoryWindow: NSObject, NSApplicationDelegate, WKNavigation
             }
             return
         }
-        if message.name == "commentTicket", let body = message.body as? [String: String],
-           let name = body["name"], name.range(of: #"^[a-z0-9-]{1,32}$"#, options: .regularExpression) != nil,
-           let text = body["text"], !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, text.count <= 8000 {
-            // The user's comment is the reply to a ticket. The Factory reads STATE/inbox.
-            let inbox = state.appendingPathComponent("inbox", isDirectory: true)
-            try? FileManager.default.createDirectory(at: inbox, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
-            // One file per comment, never appended: a reply is a complete record, and nothing reads it half-written.
-            let stem = name + "-" + ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "")
-            let entry = inbox.appendingPathComponent(stem + ".md")
-            let record = "name: \(name)\nat: \(ISO8601DateFormatter().string(from: Date()))\n\n\(text)\n"
-            try? record.write(to: entry, atomically: true, encoding: .utf8)
+        if message.name == "commentTicket" || message.name == "newTicket", let body = message.body as? [String: String],
+           let text = body["text"], !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+           text.utf8.count <= (message.name == "newTicket" ? 4000 : 8000) {
+            // A comment on a waiting proposal stays with the proposal. A new ticket is a request the service derives a proposal from.
+            var arguments = ["request", state.path]
+            if message.name == "commentTicket" {
+                guard let name = body["name"], name.range(of: #"^[a-z0-9-]{1,32}$"#, options: .regularExpression) != nil else { return }
+                arguments = ["reply", state.path, name]
+            }
+            let call = Process()
+            call.executableURL = state.appendingPathComponent("taik-seed")
+            call.arguments = arguments
+            let input = Pipe()
+            call.standardInput = input
+            call.standardOutput = FileHandle.nullDevice
+            call.standardError = FileHandle.nullDevice
+            if (try? call.run()) != nil {
+                input.fileHandleForWriting.write(Data(text.utf8))
+                try? input.fileHandleForWriting.close()
+            }
             return
         }
         guard message.name == "openArtifact", let body = message.body as? [String: String],

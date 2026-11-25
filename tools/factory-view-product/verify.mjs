@@ -315,4 +315,39 @@ assert(html.includes('class="ticket-brief"') && html.includes('class="round-chec
 assert.doesNotMatch(css, /#taik-live \.round-checks \{[^}]*(?:text-overflow|white-space:\s*nowrap|line-clamp)/, 'the finding of the gate is not cut off');
 assert.doesNotMatch(css, /#taik-live \.thread-message \{[^}]*(?:text-overflow|white-space:\s*nowrap|line-clamp)/, 'a message is not cut off');
 
-console.log(`PASS: host contract, offline isolation, ${shadows.length} token shadows without glow, contrast ${Math.min(...measured).toFixed(2)}–${Math.max(...measured).toFixed(2)}, lossless .run highlighting, token flow per round, one workpiece pane with live draft, animated flow, ticket board in one group at a time, crew with agents and harnesses, conversation in the ticket, one ticket with the full history`);
+// 15. A ticket is opened in the viewer, in the user's words. A request shows where it stands.
+for (const hook of ['id="taik-new-ticket"', 'newTicket', 'firstTicket(', 'foldSteps(']) assert(html.includes(hook), `request hook ${hook}`);
+const { firstTicket } = new Function(boardBlock + '\nreturn { firstTicket };')();
+const requested = boardTickets({ jobs: [], proposals: [
+  { name: 'ticket-001', intent: 'Wird gerade abgeleitet', origin: '', state: 'deriving' },
+  { name: 'ticket-002', intent: 'Unklarer Wunsch', origin: '', state: 'declined', note: 'zu vage' },
+  { name: 'ticket-003', intent: 'Fehler beim Ableiten', origin: '', state: 'failed', note: 'worker' },
+  { name: 'ticket-004', intent: 'Fertiger Vorschlag', origin: 'requests' },
+] });
+assert.deepEqual(requested.run.map(entry => [entry.key, entry.flag]), [['proposal:ticket-001', 'Wird abgeleitet']], 'a request being derived is running');
+assert.deepEqual(requested.decision.map(entry => [entry.key, entry.flag]), [['proposal:ticket-002', 'Abgelehnt'], ['proposal:ticket-003', 'Fehler']], 'a declined or failed request is decided');
+assert(requested.decision[0].meta.includes('zu vage'), 'the reason of a declined request is told');
+assert.deepEqual(requested.open.map(entry => entry.key), ['proposal:ticket-004'], 'only a finished proposal waits for the user');
+// The ticket shown first belongs to the group shown first.
+assert.equal(firstTicket(requested, ''), 'proposal:ticket-004');
+assert.equal(firstTicket(requested, 'run'), 'proposal:ticket-001');
+assert.equal(firstTicket({ open: [], run: [], decision: [] }, ''), null);
+// A stream of byte counts is one step, not fifty.
+const stepsBlock = html.match(/\/\*STEPS_BEGIN\*\/([\s\S]*?)\/\*STEPS_END\*\//)?.[1];
+assert(stepsBlock, 'the step logic sits between STEPS_BEGIN and STEPS_END');
+assert.doesNotMatch(stepsBlock, /document|window\.|innerHTML|querySelector/, 'the step logic touches no DOM');
+const { foldSteps } = new Function(stepsBlock + '\nreturn { foldSteps };')();
+const steps = [
+  { elapsed: 1, kind: 'worker', detail: 'Worker liefert Quellcode' },
+  { elapsed: 2, kind: 'worker', detail: '4096 Bytes Quellcode empfangen' },
+  { elapsed: 3, kind: 'worker', detail: '8192 Bytes Quellcode empfangen' },
+  { elapsed: 4, kind: 'worker', detail: '12288 Bytes Quellcode empfangen' },
+  { elapsed: 5, kind: 'evaluate', detail: 'Gate' },
+  { elapsed: 6, kind: 'worker', detail: '100 Bytes Quellcode empfangen' },
+];
+const before = JSON.stringify(steps);
+assert.deepEqual(foldSteps(steps), [steps[0], { elapsed: 4, kind: 'worker', detail: '12288 Bytes Quellcode empfangen', folded: 3 }, steps[4], steps[5]], 'consecutive byte counts fold into the last one');
+assert.equal(JSON.stringify(steps), before, 'folding leaves the events untouched');
+assert.deepEqual(foldSteps([]), []);
+
+console.log(`PASS: host contract, offline isolation, ${shadows.length} token shadows without glow, contrast ${Math.min(...measured).toFixed(2)}–${Math.max(...measured).toFixed(2)}, lossless .run highlighting, token flow per round, one workpiece pane with live draft, animated flow, ticket board in one group at a time, crew with agents and harnesses, conversation in the ticket, one ticket with the full history, tickets opened in the viewer`);
