@@ -1,0 +1,38 @@
+[
+ {
+  "round": 1,
+  "ms": 98232,
+  "prompt_tokens": 2240,
+  "completion_tokens": 33996,
+  "cost_usd": 0.017222,
+  "decision": "rejected",
+  "checks": "AssertionError [ERR_ASSERTION]: Bundle muss genau main.rs enthalten"
+ },
+ {
+  "round": 2,
+  "ms": 87391,
+  "prompt_tokens": 7005,
+  "completion_tokens": 26711,
+  "cost_usd": 0.014056,
+  "decision": "rejected",
+  "checks": "AssertionError [ERR_ASSERTION]: Bundle muss genau main.rs enthalten"
+ },
+ {
+  "round": 3,
+  "ms": 61072,
+  "prompt_tokens": 7105,
+  "completion_tokens": 18783,
+  "cost_usd": 0.010102,
+  "decision": "rejected",
+  "checks": "AssertionError [ERR_ASSERTION]: Erste Zeile muss === main.rs === sein"
+ },
+ {
+  "round": 4,
+  "ms": 37933,
+  "prompt_tokens": 7377,
+  "completion_tokens": 9403,
+  "cost_usd": 0.005439,
+  "decision": "accepted",
+  "checks": "PASS: 116 Verhaltenspr\u00fcfungen bestanden"
+ }
+]

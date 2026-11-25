@@ -41,6 +41,7 @@
 ## Galaxy an Software-Aufträgen
 
 - [Versuch mit und ohne wiederverwendetes Ergebnis, mit Auswertung](jobs/job-galaxy-quellcode/summary.run)
+- [Nachfolgeauftrag von Grund auf gegen aufbauend auf dem angenommenen Stand](jobs/job-galaxy-quellcode/summary-02.run)
 - [Gemeinsames Gate](jobs/job-galaxy-quellcode/gate.mjs), [Auftrag ohne](jobs/job-galaxy-quellcode/brief-ohne.md) und [mit Wiederverwendung](jobs/job-galaxy-quellcode/brief-mit.md)
 
 ## Supermarkt-Floorplanner

@@ -1,0 +1,14 @@
+328	start	Factory hat den Auftrag übernommen
+1418	worker	Eingehängter Worker savant-1-4 liefert Quellcode
+1463	worker	4096 Bytes Quellcode empfangen
+1482	worker	8192 Bytes Quellcode empfangen
+1496	worker	12288 Bytes Quellcode empfangen
+1512	worker	16384 Bytes Quellcode empfangen
+1528	worker	16896 Bytes Quellcode empfangen
+1538	worker	17920 Bytes Quellcode empfangen
+1547	worker	18944 Bytes Quellcode empfangen
+1557	worker	19456 Bytes Quellcode empfangen
+1566	worker	19666 Bytes Quellcode empfangen
+1630	evaluate	Unabhängiges, gespeichertes Prüfgate ausführen
+1946341	checks	PASS: 116 Verhaltensprüfungen bestanden
+1958503	accepted	Retain the accepted artifact. No further work was authorized by this round.

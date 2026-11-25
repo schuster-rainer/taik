@@ -1,0 +1,20 @@
+decision=observed
+identity=galaxy-quellcode-02
+intent=G-03 und I-03 an einer schwereren Aufgabe prüfen: Senkt der angenommene Stand eines Auftrags die Kosten seines Nachfolgers?
+scope=Successor job MiniCalc 2: the accepted interpreter extended by comparisons, reassignment, if, while and a step limit. Same brief and same gate with 116 behaviour cases for both arms. Worker Savant 1.4 at low reasoning effort through attached Factory rounds with the usual repair loop. Three runs per arm, alternating.
+arm_scratch=The worker gets the brief and no source. Jobs ../job-minicalc2-neu-1 to -3.
+arm_reuse=The worker gets the brief and the accepted source of ../job-minicalc-savant-1/round-01.html, the way the Factory passes an accepted baseline. Jobs ../job-minicalc2-aufbau-1 to -3.
+job_author=Brief and gate were written by Savant from the old brief and gate. They were not checked case by case by hand. Five of six runs passed all 116 cases at the first attempt, which speaks against a contradiction in the gate.
+scratch_rounds=1, 4, 1
+scratch_seconds=48.7, 284.6, 59.6
+scratch_cost_usd=0.0101, 0.0468, 0.0100
+reuse_rounds=1, 1, 1
+reuse_seconds=56.8, 88.0, 71.2
+reuse_cost_usd=0.0103, 0.0134, 0.0101
+observation=With reuse every run was accepted in the first round. From scratch one of three runs needed four rounds, all three rejections for the bundle format and none for behaviour. Means: 72 s and 0.0113 USD with reuse, 131 s and 0.0223 USD from scratch. Medians: 71 s and 0.0103 USD with reuse, 60 s and 0.0101 USD from scratch.
+interpretation=In a run that succeeds at once, reuse saves nothing: the worker writes the whole file again and reads more input. The gain in the means comes from one run. The accepted source may have helped there as an example of the format, which the brief also states.
+g03=Weak support in the means, none in the medians. Not established with three runs per arm.
+i03=Same.
+cost_note=The attached runs of this experiment recorded their cost in savant-usage.json of each job, not in the round records.
+continuation=The cost of a successor is dominated by rewriting the whole artifact. A worker that returns only the changed parts would make reuse pay. Test that with a patch format before repeating this comparison.
+end

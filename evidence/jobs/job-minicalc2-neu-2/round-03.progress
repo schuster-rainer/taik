@@ -1,0 +1,11 @@
+483	start	Factory hat den Auftrag übernommen
+1293	worker	Eingehängter Worker savant-1-4 liefert Quellcode
+1343	worker	4096 Bytes Quellcode empfangen
+1359	worker	8192 Bytes Quellcode empfangen
+1374	worker	12288 Bytes Quellcode empfangen
+1390	worker	16384 Bytes Quellcode empfangen
+1579	worker	20480 Bytes Quellcode empfangen
+1906	worker	20599 Bytes Quellcode empfangen
+1919	evaluate	Unabhängiges, gespeichertes Prüfgate ausführen
+110660	checks	AssertionError [ERR_ASSERTION]: Erste Zeile muss === main.rs === sein
+120893	rejected	Manual source round ended. Inspect the gate evidence before another submission.

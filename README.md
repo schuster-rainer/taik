@@ -161,6 +161,7 @@ The viewer is `tools/factory-view.html`. It changes only through a source job. B
 | Savant against Opus as the worker, same briefs and gates | both accepted in round 1 on two jobs. Savant took 10 s and 40 s at 0.003 and 0.010 USD, Opus 24 s and 67 s at 0.075 and 0.150 USD list price | [summary](evidence/jobs/job-savant-worker/summary.run) |
 | Snap as a classifier of rejected rounds | 6 of 6 matched the expected cause, labels not independent | [summary](evidence/jobs/job-snap-kategorisierer/summary.run) |
 | Reuse of an accepted operator in another software job | no benefit: 0.122 against 0.100 USD mean, all four runs accepted in round 1 | [summary](evidence/jobs/job-galaxy-quellcode/summary.run) |
+| Successor job from scratch against building on the accepted source | all three reuse runs accepted in round 1, one of three scratch runs needed four rounds. Means 0.011 against 0.022 USD, medians equal | [summary](evidence/jobs/job-galaxy-quellcode/summary-02.run) |
 | Reuse including setup on tag batches | slower than both comparators at that sample size | [summary](evidence/jobs/job-galaxy-intelligence/summary.run) |
 
 ## Limits
