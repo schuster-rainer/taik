@@ -21,7 +21,7 @@ pub const REQUEST: &str = "decision=accepted\nkind=software\nprocedure=\ntags=\n
 pub const FOLLOW_UP_SUFFIX: &str = "-folgeauftrag";
 const FOLLOW_UP_HEADER: &str = "// TAIK: allow-follow-up";
 const FOLLOW_UP_LINE: &str = "TAIK_FOLLOWUP: ";
-const SEED: &str = "submission.seed.html";
+pub const SEED: &str = "submission.seed.html";
 // Absolute path of a Claude CLI that may take over when the Codex worker fails. Unset means no second worker.
 const SECOND_WORKER: &str = "TAIK_SECOND_WORKER";
 // Absolute path of a Claude CLI that does the work first. Codex is not called while this is set.
@@ -95,6 +95,7 @@ struct SourceJob {
     gate: String,
     digest: String,
     seed: Option<PathBuf>,
+    follow_up: bool,
     _lock: File,
 }
 
@@ -126,6 +127,7 @@ impl SourceJob {
             gate,
             digest,
             seed,
+            follow_up: needs_seed,
             _lock: lock,
         })
     }
@@ -135,7 +137,7 @@ impl SourceJob {
     }
 
     fn rounds(&self) -> usize {
-        if self.seed.is_some() { 1 } else { ROUNDS }
+        if self.follow_up { 1 } else { ROUNDS }
     }
 
     fn allows_follow_up(&self) -> bool {
@@ -299,6 +301,7 @@ fn run_round(
     let mut second_worker = String::new();
     let mut claude_called = false;
     let mut gate_ms = None;
+    let mut patch_blocks = None;
     let execution = (|| -> Result<_> {
         let html = if persisted.try_exists()? {
             progress.event(
@@ -335,6 +338,9 @@ fn run_round(
                 "You are the code worker embedded in TAIK. Return one complete standalone HTML document, no fences or explanation.\n\nWORK ORDER:\n{brief}\n\nACCEPTED SOURCE TO BUILD ON:\n{}",
                 previous.as_deref().unwrap_or("(empty)"),
             );
+            if previous.is_some() {
+                prompt.push_str(PATCH_OFFER);
+            }
             if let Some(feedback) = feedback {
                 use std::fmt::Write as _;
                 writeln!(
@@ -400,14 +406,33 @@ fn run_round(
         );
         let verification = scratch.join("verification");
         fs::create_dir(&verification)?;
+        // A patch is applied to the accepted source. The gate always judges a complete document.
+        let accepted_source = baseline
+            .as_ref()
+            .map(|path| record::read_regular(path, LIMIT))
+            .transpose()?;
+        let (html, patch_error) = match apply_patch(accepted_source.as_deref(), &html) {
+            None => (html, None),
+            Some(Ok((patched, blocks))) => {
+                progress.event(
+                    "worker",
+                    format_args!(
+                        "Patch mit {blocks} Blöcken auf den angenommenen Stand angewendet"
+                    ),
+                );
+                patch_blocks = Some(blocks);
+                (patched, None)
+            }
+            Some(Err(reason)) => (html, Some(format!("patch not applicable: {reason}"))),
+        };
         let gate_started = Instant::now();
         let result = verify(&verification, path, gate, &html, baseline.is_some())?;
         gate_ms = Some(gate_started.elapsed().as_millis());
-        let valid = result.status.success();
+        let valid = patch_error.is_none() && result.status.success();
         if valid && !persisted.try_exists()? {
             record::publish_text(&persisted, &html, LIMIT)?;
         }
-        let assertion = result.assertion();
+        let assertion = patch_error.or_else(|| result.assertion());
         let changed = feedback.is_none_or(|previous| previous.candidate != html);
         let advance = queued && !valid && assertion.is_some() && number < budget && changed;
         let further = if queued && valid && number < budget && job.allows_follow_up() {
@@ -475,8 +500,9 @@ fn run_round(
     let further = further.as_deref().unwrap_or("");
     let report = format!(
         "decision={decision}\nkind=software\nprocedure=\ntags=\nidentity={stem}\nintent={intent}\nbaseline={baseline}\nworker={worker}\n{second_worker}{worker_observation}limits={budget} rounds; worker 150s; verifier 15s; 96KiB source\n\
-         gate_sha256={digest}\ngate_ms={}\nchecks={checks}\nartifact={artifact}\nrejected_candidate={rejected_candidate}\nfeedback={feedback_record}\nfollow_up={further}\ncontinuation={continuation}\nadvance={advance}\nend\n",
+         gate_sha256={digest}\ngate_ms={}\npatch_blocks={}\nchecks={checks}\nartifact={artifact}\nrejected_candidate={rejected_candidate}\nfeedback={feedback_record}\nfollow_up={further}\ncontinuation={continuation}\nadvance={advance}\nend\n",
         gate_ms.map_or_else(String::new, |ms| ms.to_string()),
+        patch_blocks.map_or_else(String::new, |blocks: usize| blocks.to_string()),
     );
     crate::emit(&output, &report)?;
     if draft.is_some() {
@@ -752,6 +778,102 @@ pub(crate) fn ask(
             codex(scratch, job, prompt, progress, |_| {}).map(|text| (text, String::new())),
             "codex-subscription",
         ),
+    }
+}
+
+const PATCH_OFFER: &str = "\n\nYou may return a patch instead of the complete document when most of the accepted source stays unchanged. A patch starts with the line '=== PATCH ===' followed by one or more blocks of this form:\n<<<<<<< SEARCH\n<exact lines from the accepted source>\n=======\n<replacement lines>\n>>>>>>> REPLACE\nEach SEARCH text must occur exactly once in the accepted source at the time its block is applied. Blocks are applied in order. Return either a patch or a complete document, never both.";
+
+// None when the answer is a complete document. Otherwise the patched source and the number of blocks.
+fn apply_patch(
+    base: Option<&str>,
+    answer: &str,
+) -> Option<std::result::Result<(String, usize), String>> {
+    let mut rest = answer.strip_prefix("=== PATCH ===\n")?;
+    let Some(base) = base else {
+        return Some(Err("there is no accepted source to patch".into()));
+    };
+    let mut text = base.to_owned();
+    let mut blocks = 0;
+    loop {
+        rest = rest.trim_start_matches('\n');
+        if rest.trim().is_empty() {
+            break;
+        }
+        let number = blocks + 1;
+        let Some(body) = rest.strip_prefix("<<<<<<< SEARCH\n") else {
+            return Some(Err(format!(
+                "block {number} does not start with <<<<<<< SEARCH"
+            )));
+        };
+        let Some((search, after)) = body.split_once("\n=======\n") else {
+            return Some(Err(format!("block {number} has no ======= line")));
+        };
+        let (replacement, after) = if let Some(after) = after.strip_prefix(">>>>>>> REPLACE") {
+            ("", after)
+        } else if let Some(found) = after.split_once("\n>>>>>>> REPLACE") {
+            found
+        } else {
+            return Some(Err(format!("block {number} has no >>>>>>> REPLACE line")));
+        };
+        match text.matches(search).count() {
+            1 => text = text.replacen(search, replacement, 1),
+            0 => {
+                return Some(Err(format!(
+                    "the SEARCH text of block {number} does not occur in the accepted source"
+                )));
+            }
+            count => {
+                return Some(Err(format!(
+                    "the SEARCH text of block {number} occurs {count} times in the accepted source"
+                )));
+            }
+        }
+        blocks += 1;
+        rest = after;
+    }
+    if blocks == 0 {
+        return Some(Err("the patch contains no block".into()));
+    }
+    if text.len() > LIMIT {
+        return Some(Err("the patched source exceeds the size limit".into()));
+    }
+    Some(Ok((text, blocks)))
+}
+
+#[cfg(test)]
+mod patch_tests {
+    use super::apply_patch;
+
+    #[test]
+    fn patches_apply_in_order_and_refuse_ambiguous_or_missing_text() {
+        let base = "one\ntwo\nthree\ntwo-b\n";
+        assert!(apply_patch(Some(base), "<!doctype html>").is_none());
+        let patch = "=== PATCH ===\n<<<<<<< SEARCH\none\n=======\nONE\nextra\n>>>>>>> REPLACE\n\n<<<<<<< SEARCH\nthree\n=======\n>>>>>>> REPLACE\n";
+        assert_eq!(
+            apply_patch(Some(base), patch),
+            Some(Ok(("ONE\nextra\ntwo\n\ntwo-b\n".to_owned(), 2)))
+        );
+        let ambiguous = "=== PATCH ===\n<<<<<<< SEARCH\ntwo\n=======\nx\n>>>>>>> REPLACE\n";
+        assert!(
+            apply_patch(Some(base), ambiguous)
+                .unwrap()
+                .unwrap_err()
+                .contains("occurs 2 times")
+        );
+        let missing = "=== PATCH ===\n<<<<<<< SEARCH\nfour\n=======\nx\n>>>>>>> REPLACE\n";
+        assert!(
+            apply_patch(Some(base), missing)
+                .unwrap()
+                .unwrap_err()
+                .contains("does not occur")
+        );
+        assert!(apply_patch(None, missing).unwrap().is_err());
+        assert!(apply_patch(Some(base), "=== PATCH ===\n").unwrap().is_err());
+        assert!(
+            apply_patch(Some(base), "=== PATCH ===\n<<<<<<< SEARCH\none\n")
+                .unwrap()
+                .is_err()
+        );
     }
 }
 

@@ -174,6 +174,7 @@ pub fn approve(state: &Path, name: &str) -> Result<PathBuf> {
         name,
         &proposal.join("brief.md"),
         &proposal.join("verify.mjs"),
+        None,
     )?;
     record::publish_text(
         &proposal.join("approved.txt"),

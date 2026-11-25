@@ -1,0 +1,20 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-07
+intent=Den Worker nur die geänderten Stellen liefern lassen und Aufträge auf einem angenommenen Artefakt aufbauen.
+baseline=taik-seed fb5d2643f2e33bc37535416fffb107b6e82b4c73ab57516aa4a2b30948f2304d
+worker=claude-fable
+decided_by=the installed taik-seed fb5d2643f2e33bc37535416fffb107b6e82b4c73ab57516aa4a2b30948f2304d at /Users/rainer/.local/state/taik-factory/taik-seed
+limits=99 rounds; gate 900s; candidate checks 10s each
+gate_sha256=76b41170f51fa7e1a5424ba01f903bcf2276b8f8f19e4d87f952e88d18b6b0ce
+gate_ms=16618
+checks=PASS: Rust tests, Clippy with warnings denied, release build; candidate seeded, rejected an invalid procedure without touching the accepted record, and extended it
+evidence=round-07.checks.log
+artifact=round-07-taik-seed
+artifact_sha256=d47a62a41beb6566e9b527486d99a797c5a7c979df194a9ae36092d94557e365
+rollback=round-07.rollback-taik-seed
+continuation=Restart the service so that it runs the accepted binary.
+advance=false
+end

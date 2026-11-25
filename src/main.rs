@@ -47,7 +47,7 @@ const USAGE: &str = "usage: taik-seed seed OUTPUT.run
        taik-seed approve STATE NAME
        taik-seed experiment BASELINE.run OUTPUT_DIRECTORY
        taik-seed queue STATE BASELINE.run
-       taik-seed queue-source STATE NAME BRIEF GATE
+       taik-seed queue-source STATE NAME BRIEF GATE [ACCEPTED_SOURCE]
        taik-seed queue-self STATE
        taik-seed drain|serve STATE\n       taik-seed serve STATE --reflect";
 
@@ -399,12 +399,18 @@ fn run() -> Result<bool> {
             Ok(true)
         }
         #[cfg(target_os = "macos")]
-        "queue-source" if rest.len() == 3 => {
+        "queue-source" if rest.len() == 3 || rest.len() == 4 => {
             let name = rest[0].to_str().ok_or("job name must be ASCII")?;
             println!(
                 "{}",
-                service::queue_source(first, name, Path::new(&rest[1]), Path::new(&rest[2]))?
-                    .display()
+                service::queue_source(
+                    first,
+                    name,
+                    Path::new(&rest[1]),
+                    Path::new(&rest[2]),
+                    rest.get(3).map(Path::new),
+                )?
+                .display()
             );
             Ok(true)
         }

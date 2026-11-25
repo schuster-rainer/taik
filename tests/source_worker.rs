@@ -432,3 +432,80 @@ fn savant_is_a_streamed_worker_with_its_own_cost_record() {
         }
     }
 }
+
+#[test]
+fn a_queued_job_builds_on_an_accepted_source_through_a_patch() {
+    let root = tempfile::Builder::new()
+        .prefix("taik-patch-")
+        .tempdir_in("/tmp")
+        .unwrap();
+    let brief = root.path().join("brief.md");
+    fs::write(&brief, "Change the mark\n").unwrap();
+    let gate = root.path().join("verify.mjs");
+    fs::write(
+        &gate,
+        "import { readFileSync } from 'node:fs';\nconst text = readFileSync(process.argv[2], 'utf8');\nif (text !== '<!doctype html>\\n<p>new</p>\\n<p>kept</p>\\n') throw new Error('unexpected document');\nconsole.log('PASS: patched');\n",
+    )
+    .unwrap();
+    let seed = root.path().join("accepted.html");
+    fs::write(&seed, "<!doctype html>\n<p>old</p>\n<p>kept</p>\n").unwrap();
+    let stream = root.path().join("stream.txt");
+    let answer = |text: &str| {
+        let chunk = serde_json::json!({"choices": [{"delta": {"content": text}}]});
+        fs::write(
+            &stream,
+            format!("data: {chunk}\n\ndata: {{\"choices\":[],\"usage\":{{\"prompt_tokens\":10,\"completion_tokens\":10}}}}\n\ndata: [DONE]\n"),
+        )
+        .unwrap();
+    };
+    let run = |name: &str| {
+        let state = root.path().join(name);
+        let queued = factory()
+            .arg("queue-source")
+            .arg(&state)
+            .arg(name)
+            .arg(&brief)
+            .arg(&gate)
+            .arg(&seed)
+            .output()
+            .unwrap();
+        assert!(queued.status.success(), "{queued:?}");
+        let result = factory()
+            .arg("drain")
+            .arg(&state)
+            .env("TAIK_LEAD_WORKER", "savant")
+            .env("SUBQ_API_KEY", "test-key")
+            .env("TAIK_SUBQ_ENDPOINT", format!("file://{}", stream.display()))
+            .env_remove("TAIK_AUTO_PROPOSE")
+            .output()
+            .unwrap();
+        let job = state.join("jobs").join(format!("job-{name}"));
+        (result.status.code(), job)
+    };
+
+    answer("=== PATCH ===\n<<<<<<< SEARCH\n<p>old</p>\n=======\n<p>new</p>\n>>>>>>> REPLACE\n");
+    let (code, job) = run("patched");
+    let record = fs::read_to_string(job.join("round-01.run")).unwrap();
+    assert_eq!(code, Some(0), "{record}");
+    assert!(
+        record.contains("\npatch_blocks=1\n") && record.starts_with("decision=accepted\n"),
+        "{record}"
+    );
+    assert_eq!(
+        fs::read_to_string(job.join("round-01.html")).unwrap(),
+        "<!doctype html>\n<p>new</p>\n<p>kept</p>\n"
+    );
+
+    // The same worker answer every round: the diagnosis names the block, then the loop stops.
+    answer("=== PATCH ===\n<<<<<<< SEARCH\n<p>absent</p>\n=======\n<p>new</p>\n>>>>>>> REPLACE\n");
+    let (code, job) = run("unmatched");
+    let record = fs::read_to_string(job.join("round-01.run")).unwrap();
+    assert_eq!(code, Some(1), "{record}");
+    assert!(
+        record.contains("checks=patch not applicable: the SEARCH text of block 1 does not occur"),
+        "{record}"
+    );
+    assert!(record.contains("\nadvance=true\n"), "{record}");
+    assert!(!job.join("round-01.html").exists());
+    assert!(job.join("round-02.run").exists() && !job.join("round-03.run").exists());
+}

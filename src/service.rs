@@ -57,7 +57,13 @@ pub fn queue_self(state: &Path) -> Result<PathBuf> {
 }
 
 #[cfg(target_os = "macos")]
-pub fn queue_source(state: &Path, name: &str, brief: &Path, gate: &Path) -> Result<PathBuf> {
+pub fn queue_source(
+    state: &Path,
+    name: &str,
+    brief: &Path,
+    gate: &Path,
+    seed: Option<&Path>,
+) -> Result<PathBuf> {
     if name.is_empty()
         || name.len() > 48
         || !name
@@ -89,6 +95,15 @@ pub fn queue_source(state: &Path, name: &str, brief: &Path, gate: &Path) -> Resu
         &gate,
         crate::source::LIMIT,
     )?;
+    // An accepted artifact from elsewhere that the job builds on.
+    if let Some(seed) = seed {
+        let source = record::read_regular(seed, crate::source::LIMIT)?;
+        record::publish_text(
+            &job.path().join(crate::source::SEED),
+            &source,
+            crate::source::LIMIT,
+        )?;
+    }
     record::publish(&job.path().join("request.run"), crate::source::REQUEST)?;
     publish_job(job, jobs.join(destination))
 }

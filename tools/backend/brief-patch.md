@@ -1,0 +1,3 @@
+Den Worker nur die geänderten Stellen liefern lassen und Aufträge auf einem angenommenen Artefakt aufbauen.
+
+Beobachtung aus `../job-galaxy-quellcode/summary-02.run`: Ein Nachfolgeauftrag war mit dem angenommenen Stand nicht billiger, weil der Worker die ganze Datei neu schrieb. Liegt ein angenommener Stand vor, darf der Worker jetzt einen Patch aus SEARCH/REPLACE-Blöcken liefern. Die Factory wendet ihn an, das Gate prüft immer das vollständige Dokument. Ein Block, der nicht genau einmal passt, wird mit Blocknummer als Prüfbefund zurückgegeben. `queue-source` nimmt optional ein angenommenes Artefakt als Ausgangsstand, mit dem üblichen Budget von vier Runden.
