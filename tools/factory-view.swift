@@ -69,7 +69,17 @@ private struct Proposal: Codable {
     let origin: String
 }
 
+private struct Agent: Codable {
+    let at: Int
+    let session: String
+    let event: String
+    let tool: String
+    let target: String
+    let cwd: String
+}
+
 private struct Snapshot: Codable {
+    let agents: [Agent]
     let proposals: [Proposal]
     let spent: Double
     let jobs: [Job]
@@ -98,6 +108,7 @@ private final class FactoryMonitor {
             watchPath(queue)
             watchPath(state.appendingPathComponent("service-error.log"))
             watchPath(state.appendingPathComponent("proposals", isDirectory: true))
+            watchPath(state.appendingPathComponent("agents", isDirectory: true))
         }
         let jobURLs = latestJobs(in: queue)
         if watch { for url in jobURLs { watchPath(url) } }
@@ -106,14 +117,15 @@ private final class FactoryMonitor {
             let workFiles = workFilesByJob.values.flatMap { $0 }
             for url in workFiles { watchPath(url) }
             let retained = Set(jobURLs + workFiles + [state, queue, state.appendingPathComponent("service-error.log"),
-                state.appendingPathComponent("proposals", isDirectory: true)])
+                state.appendingPathComponent("proposals", isDirectory: true),
+                state.appendingPathComponent("agents", isDirectory: true)])
             for url in Array(directories.keys) where !retained.contains(url) { stopWatching(url) }
         }
         let jobs = jobURLs.compactMap { readJob($0, workFilesByJob[$0] ?? []) }
         let pid = runningService()
         if watch { watchServiceExit(pid) }
         let snapshot = Snapshot(
-            proposals: waitingProposals(), spent: recentWorkerCost(in: queue), jobs: jobs, pending: jobs.filter(\.pending).count,
+            agents: recentAgents(), proposals: waitingProposals(), spent: recentWorkerCost(in: queue), jobs: jobs, pending: jobs.filter(\.pending).count,
             service: state == defaultState ? (pid == nil ? "offline" : "running") : "unmanaged", pid: pid
         )
         let encoder = JSONEncoder()
@@ -122,6 +134,19 @@ private final class FactoryMonitor {
               json != lastSnapshot else { return }
         lastSnapshot = json
         onChange(json)
+    }
+
+    // Agent sessions that reported through tools/agent-hook.sh during the last ten minutes.
+    private func recentAgents() -> [Agent] {
+        let directory = state.appendingPathComponent("agents", isDirectory: true)
+        let entries = (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles])) ?? []
+        let now = Int(Date().timeIntervalSince1970)
+        return entries.filter { $0.pathExtension == "json" }.compactMap { url in
+            guard let data = try? Data(contentsOf: url), data.count < 4096,
+                  let agent = try? JSONDecoder().decode(Agent.self, from: data), now - agent.at < 600 else { return nil }
+            return agent
+        }.sorted { $0.at > $1.at }
     }
 
     // Proposals the Factory wrote that nobody has approved yet.

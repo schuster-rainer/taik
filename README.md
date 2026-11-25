@@ -138,6 +138,8 @@ Only the installed binary may run this. It pins the gate, runs it in the checkou
 - Right, top: the published Floorplanner, running in a script-only sandbox without network.
 - Right, bottom: the selected job. During a round it renders the draft without scripts above its source, next to the live progress. The Claude worker streams, so the draft grows while it writes.
 
+- Agents: Claude Code sessions in this checkout report each tool call through `tools/agent-hook.sh`, set up in `.claude/settings.json`. The hook writes one small file per session into `STATE/agents`. No model is called for it.
+
 The viewer is `tools/factory-view.html`. It changes only through a source job. Before installing, check a snapshot:
 
 ```sh

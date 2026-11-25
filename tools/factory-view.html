@@ -150,6 +150,12 @@
   #taik-live .proposals button { flex: none; color: var(--active); font-weight: 620; }
   #taik-live button:disabled { color: var(--quiet); box-shadow: var(--nm-inset-sm); }
 
+  #taik-live .agents { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 10px; }
+  #taik-live .agents li { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 9px 14px;
+    border-radius: 13px; box-shadow: var(--nm-inset-sm); }
+  #taik-live .agents .sub { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #taik-live .agents h3 .sub { display: inline; font-weight: 400; font-family: var(--mono); }
+
   /* Flow of a round */
   #taik-live .flow { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }
   #taik-live .flow-node { position: relative; margin: 0 10px; padding: 9px 12px 10px; border-radius: 14px; box-shadow: var(--nm-raised-sm); min-width: 0; }
@@ -598,6 +604,18 @@
       const proposals = (snapshot.proposals ?? []).map(proposal => `<li><div><h3>${escape(proposal.intent)}</h3>
           <span class="sub">${escape(proposal.name)}${proposal.origin ? ' · aus ' + escape(proposal.origin.replace(/^job-/, '')) : ''}</span></div>
           <button type="button" data-proposal="${escape(proposal.name)}">Freigeben</button></li>`).join('');
+      const agentState = agent => agent.event === 'Stop' ? ['', 'wartet']
+        : agent.event === 'UserPromptSubmit' ? ['active', 'liest den Auftrag']
+        : agent.event === 'PreToolUse' ? ['active', agent.tool] : ['', `${agent.tool} beendet`];
+      const agents = (snapshot.agents ?? []).map(agent => {
+        const [tone, doing] = agentState(agent);
+        const where = agent.target ? agent.target.split('/').slice(-2).join('/') : agent.cwd.split('/').at(-1);
+        return `<li><span class="dot ${tone}" aria-hidden="true"></span><div><h3>Claude Code <span class="sub">${escape(agent.session.slice(0, 8))}</span></h3>
+          <span class="sub" title="${escape(agent.target)}">${escape(doing)}${where ? ' · ' + escape(where) : ''}</span></div>
+          <time class="sub" data-at="${Number(agent.at) || 0}"></time></li>`;
+      }).join('');
+      const working = agents ? `<section aria-label="Agenten"><div class="section-heading"><h2>Agenten</h2>
+          <span class="sub">gemeldet über Hooks, ohne Modellaufruf</span></div><ul class="agents">${agents}</ul></section>` : '';
       const waiting = proposals ? `<section aria-label="Vorschläge"><div class="section-heading"><h2>Vorschläge der Factory</h2>
           <span class="sub">warten auf deine Freigabe</span></div><ul class="proposals">${proposals}</ul></section>` : '';
       const goal = job.goal ? `<section class="goal" aria-labelledby="taik-goal"><h2 id="taik-goal">Auftragsziel</h2><p>${escape(job.goal)}</p></section>` : '';
@@ -618,7 +636,7 @@
       const rounds = job.rounds.length ? `<ol class="rounds">${job.rounds.map((round, index) => renderRound(round, index, job)).join('')}</ol>`
         : '<p class="sub lead">Die Factory hat den Auftrag erhalten. Die erste Runde steht noch aus.</p>';
       const options = snapshot.jobs.map(entry => `<option value="${escape(entry.id)}"${selected === entry.id ? ' selected' : ''}>${escape(entry.id)} · ${jobStatus(entry)}</option>`).join('');
-      setContent(`${waiting}${goal}<section aria-label="Auftragsverlauf">
+      setContent(`${working}${waiting}${goal}<section aria-label="Auftragsverlauf">
         <div class="section-heading"><h2>Auftragsverlauf</h2><span class="sub">${escape(job.id)} · ${jobStatus(job)}</span></div>
         <div class="job-control"><label for="taik-live-job">Auftrag</label>
         <select id="taik-live-job"><option value="latest"${selected === 'latest' ? ' selected' : ''}>Neuester Auftrag</option>${options}</select></div>
@@ -647,7 +665,15 @@
       if (focusId === 'taik-live-job') document.getElementById(focusId)?.focus({ preventScroll: true });
     }
 
+    function updateAges() {
+      for (const label of root.querySelectorAll('time[data-at]')) {
+        const seconds = Math.max(0, Math.floor(Date.now() / 1000 - Number(label.dataset.at)));
+        label.textContent = seconds < 60 ? `vor ${seconds} s` : `vor ${Math.floor(seconds / 60)} min`;
+      }
+    }
+
     function updateElapsed() {
+      updateAges();
       const label = root.querySelector('[data-started]');
       const start = Number(label?.dataset.started);
       if (!start) return;

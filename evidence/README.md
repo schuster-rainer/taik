@@ -100,6 +100,7 @@
 
 - [Neumorphe Ansicht mit ausgezeichneten Prüfprotokollen](jobs/job-factory-neomorph/round-01.html), [Auftrag](jobs/job-factory-neomorph/round-01.brief.md) und [Entscheidung](jobs/job-factory-neomorph/round-01.run)
 - [Bildmarke in der Kopfzeile](jobs/job-factory-neomorph/round-02.run) und [Aufnahme der installierten Ansicht](jobs/job-factory-neomorph/round-02.screenshot.png)
+- [Agentenanzeige über Hooks](jobs/job-factory-ansicht-2/round-02.run) und [Aufnahme](jobs/job-factory-ansicht-2/round-02.screenshot.png)
 - [Ablauf einer Runde als Stationen](jobs/job-factory-neomorph/round-04.run) und [Vorschläge mit Freigabe im Dashboard](jobs/job-factory-ansicht-2/round-01.run)
 - [Aufnahme des Kandidaten](jobs/job-factory-neomorph/round-01.screenshot.png), [WebKit-Prüfung](jobs/job-factory-neomorph/round-01.webkit.log) und [vorheriger Stand](jobs/job-factory-neomorph/rollback.factory-view.html)
 
