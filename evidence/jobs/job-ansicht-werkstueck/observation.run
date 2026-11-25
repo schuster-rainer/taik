@@ -1,0 +1,13 @@
+decision=observed
+identity=ansicht-werkstueck-beobachtung-01
+intent=Festhalten, was der Umbau der rechten Seite zum Werkstück-Feld gezeigt hat.
+scope=One queued job on the live service, worker Savant 1.4, the installed viewer as the starting source. claude-fable wrote the brief, the gate and a new WebKit check for the changed contract before the candidate existed. The user had chosen one workpiece pane and asked for visible activity.
+contract_change=The pane "Zum Auftrag" is gone, so the pinned viewer gate and tools/check-factory-design.js of the earlier jobs no longer apply. The earlier check is kept as tools/check-factory-design.v1.js. The new check drives a round through the page: the live draft takes the pane and is marked unverified, source mode shows its text, the accepted result returns untouched afterwards.
+round_1=Rejected. A patch of 19 blocks, 0.0194 USD, 67 s. The gate missed the literal mode buttons.
+round_2=Accepted. A complete document, 0.0167 USD, 47 s. 238 lines differ from the previous viewer, seven animations.
+release=tools/release-view.sh ran the WebKit check on the accepted bytes, installed exactly those bytes and checked the installed app. Both checks passed. Record release-round-02.run.
+agent_share=No line of the viewer was written by claude-fable in this job. Brief, gates and the decision to release came from the agent and the user.
+known_defect=When the selected job is a viewer job, view mode shows the viewer fragment as an empty shell, because a fragment that starts with a style block counts as a document. Source and diff mode show it correctly.
+limitations=The animations were not watched during a live round by the check, only that a station is active during a round and none afterwards. One job.
+continuation=Show viewer fragments as source in view mode. Let the service call the release step itself after an accepted viewer round.
+end

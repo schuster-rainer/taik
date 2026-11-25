@@ -1,0 +1,9 @@
+decision=accepted
+kind=release
+identity=release-round-02
+artifact=round-02.html
+artifact_sha256=dc7abc9bdb293fad48ac3c85038eb5c67711257d0c7ee5af368d33ac28f55ead
+released_by=tools/release-view.sh
+checks=candidate: PASS: Desktop and narrow history/viewport, live draft, Canvas interaction and theme checks passed. installed: PASS: Desktop and narrow history/viewport, live draft, Canvas interaction and theme checks passed.
+rollback=rollback.round-02.html
+end

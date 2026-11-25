@@ -1,0 +1,25 @@
+decision=rejected
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=Die rechte Seite der Factory-Ansicht zu einem einzigen Werkstück-Feld umbauen und den Ablauf sichtbar lebendig machen.
+baseline=/Users/rainer/projects/ideas/talk/evidence/jobs/job-ansicht-werkstueck/submission.seed.html
+worker=savant
+worker_model=subq-savant-1.4
+worker_input_tokens=18722
+worker_output_tokens=34992
+worker_cost_usd=0.019368
+worker_duration_ms=66569
+limits=4 rounds; worker lease 60s up to 900s; verifier 15s; 96KiB source
+gate_sha256=72bb5d75cb58608811dcfe2ef268ffd5eb34ca25c6476fa89f2f93bff6354985
+gate_ms=93
+patch_blocks=19
+checks=AssertionError [ERR_ASSERTION]: mode button view
+artifact=
+rejected_candidate=round-01.rejected.txt
+feedback=
+follow_up=
+continuation=Revise the retained source using the gate diagnosis, then run the same gate.
+advance=true
+end

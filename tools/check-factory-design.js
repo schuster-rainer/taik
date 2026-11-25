@@ -13,40 +13,41 @@ const select = (selector, value) => {
 const evidence = '[design-gate] Prüfbefund im Live-Entwurf';
 const draft = '<html><!-- ' + evidence + ' --><body>Lokaler Prüfentwurf</body></html>';
 
+// Contract of the workpiece view: one pane shows the workpiece of the selected job. While a round
+// runs it shows the live draft, marked as unverified, and the accepted result afterwards.
 function renderFacts(mode) {
   const activity = find('#taik-activity'), history = find('[aria-label="Auftragsverlauf"]');
-  const preview = find('#taik-preview'), lower = find('#taik-job-content');
+  const preview = find('#taik-preview'), flow = find('#taik-flow');
   const result = frame('#taik-result-viewport');
-  for (const [el, label] of [[history,'history'], [preview,'preview'], [result,'result iframe'], [lower,'live content']]) {
+  for (const [el, label] of [[history,'history'], [preview,'preview'], [flow,'flow'], [result,'accepted result iframe']]) {
     requireFact(rendered(el), label + ' is not rendered');
   }
+  for (const gone of ['#taik-job-content', '#taik-job-observation', '#taik-job-viewport']) {
+    requireFact(!find(gone), 'The removed pane element still exists: ' + gone);
+  }
   requireFact(!!history.querySelector('.rounds .round'), 'The visible history contains no completed rounds');
-  requireFact(lower.textContent.includes(evidence), 'The right-hand panel did not render the snapshot draft');
   requireFact(result.srcdoc.includes('<canvas'), 'The accepted result no longer contains the Floorplanner canvas');
   requireFact(result.getAttribute('sandbox') === 'allow-scripts', 'The accepted result lost its preview isolation');
+  requireFact(flow.querySelectorAll('.flow-node').length === 5, 'The flow does not show its five stations');
   const rect = el => el.getBoundingClientRect().toJSON();
   const facts = {
     mode, viewport: innerWidth, scrollWidth: document.documentElement.scrollWidth,
     historyY: Math.round(rect(history).top), historyCount: history.querySelectorAll('.rounds .round').length,
     openDetails: history.querySelectorAll('details[open]').length,
-    result: rect(result), live: rect(lower)
+    result: rect(result), flow: rect(flow)
   };
-  requireFact(facts.live.top >= facts.result.bottom - 1, 'The lower live pane overlaps the accepted result');
-  const pane = lower.closest('.preview-pane');
-  for (const el of pane.querySelectorAll('#taik-job-content, #taik-job-observation:not([hidden]), taik-artifact-preview:not([hidden])')) {
-    requireFact(rect(el).bottom <= rect(pane).bottom + 1 && rect(el).right <= rect(pane).right + 1,
-      'Content leaves the lower pane: ' + (el.id || el.tagName));
-  }
+  requireFact(facts.result.top >= facts.flow.bottom - 1, 'The workpiece overlaps the flow');
   if (mode === 'desktop') {
     requireFact(rect(preview).left >= rect(activity).right - 1, 'Desktop right pane is not beside history/activity');
+    requireFact(facts.result.bottom <= innerHeight + 1, 'The workpiece leaves the window');
+    requireFact(facts.result.height >= innerHeight * 0.45, 'The workpiece does not use the freed height: ' + Math.round(facts.result.height));
   } else {
     requireFact(rect(preview).top >= rect(activity).bottom - 1, 'Narrow layout does not stack activity and preview');
     if (facts.scrollWidth > facts.viewport + 1) {
       const outside = [...document.querySelectorAll('#taik-live *')]
         .filter(el => rect(el).right > innerWidth + 1)
         .slice(0, 8)
-        .map(el => [el.tagName, el.id || el.className, el.parentElement?.className,
-          Math.round(rect(el).right), el.textContent.trim().slice(0, 60)]);
+        .map(el => [el.tagName, el.id || el.className, Math.round(rect(el).right), el.textContent.trim().slice(0, 60)]);
       throw new Error('Narrow layout overflows: ' + JSON.stringify({viewport:innerWidth, width:facts.scrollWidth, outside}));
     }
   }
@@ -68,8 +69,12 @@ async function runDesignGate(requireOpen) {
     details.open = true;
     await delayFrame();
     const result = frame('#taik-result-viewport');
-    requireFact(rendered(result), 'Floorplanner preview is missing before live snapshot');
+    requireFact(rendered(result), 'Floorplanner is not shown as the workpiece');
     const original = result.srcdoc;
+    const modes = [...document.querySelectorAll('button[data-workpiece-mode]')].map(button => button.dataset.workpieceMode);
+    requireFact(['view', 'source', 'diff'].every(mode => modes.includes(mode)), 'The workpiece lacks its three modes: ' + modes.join(','));
+
+    // A round starts: the live draft takes the pane and is marked as unverified.
     const active = structuredClone(snapshot);
     active.pending = Math.max(1, active.pending);
     const job = active.jobs.find(entry => entry.id === 'job-floorplanner');
@@ -82,18 +87,33 @@ async function runDesignGate(requireOpen) {
     requireFact([...history().querySelectorAll('details[open]')].some(el => el.dataset.round === selectedDetail),
       'A live update closed the selected history detail');
     requireFact(find('#taik-live-job').value === 'job-floorplanner', 'A live update dislodged the selected job');
-    requireFact(frame('#taik-result-viewport') === result && result.srcdoc === original,
-      'A draft update reloaded the accepted Floorplanner');
-    const observation = find('#taik-job-observation');
-    requireFact(observation?.textContent.includes(evidence) && !observation.hidden,
-      'The right-hand work timeline did not render the live Factory event');
+    const draftFrame = frame('#taik-draft-viewport');
+    requireFact(rendered(draftFrame) && draftFrame.srcdoc.includes(evidence), 'The live draft is not shown as the workpiece');
+    requireFact(draftFrame.getAttribute('sandbox') === '', 'The live draft may run scripts');
+    requireFact(!rendered(result), 'The accepted result is shown beside the live draft');
+    requireFact(frame('#taik-result-viewport') === result && result.srcdoc === original, 'A draft update reloaded the accepted result');
+    requireFact(/ungeprüft/i.test(find('#taik-preview').textContent), 'The live draft is not marked as unverified');
+    requireFact(find('#taik-activity').textContent.includes(evidence), 'The history does not show the live Factory event');
+    requireFact(find('#taik-flow .flow-node.active'), 'No station of the flow is active during a round');
+    find('button[data-workpiece-mode="source"]').click();
+    await delayFrame();
+    const source = find('#taik-result-source');
+    requireFact(rendered(source) && source.textContent.includes(evidence), 'Source mode does not show the draft text');
+    requireFact(!rendered(draftFrame), 'Source mode still shows the rendered draft');
     job.progress[key].push({elapsed: 200, kind: 'checks', detail: 'Independent gate update'});
     window.updateFactory(active);
     await delayFrame();
-    requireFact(observation.textContent.includes('Independent gate update'),
-      'The right-hand work timeline stopped updating while the draft was unchanged');
-    requireFact(frame('#taik-result-viewport') === result && result.srcdoc === original,
-      'A work event reloaded the accepted Floorplanner');
+    requireFact(find('#taik-activity').textContent.includes('Independent gate update'), 'The history stopped updating while the draft was unchanged');
+    requireFact(rendered(find('#taik-result-source')), 'A live update left source mode');
+
+    // The round is over: the accepted result returns, untouched.
+    find('button[data-workpiece-mode="view"]').click();
+    window.updateFactory(snapshot);
+    await delayFrame();
+    requireFact(frame('#taik-result-viewport') === result && result.srcdoc === original && rendered(result),
+      'The accepted result did not return unchanged after the round');
+    requireFact(!rendered(frame('#taik-draft-viewport')), 'The draft stayed after the round');
+    requireFact(!find('#taik-flow .flow-node.active'), 'A station stays active after the round');
     const desktop = renderFacts('desktop');
     desktop.defaultOpenDetails = defaultOpen;
     await verifyCanvasAndTheme(result, original, desktop);

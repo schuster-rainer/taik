@@ -37,7 +37,8 @@
     box-shadow: var(--nm-inset-sm); font-size: .8rem; white-space: nowrap; }
   #taik-live .appearance { display: flex; align-items: center; gap: 9px; }
   #taik-live .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--quiet); }
-  #taik-live .dot.active { width: 12px; height: 12px; border: 2px solid var(--active); border-right-color: transparent; background: transparent; animation: taik-working .9s linear infinite; }
+  #taik-live .dot.active { width: 12px; height: 12px; border: 2px solid var(--active); border-right-color: transparent; background: transparent; animation: taik-working .9s linear infinite, taik-blink 1.8s ease-in-out infinite; }
+  @keyframes taik-blink { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
   #taik-live .dot.offline { background: var(--bad); }
   @keyframes taik-working { to { transform: rotate(360deg); } }
   @media (prefers-reduced-motion: reduce) { #taik-live .dot.active { animation: none; } }
@@ -47,6 +48,7 @@
     font-size: .68rem; font-weight: 640; letter-spacing: .16em; text-transform: uppercase; color: var(--quiet); }
   #taik-live h3 { font-size: .93rem; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; }
   #taik-live .sub { color: var(--quiet); font-size: .8rem; }
+  #taik-live .unverified { color: var(--bad); }
   #taik-live code { font-family: var(--mono); font-size: .86em; overflow-wrap: anywhere; }
   #taik-live pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: .74rem/1.6 var(--mono); }
 
@@ -55,7 +57,7 @@
   #taik-activity { min-width: 0; min-height: 0; overflow-y: auto; padding: 10px 12px 18px; margin-left: -12px;
     display: flex; flex-direction: column; gap: 20px; }
   #taik-live .preview { min-width: 0; min-height: 0; padding: 10px 12px 18px; margin-right: -12px; display: grid;
-    grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1.5fr) minmax(0, 1fr); gap: 20px; }
+    grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); gap: 20px; }
 
   /* Raised surfaces */
   #taik-activity > section, #taik-live .preview-pane { margin: 0; padding: 16px 18px 18px; border-radius: 20px;
@@ -100,10 +102,11 @@
   #taik-live details[open] > summary { color: var(--ink); }
 
   /* Inset wells */
-  #taik-live .events, #taik-live .run-record, #taik-live #taik-job-content[data-mode="code"] {
+  #taik-live .events, #taik-live .run-record {
     border-radius: 13px; box-shadow: var(--nm-inset); background: var(--nm-base); }
   #taik-live .events { list-style: none; margin: 8px 0 0; padding: 9px 13px; }
-  #taik-live .events li { display: grid; grid-template-columns: 62px minmax(0, 1fr); gap: 11px; margin: 5px 0; align-items: baseline; }
+  #taik-live .events li { display: grid; grid-template-columns: 62px minmax(0, 1fr); gap: 11px; margin: 5px 0; align-items: baseline; animation: taik-rise .35s ease-out both; }
+  @keyframes taik-rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
   #taik-live .events time { color: var(--quiet); font: .7rem var(--mono); text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
   #taik-live .events .event-name { font-size: .81rem; font-weight: 580; }
   #taik-live .events code { display: block; color: var(--quiet); font-size: .73rem; line-height: 1.45; }
@@ -178,7 +181,14 @@
     background-size: 10px 3px; animation: taik-flow .6s linear infinite; }
   @keyframes taik-flow { to { background-position: 10px 0; } }
   @media (prefers-reduced-motion: reduce) { #taik-live .flow-node.done + .flow-node.active::before { animation: none; } }
-  #taik-live .flow-node.active { box-shadow: var(--nm-inset); }
+  #taik-live .flow-node.active { box-shadow: var(--nm-inset); animation: taik-breathe 2.4s ease-in-out infinite; }
+  @keyframes taik-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+  #taik-live .flow-dot { position: absolute; left: -20px; top: 50%; width: 4px; height: 4px; margin-top: -2px; border-radius: 50%; background: var(--active); opacity: 0; animation: taik-travel 1.5s linear infinite; }
+  #taik-live .flow-dot:nth-of-type(2) { animation-delay: .5s; }
+  #taik-live .flow-dot:nth-of-type(3) { animation-delay: 1s; }
+  @keyframes taik-travel { 0% { transform: translateX(0); opacity: 0; } 20% { opacity: 1; } 80% { opacity: 1; } 100% { transform: translateX(20px); opacity: 0; } }
+  #taik-live .flow-node.done .flow-op { animation: taik-op-done .6s ease-out 1; }
+  @keyframes taik-op-done { from { color: var(--quiet); } to { color: var(--active); } }
   #taik-live .flow-op { display: block; font: 600 .6rem var(--mono); letter-spacing: .14em; color: var(--quiet); }
   #taik-live .flow-node.done .flow-op, #taik-live .flow-node.active .flow-op { color: var(--active); }
   #taik-live .flow-node.failed .flow-op { color: var(--bad); }
@@ -190,31 +200,24 @@
 
   /* Right column */
   #taik-live taik-artifact-preview { flex: 1; min-height: 0; }
-  #taik-live .work-panels { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: 18px; }
-  #taik-live .work-panels:has(#taik-job-observation:not([hidden])) { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); }
-  #taik-live .work-output { display: flex; flex-direction: column; gap: 10px; min-width: 0; min-height: 0; }
-  #taik-live #taik-job-content { min-width: 0; min-height: 0; overflow: auto; flex: 0 1 auto; }
-  #taik-live #taik-job-content[data-mode="code"] { flex: 1 1 0; padding: 10px 14px; }
-  #taik-live #taik-draft-viewport { order: -1; flex: 1.4 1 0; }
-  #taik-live .work-output:has(#taik-draft-viewport:not([hidden])) #taik-job-content[data-mode="code"] { flex: 1 1 0; }
-  #taik-live #taik-job-observation { min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
-  #taik-live #taik-job-observation[hidden] { display: none; }
-  #taik-live #taik-job-observation .events { flex: 1; min-height: 0; overflow: auto; margin-top: 10px; }
   #taik-live .preview p { line-height: 1.5; overflow-wrap: anywhere; }
 
   @media (max-width: 800px) {
     #taik-live { height: auto; padding: 14px 16px 20px; }
     #taik-live .split { grid-template-columns: minmax(0, 1fr); gap: 8px; }
     #taik-activity { overflow: visible; }
-    #taik-live .preview { margin-left: -12px; grid-template-rows: auto minmax(360px, 55vh) minmax(420px, 60vh); }
+    #taik-live .preview { margin-left: -12px; grid-template-rows: auto minmax(480px, 75vh); }
     #taik-live .flow { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 0; }
     #taik-live .flow-node + .flow-node::before { display: none; }
+    #taik-live .flow-dot { display: none; }
   }
   @media (max-width: 450px) {
     #taik-live .measures { grid-template-columns: 1fr; }
-    #taik-live .work-panels:has(#taik-job-observation:not([hidden])) { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1.6fr) minmax(0, 1fr); }
   }
   @media (pointer: coarse) { #taik-live summary, #taik-live select, #taik-live button { min-height: 38px; } }
+  @media (prefers-reduced-motion: reduce) {
+    #taik-live *, #taik-live *::before, #taik-live *::after { animation: none; }
+  }
 </style>
 <div id="taik-live" lang="de">
   <header id="taik-header"></header>
@@ -226,20 +229,11 @@
         <ol id="taik-flow" class="flow"></ol>
       </section>
       <section class="preview-pane" aria-labelledby="taik-result-heading">
-        <div class="section-heading"><h2 id="taik-result-heading">Ergebnis</h2><span id="taik-result-modes" class="modes"></span><span id="taik-result-label" class="sub"></span></div>
+        <div class="section-heading"><h2 id="taik-result-heading">Werkstück</h2><span id="taik-result-modes" class="modes"><button type="button" data-workpiece-mode="view" disabled>Ansicht</button><button type="button" data-workpiece-mode="source">Quelltext</button><button type="button" data-workpiece-mode="diff">Diff</button></span><span id="taik-result-label" class="sub"></span></div>
         <taik-artifact-preview id="taik-result-viewport" hidden></taik-artifact-preview>
+        <taik-artifact-preview id="taik-draft-viewport" draft hidden></taik-artifact-preview>
+        <div id="taik-result-source" class="diff" hidden></div>
         <div id="taik-result-diff" class="diff" hidden></div>
-      </section>
-      <section class="preview-pane" aria-labelledby="taik-job-heading">
-        <div class="section-heading"><h2 id="taik-job-heading">Zum Auftrag</h2><span id="taik-job-label" class="sub"></span></div>
-        <div class="work-panels">
-          <div class="work-output">
-            <div id="taik-job-content"></div>
-            <taik-artifact-preview id="taik-job-viewport" hidden></taik-artifact-preview>
-            <taik-artifact-preview id="taik-draft-viewport" draft hidden></taik-artifact-preview>
-          </div>
-          <div id="taik-job-observation" aria-label="Arbeitsfortschritt" hidden></div>
-        </div>
       </section>
     </aside>
   </div>
@@ -316,13 +310,12 @@
     const root = document.getElementById('taik-live');
     const header = document.getElementById('taik-header');
     const activity = document.getElementById('taik-activity');
+    const modes = document.getElementById('taik-result-modes');
     const resultLabel = document.getElementById('taik-result-label');
     const resultViewport = document.getElementById('taik-result-viewport');
-    const jobLabel = document.getElementById('taik-job-label');
-    const jobContent = document.getElementById('taik-job-content');
-    const jobViewport = document.getElementById('taik-job-viewport');
     const draftViewport = document.getElementById('taik-draft-viewport');
-    const observation = document.getElementById('taik-job-observation');
+    const resultSource = document.getElementById('taik-result-source');
+    const resultDiff = document.getElementById('taik-result-diff');
     const labels = { lower: 'Kleinschreiben', trim: 'Ränder trimmen', sort: 'Sortieren', dedup: 'Duplikate entfernen', 'drop-blank': 'Leere Tags entfernen' };
     const aliases = { 'lower-then-trim': 'lower,trim,sort,dedup,drop-blank', 'trim-then-lower': 'trim,lower,sort,dedup,drop-blank' };
     const openRounds = new Map();
@@ -337,10 +330,8 @@
     let selected = 'latest';
     let lastHTML = '';
     let lastHeader = '';
-    let jobPreviewKey = '';
-    let resultMode = 'view';
-    let resultKey = '';
-    let observationKey = '';
+    let workpieceMode = 'view';
+    let workpieceKey = '';
     const appearances = { system: 'System', light: 'Hell', dark: 'Dunkel' };
     const systemAppearance = matchMedia('(prefers-color-scheme: dark)');
     let appearance = document.documentElement.dataset.appearance ?? 'system';
@@ -348,7 +339,6 @@
     function syncAppearance() {
       const resolved = appearance === 'system' ? (systemAppearance.matches ? 'dark' : 'light') : appearance;
       resultViewport.setAppearance(resolved);
-      jobViewport.setAppearance(resolved);
       draftViewport.style.colorScheme = resolved;
     }
     systemAppearance.addEventListener('change', syncAppearance);
@@ -368,41 +358,70 @@
       return markup + escape(code.slice(cursor));
     }
 
-    function renderPreview(selectedJob) {
-      const shows = job => /^\s*<(?:!doctype|html)\b/i.test(job?.preview ?? '');
-      const resultJob = shows(selectedJob) ? selectedJob : snapshot.jobs.find(shows);
-      const diffPane = document.getElementById('taik-result-diff');
-      const modes = document.getElementById('taik-result-modes');
-      if (resultJob) {
-        const result = latestAccepted(resultJob);
-        const canDiff = typeof resultJob.previous === 'string';
-        const mode = canDiff ? resultMode : 'view';
-        const key = JSON.stringify([resultJob.id, result.name, mode, canDiff]);
-        resultViewport.show(`${resultJob.id}/${result.name}`, resultJob.preview);
-        resultViewport.hidden = mode === 'diff';
-        diffPane.hidden = mode !== 'diff';
-        if (key !== resultKey) {
-          resultKey = key;
-          let summary = '';
-          if (mode === 'diff') {
-            const diff = diffLines(resultJob.previous, resultJob.preview);
-            summary = ` · +${diff.added} −${diff.removed} Zeilen`;
-            diffPane.innerHTML = diff.markup ? `<pre>${diff.markup}</pre>` : '<p class="sub">Kein Unterschied zum vorherigen Stand.</p>';
-            diffPane.scrollTop = 0;
-          }
-          resultLabel.textContent = `${resultJob.id.replace(/^job-/, '')} · freigegeben · ${result.fields.artifact}${summary}`;
-          modes.innerHTML = canDiff ? ['view', 'diff'].map(value =>
-            `<button type="button" data-result-mode="${value}"${mode === value ? ' disabled' : ''}>${value === 'view' ? 'Ansicht' : 'Diff'}</button>`).join('') : '';
-        }
-      } else {
-        diffPane.hidden = true;
-        modes.innerHTML = '';
-        resultKey = '';
-        resultLabel.textContent = 'Der erste geprüfte Stand steht aus.';
-        resultViewport.hidden = true;
+    /*WORKPIECE_BEGIN*/
+    function workpieceState(job, mode) {
+      const isDocument = text => /^\s*<(?:!doctype|html|style)/i.test(text ?? '');
+      if (!job || (!job.draft && !job.preview)) return { show: 'empty', unverified: false };
+      if (job.draft) {
+        const show = mode === 'source' ? 'source'
+          : mode === 'diff' ? (job.preview ? 'diff' : 'source')
+          : isDocument(job.draft) ? 'draft' : 'source';
+        return { show, unverified: true };
       }
-      renderJobPreview(selectedJob, resultJob);
-      renderJobObservation(selectedJob);
+      const show = mode === 'source' ? 'source'
+        : mode === 'diff' ? (typeof job.previous === 'string' ? 'diff' : 'source')
+        : isDocument(job.preview) ? 'accepted' : 'source';
+      return { show, unverified: false };
+    }
+    /*WORKPIECE_END*/
+
+    function setWorkpieceModes(mode) {
+      for (const button of modes.querySelectorAll('button[data-workpiece-mode]')) {
+        button.disabled = button.dataset.workpieceMode === mode;
+      }
+    }
+
+    function renderPreview(selectedJob) {
+      const shown = selectedJob && (selectedJob.draft || selectedJob.preview) ? selectedJob
+        : snapshot.jobs.find(job => workpieceState(job, 'view').show === 'accepted') ?? selectedJob;
+      const state = workpieceState(shown, workpieceMode);
+      setWorkpieceModes(workpieceMode);
+      const key = JSON.stringify([shown?.id, state.show, state.unverified, workpieceMode, shown?.draft, shown?.preview, shown?.previous]);
+      if (key === workpieceKey) { renderFlow(selectedJob); return; }
+      workpieceKey = key;
+      resultViewport.hidden = state.show !== 'accepted';
+      draftViewport.hidden = state.show !== 'draft';
+      resultSource.hidden = state.show !== 'source';
+      resultDiff.hidden = state.show !== 'diff';
+      if (state.show === 'accepted') {
+        const accepted = latestAccepted(shown);
+        resultViewport.show(`${shown.id}/${accepted.name}`, shown.preview);
+      }
+      if (state.show === 'draft') {
+        const draft = shown.draft.replace(/^\s*```(?:html)?[ \t]*\r?\n/i, '').replace(/\r?\n```\s*$/, '');
+        draftViewport.show(shown.id, draft);
+      }
+      if (state.show === 'source') {
+        const code = shown.draft ?? shown.preview ?? '';
+        const offset = resultSource.scrollTop;
+        const follow = resultSource.scrollHeight - offset - resultSource.clientHeight < 36;
+        resultSource.innerHTML = `<pre class="source-code"><code>${highlight(code)}</code></pre>`;
+        resultSource.scrollTop = shown.draft && follow ? resultSource.scrollHeight : offset;
+      }
+      if (state.show === 'diff') {
+        const [before, after] = shown.draft ? [shown.preview ?? '', shown.draft] : [shown.previous, shown.preview];
+        const diff = diffLines(before, after);
+        resultDiff.innerHTML = diff.markup ? `<pre>${diff.markup}</pre>` : '<p class="sub">Kein Unterschied zum vorherigen Stand.</p>';
+        resultDiff.scrollTop = 0;
+      }
+      if (state.show === 'empty') {
+        resultLabel.textContent = 'Der erste geprüfte Stand steht aus.';
+      } else if (state.unverified) {
+        resultLabel.innerHTML = '<span class="unverified">Entwurf · ungeprüft</span>';
+      } else {
+        const artifact = latestAccepted(shown)?.fields.artifact ?? '';
+        resultLabel.textContent = `${shown.id.replace(/^job-/, '')} · freigegeben${artifact ? ' · ' + artifact : ''}`;
+      }
       renderFlow(selectedJob);
     }
 
@@ -421,9 +440,11 @@
       const software = job?.baseline.fields.kind === 'software';
       const worker = record.worker_model || record.worker || (software ? 'Code-Worker' : 'lokale Suche');
       const cost = record.worker_cost_usd ? ` · ${Number(record.worker_cost_usd).toFixed(3)} $` : '';
+      const draftCount = job?.draft ? `${tokenCount(job.draft.length)} Zeichen` : '';
+      const startedAt = Number(job?.sourceStartedAt) || 0;
       const nodes = [
         ['STRUCTURE', 'Auftrag', job ? job.id.replace(/^job-/, '') : 'kein Auftrag'],
-        ['ADD', 'Worker', running && reached === 1 ? (last.detail ?? '') : worker + cost],
+        ['ADD', 'Worker', running && job?.draft ? draftCount : running && reached === 1 ? (last.detail ?? '') : worker + cost],
         ['REDUCE', 'Gate', record.gate_ms ? `${record.gate_ms} ms` : software ? 'fixiertes Prüfgate' : 'feste Prüfungen'],
         ['REFLECT', 'Entscheidung', running ? 'steht aus' : failed ? 'abgelehnt' : record.decision === 'accepted' ? 'angenommen' : (record.decision ?? 'steht aus')],
         ['RETAIN', 'Bestand', job ? `${job.rounds.length} ${job.rounds.length === 1 ? 'Protokoll' : 'Protokolle'}` : ''],
@@ -431,7 +452,9 @@
       const html = nodes.map(([operation, name, detail], index) => {
         const state = index < reached || (!running && index <= reached) ? 'done' : index === reached && running ? 'active' : '';
         const tone = failed && index === 3 ? ' failed' : '';
-        return `<li class="flow-node ${state}${tone}"><span class="flow-op">${operation}</span><span class="flow-name">${name}</span><span class="flow-detail" title="${escape(detail)}">${escape(detail)}</span></li>`;
+        const dots = state === 'active' && index > 0 ? '<i class="flow-dot"></i><i class="flow-dot"></i><i class="flow-dot"></i>' : '';
+        const live = index === 0 && running && startedAt ? ` <time data-started="${startedAt}"></time>` : '';
+        return `<li class="flow-node ${state}${tone}">${dots}<span class="flow-op">${operation}</span><span class="flow-name">${name}</span><span class="flow-detail" title="${escape(detail)}">${escape(detail)}${live}</span></li>`;
       }).join('');
       const label = !job ? '' : running ? `Runde ${job.rounds.length + 1} läuft` : job.rounds.length ? `Runde ${job.rounds.length} abgeschlossen` : 'eingereiht';
       if (html + label === flowKey) return;
@@ -506,62 +529,6 @@
         markup += `<span class="diff-${kind === '+' ? 'add' : kind === '-' ? 'del' : 'same'}">${kind} ${escape(line)}</span>\n`;
       });
       return { markup, added: ops.filter(op => op[0] === '+').length, removed: ops.filter(op => op[0] === '-').length };
-    }
-
-    function renderJobObservation(job) {
-      const round = Object.keys(job?.progress ?? {}).sort().at(-1);
-      const events = job?.progress?.[round] ?? [];
-      const key = JSON.stringify([job?.id, round, events]);
-      if (key === observationKey) return;
-      const previous = observation.querySelector('.events');
-      const offset = previous?.scrollTop ?? 0;
-      const follow = !previous || job?.id !== observation.dataset.job
-        || previous.scrollHeight - offset - previous.clientHeight < 36;
-      observationKey = key;
-      observation.dataset.job = job?.id ?? '';
-      observation.hidden = !events.length;
-      const heading = round ? `Arbeitsfortschritt · Runde ${Number(round.slice('round-'.length))}` : 'Arbeitsfortschritt';
-      observation.innerHTML = events.length ? `<h3 class="label">${heading}</h3>${eventList(events)}` : '';
-      const list = observation.querySelector('.events');
-      if (list) list.scrollTop = follow ? list.scrollHeight : offset;
-    }
-
-    function renderJobPreview(job, resultJob) {
-      const accepted = job && latestAccepted(job);
-      const last = job?.rounds.at(-1);
-      const result = last?.fields.checks || accepted?.fields.tags;
-      const isDocument = text => /^\s*<(?:!doctype\b|html\b|head\b|body\b|style\b)/i.test(text ?? '');
-      const program = job?.preview && !isDocument(job.preview);
-      const code = job?.draft ?? (job?.id === resultJob?.id || program ? job?.preview : null);
-      const showArtifact = job?.preview && !code && job.id !== resultJob?.id;
-      const key = JSON.stringify([job?.id, accepted?.name, code, !!job?.draft, result, job?.sourceActive]);
-      if (key === jobPreviewKey) return;
-      jobPreviewKey = key;
-      jobViewport.hidden = !showArtifact;
-      const draft = job?.draft?.replace(/^\s*```(?:html)?[ \t]*\r?\n/i, '').replace(/\r?\n```\s*$/, '');
-      const showDraft = /^\s*<(?:!doctype\b|html\b|head\b|body\b|[a-z][\w-]*[\s/>])/i.test(draft ?? '');
-      draftViewport.hidden = !showDraft;
-      if (showDraft) draftViewport.show(job.id, draft);
-      jobLabel.textContent = (job?.id ?? '').replace(/^job-/, '');
-
-      if (code) {
-        const offset = jobContent.scrollTop;
-        const follow = jobContent.scrollHeight - offset - jobContent.clientHeight < 36;
-        const status = showDraft ? 'Arbeitsvorschau · Live-Entwurf ohne Skripte'
-          : job.draft ? 'Quellcode · Live-Entwurf' : program ? `Freigegebenes Programm · ${escape(accepted.fields.artifact)}` : 'Freigegebener Quellcode';
-        jobContent.dataset.mode = 'code';
-        jobLabel.textContent = `${job.id.replace(/^job-/, '')} · ${status}`;
-        jobContent.innerHTML = `<pre class="source-code"><code>${highlight(code)}</code></pre>`;
-        jobContent.scrollTop = job.draft && follow ? jobContent.scrollHeight : offset;
-      } else if (showArtifact) {
-        jobContent.dataset.mode = 'note';
-        jobContent.innerHTML = `<p class="sub">Freigegeben · ${escape(accepted.fields.artifact)}</p>`;
-        jobViewport.show(`${job.id}/${accepted.name}`, job.preview);
-      } else {
-        const status = job?.sourceActive ? 'Der Worker liefert noch keinen Quellcode.' : 'Der erste geprüfte Stand steht aus.';
-        jobContent.dataset.mode = 'note';
-        jobContent.innerHTML = result ? `<pre class="run-record">${highlightRun(result)}</pre>` : `<p class="sub">${status}</p>`;
-      }
     }
 
     function escape(text) {
@@ -788,11 +755,12 @@
 
     function updateElapsed() {
       updateAges();
-      const label = root.querySelector('[data-started]');
-      const start = Number(label?.dataset.started);
-      if (!start) return;
-      const seconds = Math.max(0, Math.floor(Date.now() / 1000 - start));
-      label.textContent = `· ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+      for (const label of root.querySelectorAll('[data-started]')) {
+        const start = Number(label.dataset.started);
+        if (!start) continue;
+        const seconds = Math.max(0, Math.floor(Date.now() / 1000 - start));
+        label.textContent = `· ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+      }
     }
 
     window.setInterval(updateElapsed, 1000);
@@ -814,9 +782,9 @@
       render();
     });
     root.addEventListener('click', event => {
-      const modeButton = event.target.closest('button[data-result-mode]');
+      const modeButton = event.target.closest('button[data-workpiece-mode]');
       if (modeButton) {
-        resultMode = modeButton.dataset.resultMode;
+        workpieceMode = modeButton.dataset.workpieceMode;
         render();
         return;
       }

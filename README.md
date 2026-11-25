@@ -138,24 +138,23 @@ Only the installed binary may run this. It pins the gate, runs it in the checkou
 
 ## The viewer
 
-<img src="evidence/jobs/job-ansicht-tokenfluss/round-01.screenshot.png" alt="TAIK Factory viewer" width="820">
+<img src="evidence/jobs/job-ansicht-werkstueck/round-02.screenshot.png" alt="TAIK Factory viewer" width="820">
 
 `./tools/open-factory-view.sh` builds and installs **TAIK Factory.app** into `~/Applications`. The window follows the job with the latest activity and updates on filesystem events. It makes no model calls.
 
-- Left: the goal and the history of the selected job. **Arbeitsschritte** shows the trace of a round, **Prüfprotokoll** its decision record with keys, outcomes, digests, file names and quantities marked.
-- Right, top: the published Floorplanner, running in a script-only sandbox without network.
-- Right, bottom: the selected job. During a round it renders the draft without scripts above its source, next to the live progress. The Claude worker streams, so the draft grows while it writes.
+- Left: working agents, waiting proposals, the goal and the history of the selected job. Each round shows its token flow as a bar, with time and cost. **Arbeitsschritte** shows the trace of a round, **Prüfprotokoll** its decision record with keys, outcomes, digests, file names and quantities marked.
+- Right, top: the flow of a round through its five stations. The active station moves while a round runs.
+- Right, below: the workpiece of the selected job, as view, source or diff. During a round it shows the live draft without scripts, marked as unverified, and the accepted result afterwards. An accepted result runs in a script-only sandbox without network.
+- Header: worker cost of the last 24 hours, the number of parallel slots and the appearance.
+- Agents: Claude Code sessions in this checkout report each tool call through `tools/agent-hook.sh`, set up in `.claude/settings.json`. No model is called for it.
 
-- Costs: the header shows the worker cost of the last 24 hours, the job list and the history show the cost of each job and round at list price.
-- Diff: the result pane can show only the lines that changed against the previously accepted state. The viewer computes it locally.
-- Agents: Claude Code sessions in this checkout report each tool call through `tools/agent-hook.sh`, set up in `.claude/settings.json`. The hook writes one small file per session into `STATE/agents`. No model is called for it.
-
-The viewer is `tools/factory-view.html`. It changes only through a source job. Before installing, check a snapshot:
+The viewer is `tools/factory-view.html`. It changes only through a source job. After a viewer job is accepted, one step checks and installs it:
 
 ```sh
-"$HOME/Applications/TAIK Factory.app/Contents/MacOS/factory-view" --snapshot |
-  swift tools/check-factory-design.swift --require-open
+tools/release-view.sh evidence/jobs/job-NAME
 ```
+
+It runs the WebKit check on the accepted bytes with live data, installs exactly those bytes, checks the installed app and writes a release record. Nothing is installed unless the check passes.
 
 ## What has been measured
 

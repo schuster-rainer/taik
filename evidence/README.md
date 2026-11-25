@@ -81,6 +81,10 @@
 
 - [Rust-Werkzeug `taik-stats`, vom Gate übersetzt und ausgeführt](jobs/job-taik-stats/round-03.run), [Auftrag](jobs/job-taik-stats/submission.brief.md), [Gate](jobs/job-taik-stats/submission.gate.mjs) und [Auswertung mit Gate-Fehler](jobs/job-taik-stats/observation.run)
 
+## Aufträge aus GitHub-Issues
+
+- [Erstes Issue, vom Vorschlag bis zum geschlossenen Ticket](jobs/job-issue-1/round-01.run), [Anfrage](issues/1.run) und [Reflexion](issues/reflection-issue-1.run)
+
 ## Vorschläge der Factory
 
 - [Reflexion nach jedem Auftrag](jobs/job-backend/round-05.run) und [erste Reflexion im Dienst, mit Halt](jobs/job-worker-verfuegbarkeit-10/reflection-worker-verfuegbarkeit-10-next.run)
@@ -105,6 +109,7 @@
 
 - [Neumorphe Ansicht mit ausgezeichneten Prüfprotokollen](jobs/job-factory-neomorph/round-01.html), [Auftrag](jobs/job-factory-neomorph/round-01.brief.md) und [Entscheidung](jobs/job-factory-neomorph/round-01.run)
 - [Bildmarke in der Kopfzeile](jobs/job-factory-neomorph/round-02.run) und [Aufnahme der installierten Ansicht](jobs/job-factory-neomorph/round-02.screenshot.png)
+- [Ein Werkstück-Feld und belebter Ablauf, von der Factory gebaut](jobs/job-ansicht-werkstueck/round-02.run), [Freigabe](jobs/job-ansicht-werkstueck/release-round-02.run), [Aufnahme](jobs/job-ansicht-werkstueck/round-02.screenshot.png) und [Auswertung](jobs/job-ansicht-werkstueck/observation.run)
 - [Token- und Zeitfluss je Runde, von der Factory selbst als Patch gebaut](jobs/job-ansicht-tokenfluss/round-01.run), [Aufnahme](jobs/job-ansicht-tokenfluss/round-01.screenshot.png) und [Auswertung](jobs/job-ansicht-tokenfluss/observation.run)
 - [Parallele Plätze einstellbar](jobs/job-factory-ansicht-2/round-04.run), im Dienst mit [Runde 11](jobs/job-backend/round-11.run)
 - [Kosten je Auftrag und Diff beim Ergebnis](jobs/job-factory-ansicht-2/round-03.run)
