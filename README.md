@@ -245,6 +245,7 @@ taik-seed experiment BASELINE.run OUTPUT_DIRECTORY
 taik-seed queue STATE BASELINE.run
 taik-seed queue-source STATE NAME BRIEF GATE [ACCEPTED_SOURCE]
 taik-seed queue-self STATE
+taik-seed close STATE job-NAME
 taik-seed drain|serve STATE
 taik-seed serve STATE --reflect
 ```

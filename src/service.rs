@@ -381,7 +381,8 @@ fn drain(
             .is_some_and(|history| history.iter().all(RecordStamp::matches));
         if !verified {
             completed.remove(&job);
-            if job.join("baseline.run").is_file() {
+            // A closed job gets no further round.
+            if job.join("baseline.run").is_file() && !job.join(crate::CLOSED).exists() {
                 match run_job(&job, search, table, *first_use) {
                     Ok((accepted, history)) => {
                         succeeded &= accepted;
@@ -499,6 +500,10 @@ fn drain(
 
 #[cfg(target_os = "macos")]
 fn run_source_job(home: &Path, jobs: &Path, job: &Path) -> Result<bool> {
+    // A closed job gets no further round, not even after a reply.
+    if job.join(crate::CLOSED).exists() {
+        return Ok(true);
+    }
     // The agent of this job, if it names one. Read before every pass, so the viewer can change it.
     let agent = crate::crew::for_job(home, job);
     let agent = match agent {
