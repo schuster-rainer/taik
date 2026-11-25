@@ -1,0 +1,6 @@
+decision=observed
+identity=reflection-probe-2
+derived_from=/Users/rainer/projects/ideas/talk/evidence/jobs/job-savant-probe-2/round-01.run
+worker=codex-subscription
+outcome=stop: Das akzeptierte Artefakt bleibt erhalten, und der Entscheidungsrecord autorisiert keinen weiteren Auftrag.
+end

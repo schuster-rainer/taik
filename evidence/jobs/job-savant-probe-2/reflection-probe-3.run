@@ -1,0 +1,11 @@
+decision=observed
+identity=reflection-probe-3
+derived_from=/Users/rainer/projects/ideas/talk/evidence/jobs/job-savant-probe-2/round-01.run
+worker=savant
+worker_model=subq-savant-1.4
+worker_input_tokens=866
+worker_output_tokens=45
+worker_cost_usd=0.000109
+worker_duration_ms=531
+outcome=stop: Die Runde wurde akzeptiert und das Artefakt bleibt erhalten, aber es wurde keine weitere Arbeit autorisiert.
+end

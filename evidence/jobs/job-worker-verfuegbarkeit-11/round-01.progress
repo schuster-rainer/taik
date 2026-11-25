@@ -1,0 +1,6 @@
+86	start	Factory hat den Auftrag übernommen
+503	worker	Savant erhält Auftrag und akzeptierten Ausgangsstand
+835187	worker	worker_model=subq-savant-1.4 worker_input_tokens=261 worker_output_tokens=219 worker_cost_usd=0.000136 worker_duration_ms=834 
+835251	evaluate	Unabhängiges, gespeichertes Prüfgate ausführen
+899562	checks	PASS: inert probe document with heading and paragraph
+909733	accepted	Retain the accepted artifact. No further work was authorized by this round.

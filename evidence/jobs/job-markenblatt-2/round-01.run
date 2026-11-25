@@ -1,0 +1,25 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=Ein Markenblatt für TAIK als eigenständiges HTML-Dokument bauen.
+baseline=(empty)
+worker=savant
+worker_model=subq-savant-1.4
+worker_input_tokens=854
+worker_output_tokens=9754
+worker_cost_usd=0.004962
+worker_duration_ms=26990
+limits=4 rounds; worker lease 60s up to 900s; verifier 15s; 96KiB source
+gate_sha256=ea4548716324f3992560e222cd0412b991351251aa6741456f928d90f69516d0
+gate_ms=59
+patch_blocks=
+checks=PASS: inert brand sheet with the unchanged mark 6 times, six colours and readable in light and dark
+artifact=round-01.html
+rejected_candidate=
+feedback=
+follow_up=
+continuation=Retain the accepted artifact. No further work was authorized by this round.
+advance=false
+end
