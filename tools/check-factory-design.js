@@ -91,6 +91,30 @@ async function runDesignGate(requireOpen) {
     const result = frame('#taik-result-viewport');
     requireFact(rendered(result), 'Floorplanner is not shown as the workpiece');
     const original = result.srcdoc;
+    // Crew: a new agent is typed while the snapshot refreshes. The draft and the focus survive.
+    const crew = find('#taik-crew');
+    if (crew) {
+      requireFact(rendered(crew), 'The crew is not rendered');
+      requireFact(crew.getBoundingClientRect().right <= find('#taik-activity').getBoundingClientRect().right + 1, 'The crew leaves its column');
+      find('button[data-agent-new]').click();
+      await delayFrame();
+      const field = find('#taik-agent-name');
+      requireFact(rendered(field) && rendered(find('#taik-agent-harness')) && rendered(find('#taik-agent-persona')), 'The agent form did not open');
+      field.focus();
+      field.value = 'gate-agent';
+      field.dispatchEvent(new Event('input', {bubbles: true}));
+      const refreshed = structuredClone(snapshot);
+      refreshed.spent = (refreshed.spent ?? 0) + 0.01;
+      window.updateFactory(refreshed);
+      await delayFrame();
+      requireFact(find('#taik-agent-name')?.value === 'gate-agent', 'A snapshot update lost the agent draft');
+      requireFact(document.activeElement?.id === 'taik-agent-name', 'A snapshot update took the focus from the agent form');
+      find('button[data-agent-cancel]').click();
+      await delayFrame();
+      requireFact(!find('#taik-agent-name'), 'The agent form did not close');
+      window.updateFactory(snapshot);
+      await delayFrame();
+    }
     const modes = [...document.querySelectorAll('button[data-workpiece-mode]')].map(button => button.dataset.workpieceMode);
     requireFact(['view', 'source', 'diff'].every(mode => modes.includes(mode)), 'The workpiece lacks its three modes: ' + modes.join(','));
 

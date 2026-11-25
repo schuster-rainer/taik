@@ -222,6 +222,35 @@
   #taik-live .diff-del { color: var(--bad); }
   #taik-live .diff-same, #taik-live .diff-gap { color: var(--quiet); }
 
+  /* Crew: harnesses, agents and their form */
+  #taik-live .crew { display: grid; gap: 12px; margin-top: 12px; }
+  #taik-live .crew-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; }
+  #taik-live .crew-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; align-items: baseline; width: 100%; min-width: 0;
+    padding: 9px 13px; border: 0; border-radius: 12px; box-shadow: var(--nm-raised-sm); background: var(--nm-base); text-align: left; font: inherit; color: inherit; }
+  #taik-live button.crew-row { cursor: pointer; }
+  #taik-live .crew-row[aria-expanded="true"] { box-shadow: var(--nm-inset-sm); }
+  #taik-live .crew-row .who { font-size: .88rem; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #taik-live .crew-row .what { grid-column: 1 / -1; font-size: .78rem; color: var(--quiet); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #taik-live .crew-row .state { font-size: .76rem; color: var(--quiet); white-space: nowrap; }
+  #taik-live .crew-row .state.ready { color: var(--good); }
+  #taik-live .crew-row .state.off { color: var(--bad); }
+  #taik-live .crew details > summary { font-size: .8rem; }
+  #taik-live .crew details > .crew-list { margin-top: 8px; }
+  #taik-live .agent-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; padding: 12px 13px 13px; border-radius: 13px; box-shadow: var(--nm-inset-sm); }
+  #taik-live .agent-form label { display: grid; gap: 5px; min-width: 0; font-size: .68rem; font-weight: 640; letter-spacing: .14em; text-transform: uppercase; color: var(--quiet); }
+  #taik-live .agent-form label.wide, #taik-live .agent-form .actions, #taik-live .agent-form .problem { grid-column: 1 / -1; }
+  #taik-live .agent-form input, #taik-live .agent-form textarea, #taik-live .agent-form select { font: inherit; font-size: .84rem; letter-spacing: 0; text-transform: none;
+    font-weight: 400; color: var(--ink); width: 100%; min-width: 0; border: 0; border-radius: 10px; padding: 7px 11px; background: var(--nm-base); box-shadow: var(--nm-inset-sm); }
+  #taik-live .agent-form select { padding-right: 30px; box-shadow: var(--nm-raised-sm); }
+  #taik-live .agent-form textarea { min-height: 58px; resize: vertical; }
+  #taik-live .agent-form input:read-only { color: var(--quiet); }
+  #taik-live .agent-form .actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+  #taik-live .agent-form .actions button { min-height: 28px; padding: 4px 12px; font-size: .78rem; }
+  #taik-live .agent-form .actions .save { color: var(--active); font-weight: 620; }
+  #taik-live .agent-form .problem { color: var(--bad); font-size: .78rem; }
+  #taik-live .ticket-agent { display: flex; align-items: center; gap: 10px; font-size: .78rem; color: var(--quiet); }
+  #taik-live .ticket-agent select { flex: 1; min-width: 0; font-size: .8rem; padding: 5px 30px 5px 11px; }
+
   /* Flow of a round */
   #taik-live .flow { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }
   #taik-live .flow-node { position: relative; display: flex; flex-direction: column; min-height: 86px; margin: 0 10px; padding: 9px 12px 10px; border-radius: 14px; box-shadow: var(--nm-raised-sm); min-width: 0; }
@@ -392,6 +421,9 @@
     let workpieceKey = '';
     let openTicket = '';
     let chosenBoardTab = '';
+    let agentDraft = null;
+    let agentProblem = '';
+    let crewHarnessesOpen = false;
     let ticketDrafts = new Map();
     const appearances = { system: 'System', light: 'Hell', dark: 'Dunkel' };
     const systemAppearance = matchMedia('(prefers-color-scheme: dark)');
@@ -650,7 +682,7 @@
       for (const job of data.jobs) {
         const last = job.rounds.at(-1);
         const id = job.id.replace(/^job-/, '');
-        const cost = job.cost > 0 ? ' · ' + job.cost.toFixed(3).replace('.', ',') + ' $' : '';
+        const cost = (job.agent ? ' · @' + job.agent : '') + (job.cost > 0 ? ' · ' + job.cost.toFixed(3).replace('.', ',') + ' $' : '');
         const rounds = job.rounds.length ? ` · ${job.rounds.length} ${job.rounds.length === 1 ? 'Runde' : 'Runden'}` : '';
         if (job.sourceActive) {
           run.push({ key: job.id, job: job.id, title: title(job), flag: 'In Arbeit', column: 'run', meta: id + ' · Runde ' + (job.rounds.length + 1) + cost });
@@ -669,6 +701,88 @@
       return { open, run, decision };
     }
     /*BOARD_END*/
+
+    /*CREW_BEGIN*/
+    // The overview that the Factory wrote: harnesses with their sign-in state, and the defined agents.
+    function crewOf(data) {
+      let overview = data?.crew;
+      if (typeof overview === 'string') {
+        try { overview = JSON.parse(overview); } catch { overview = null; }
+      }
+      const usable = overview && typeof overview === 'object' && !Array.isArray(overview);
+      return { harnesses: usable && Array.isArray(overview.harnesses) ? overview.harnesses : [],
+        agents: usable && Array.isArray(overview.agents) ? overview.agents : [],
+        checkedAt: usable ? Number(overview.checked_at) || 0 : 0 };
+    }
+
+    // The first "@name" in a text that names a usable agent. An address like a@name is not a mention.
+    function mentioned(text, agents) {
+      for (const match of String(text ?? '').matchAll(/(^|\s)@([a-z0-9-]{1,32})(?![a-z0-9-]*\.[a-z])/g)) {
+        if (agents.some(agent => agent.name === match[2] && !agent.error)) return match[2];
+      }
+      return '';
+    }
+
+    function agentLine(agent) {
+      return [agent.harness, agent.model || 'Standardmodell', agent.effort].filter(Boolean).join(' · ');
+    }
+
+    // Says what is wrong with a draft, or nothing when it can be saved.
+    function validAgent(draft, harnesses) {
+      if (!/^[a-z0-9-]{1,32}$/.test(draft.name ?? '')) return 'Der Name besteht aus Kleinbuchstaben, Ziffern und Bindestrichen, höchstens 32 Zeichen.';
+      const harness = harnesses.find(entry => entry.name === draft.harness);
+      if (!harness || !harness.worker) return 'Dieser Harness ist in der Factory nicht eingebunden.';
+      if (!/^[A-Za-z0-9._:/-]{0,80}$/.test(draft.model ?? '')) return 'Der Modellname enthält Zeichen, die nicht erlaubt sind.';
+      if (draft.effort && !(harness.efforts ?? []).includes(draft.effort)) return 'Diesen Effort bietet der Harness nicht an.';
+      if ((draft.persona ?? '').length > 600) return 'Die Persona ist länger als 600 Zeichen.';
+      return '';
+    }
+    /*CREW_END*/
+
+    function renderCrew() {
+      const crew = crewOf(snapshot);
+      const wired = crew.harnesses.filter(harness => harness.worker);
+      const ready = wired.filter(harness => /^(angemeldet|Schlüssel vorhanden)$/.test(harness.login));
+      const usable = crew.agents.filter(agent => !agent.error);
+      const harnessRow = harness => {
+        const tone = /^(angemeldet|Schlüssel vorhanden)$/.test(harness.login) ? 'ready' : harness.worker ? 'off' : '';
+        const billing = harness.billing === 'api' ? 'API, nach Verbrauch' : harness.billing === 'subscription' ? 'Abo' : harness.billing;
+        const detail = [harness.method, billing, harness.models?.length ? `${harness.models.length} ${harness.models.length === 1 ? 'Modell' : 'Modelle'}` : '',
+          harness.expires ? 'Anmeldung bis ' + String(harness.expires).slice(0, 10) : ''].filter(Boolean).join(' · ');
+        return `<li class="crew-row"><span class="who">${escape(harness.name)}</span><span class="state ${tone}">${escape(harness.login)}</span>
+          <span class="what" title="${escape(detail)}">${escape(detail)}</span></li>`;
+      };
+      const agentRow = agent => agent.error
+        ? `<li class="crew-row"><span class="who">@${escape(agent.name)}</span><span class="state off">fehlerhaft</span><span class="what">${escape(agent.error)}</span></li>`
+        : `<li><button type="button" class="crew-row" data-agent-edit="${escape(agent.name)}" aria-expanded="${agentDraft?.name === agent.name && !agentDraft.fresh}">
+          <span class="who">@${escape(agent.name)}</span><span class="state">${escape(agent.persona ? 'mit Persona' : '')}</span>
+          <span class="what">${escape(agentLine(agent))}</span></button></li>`;
+      const summary = crew.harnesses.length
+        ? `${usable.length} ${usable.length === 1 ? 'Agent' : 'Agenten'} · ${ready.length} von ${wired.length} Harnessen bereit` : 'Übersicht wird ermittelt';
+      return `<section id="taik-crew" aria-label="Crew"><div class="section-heading"><h2>Crew</h2><span class="sub">${summary}</span></div>
+        <div class="crew"><ul class="crew-list">${usable.length || crew.agents.length ? crew.agents.map(agentRow).join('') : '<li class="board-empty">Noch kein Agent. Ohne Agent arbeitet der Standard-Worker des Dienstes.</li>'}</ul>
+        ${agentDraft ? agentForm(crew) : '<div class="board-tabs"><button type="button" data-agent-new>Neuer Agent</button><button type="button" data-crew-refresh>Abos neu prüfen</button></div>'}
+        <details data-crew-part="harnesses"${crewHarnessesOpen ? ' open' : ''}><summary>Harnesse und Abos</summary><ul class="crew-list">${crew.harnesses.map(harnessRow).join('')}</ul></details>
+        </div></section>`;
+    }
+
+    function agentForm(crew) {
+      const draft = agentDraft;
+      const wired = crew.harnesses.filter(harness => harness.worker);
+      const harness = wired.find(entry => entry.name === draft.harness) ?? wired[0];
+      const option = (value, label, chosen) => `<option value="${escape(value)}"${value === chosen ? ' selected' : ''}>${escape(label)}</option>`;
+      const problem = agentProblem || '';
+      return `<div class="agent-form" data-agent-form>
+        <label>Name<input id="taik-agent-name" value="${escape(draft.name)}" placeholder="z. B. pruefer"${draft.fresh ? '' : ' readonly'} autocomplete="off" spellcheck="false"></label>
+        <label>Harness<select id="taik-agent-harness">${wired.map(entry => option(entry.name, `${entry.name} · ${entry.login}`, harness?.name)).join('')}</select></label>
+        <label>Modell<input id="taik-agent-model" value="${escape(draft.model)}" list="taik-agent-models" placeholder="Standard des Harness" autocomplete="off" spellcheck="false">
+          <datalist id="taik-agent-models">${(harness?.models ?? []).map(model => `<option value="${escape(model)}">`).join('')}</datalist></label>
+        <label>Effort<select id="taik-agent-effort">${option('', 'Standard', draft.effort)}${(harness?.efforts ?? []).map(effort => option(effort, effort, draft.effort)).join('')}</select></label>
+        <label class="wide">Persona<textarea id="taik-agent-persona" maxlength="600" placeholder="Ein Satz, der vor jedem Auftrag steht. Optional.">${escape(draft.persona)}</textarea></label>
+        ${problem ? `<p class="problem" role="alert">${escape(problem)}</p>` : ''}
+        <div class="actions">${draft.fresh ? '' : `<button type="button" data-agent-delete="${escape(draft.name)}">Löschen</button>`}
+          <button type="button" data-agent-cancel>Abbrechen</button><button type="button" class="save" data-agent-save>Speichern</button></div></div>`;
+    }
 
     function renderBoard() {
       const columns = boardTickets(snapshot);
@@ -695,8 +809,12 @@
 
     function ticketDetail(entry) {
       const draft = ticketDrafts.get(entry.key) ?? '';
-      return `<div class="ticket-detail" data-detail="${escape(entry.key)}">
-        <textarea aria-label="Kommentar zu ${escape(entry.key)}" placeholder="Antwort oder Frage an die Factory …">${escape(draft)}</textarea>
+      const job = entry.proposal ? null : snapshot.jobs.find(candidate => candidate.id === entry.job);
+      const agents = crewOf(snapshot).agents.filter(agent => !agent.error);
+      const chooser = job ? `<label class="ticket-agent">Agent der nächsten Runde<select data-ticket-agent="${escape(job.id)}">
+          <option value="">Standard des Dienstes</option>${agents.map(agent => `<option value="${escape(agent.name)}"${job.agent === agent.name ? ' selected' : ''}>@${escape(agent.name)} · ${escape(agentLine(agent))}</option>`).join('')}</select></label>` : '';
+      return `<div class="ticket-detail" data-detail="${escape(entry.key)}">${chooser}
+        <textarea aria-label="Kommentar zu ${escape(entry.key)}" placeholder="Antwort oder Frage an die Factory. Mit @name übernimmt ein Agent die nächste Runde.">${escape(draft)}</textarea>
         <div class="actions">${entry.proposal ? `<button type="button" data-proposal="${escape(entry.proposal)}">Freigeben</button>` : ''}
           <button type="button" data-ticket-close>Später</button>
           <button type="button" class="send" data-ticket-send="${escape(entry.key)}">Senden</button></div></div>`;
@@ -832,7 +950,7 @@
           <span class="sub" title="${escape(agent.target)}">${escape(doing)}${where ? ' · ' + escape(where) : ''}</span></div>
           <time class="sub" data-at="${Number(agent.at) || 0}"></time></li>`;
       }).join('');
-      const working = agents ? `<section aria-label="Agenten"><div class="section-heading"><h2>Agenten</h2>
+      const working = agents ? `<section aria-label="Sitzungen"><div class="section-heading"><h2>Sitzungen</h2>
           <span class="sub">gemeldet über Hooks, ohne Modellaufruf</span></div><ul class="agents">${agents}</ul></section>` : '';
       const goal = job.goal ? `<section class="goal" aria-labelledby="taik-goal"><h2 id="taik-goal">Auftragsziel</h2><p>${escape(ticketTitle(job.goal))}</p></section>` : '';
       const accepted = latestAccepted(job);
@@ -856,7 +974,7 @@
       const rounds = job.rounds.length ? `<ol class="rounds">${job.rounds.map((round, index) => renderRound(round, index, job, flows[index])).join('')}</ol>`
         : '<p class="sub lead">Die Factory hat den Auftrag erhalten. Die erste Runde steht noch aus.</p>';
       const options = snapshot.jobs.map(entry => `<option value="${escape(entry.id)}"${selected === entry.id ? ' selected' : ''}>${escape(entry.id)} · ${jobStatus(entry)}${entry.cost > 0 ? ' · ' + money(entry.cost) : ''}</option>`).join('');
-      setContent(`${board}${working}${goal}<section aria-label="Auftragsverlauf">
+      setContent(`${board}${renderCrew()}${working}${goal}<section aria-label="Auftragsverlauf">
         <div class="section-heading"><h2>Auftragsverlauf</h2><span class="sub">${escape(job.id)} · ${jobStatus(job)}${job.cost > 0 ? ' · ' + money(job.cost) : ''}</span></div>
         <div class="job-control"><label for="taik-live-job">Auftrag</label>
         <select id="taik-live-job"><option value="latest"${selected === 'latest' ? ' selected' : ''}>Neuester Auftrag</option>${options}</select></div>
@@ -876,6 +994,8 @@
       if (html === lastHTML) return;
       lastHTML = html;
       const focusId = document.activeElement?.id;
+      const fieldCaret = focusId?.startsWith('taik-agent-') && document.activeElement.setSelectionRange
+        ? [document.activeElement.selectionStart, document.activeElement.selectionEnd] : null;
       // A reply is typed while the snapshot refreshes. Keep its field and caret.
       const typing = document.activeElement?.closest?.('.ticket-detail')?.dataset.detail ? document.activeElement : null;
       const caret = typing ? [typing.selectionStart, typing.selectionEnd] : null;
@@ -886,7 +1006,11 @@
         element.scrollTop = offsets.get(element.parentElement.dataset.round) ?? 0;
       }
       updateElapsed();
-      if (focusId === 'taik-live-job') document.getElementById(focusId)?.focus({ preventScroll: true });
+      if (focusId === 'taik-live-job' || focusId?.startsWith('taik-agent-')) {
+        const again = document.getElementById(focusId);
+        again?.focus({ preventScroll: true });
+        if (again && fieldCaret && again.setSelectionRange) again.setSelectionRange(fieldCaret[0], fieldCaret[1]);
+      }
       if (typing) {
         const again = document.querySelector(`.ticket-detail[data-detail="${CSS.escape(typing.closest('.ticket-detail').dataset.detail)}"] textarea`);
         again?.focus({ preventScroll: true });
@@ -921,6 +1045,18 @@
         window.webkit?.messageHandlers?.setAppearance?.postMessage(appearance);
         return;
       }
+      if (event.target.id === 'taik-agent-harness' && agentDraft) {
+        agentDraft.harness = event.target.value;
+        agentDraft.model = '';
+        agentDraft.effort = '';
+        render();
+        return;
+      }
+      if (event.target.id === 'taik-agent-effort' && agentDraft) { agentDraft.effort = event.target.value; return; }
+      if (event.target.dataset?.ticketAgent) {
+        window.webkit?.messageHandlers?.setJobAgent?.postMessage({ job: event.target.dataset.ticketAgent, agent: event.target.value });
+        return;
+      }
       if (event.target.id === 'taik-parallel') {
         window.webkit?.messageHandlers?.setParallel?.postMessage(Number(event.target.value));
         return;
@@ -943,6 +1079,47 @@
         window.webkit?.messageHandlers?.approveProposal?.postMessage(approve.dataset.proposal);
         return;
       }
+      if (event.target.closest('button[data-crew-refresh]')) {
+        event.target.closest('button').disabled = true;
+        window.webkit?.messageHandlers?.refreshCrew?.postMessage('');
+        return;
+      }
+      if (event.target.closest('button[data-agent-new]')) {
+        const first = crewOf(snapshot).harnesses.find(harness => harness.worker);
+        agentDraft = { name: '', harness: first?.name ?? '', model: '', effort: '', persona: '', fresh: true };
+        agentProblem = '';
+        render();
+        document.getElementById('taik-agent-name')?.focus();
+        return;
+      }
+      const editAgent = event.target.closest('button[data-agent-edit]');
+      if (editAgent) {
+        const agent = crewOf(snapshot).agents.find(entry => entry.name === editAgent.dataset.agentEdit);
+        agentDraft = agentDraft?.name === agent?.name && !agentDraft.fresh ? null : agent ? { ...agent, fresh: false } : null;
+        agentProblem = '';
+        render();
+        return;
+      }
+      if (event.target.closest('button[data-agent-cancel]')) { agentDraft = null; agentProblem = ''; render(); return; }
+      if (event.target.closest('button[data-agent-save]') && agentDraft) {
+        const crew = crewOf(snapshot);
+        agentProblem = validAgent(agentDraft, crew.harnesses)
+          || (agentDraft.fresh && crew.agents.some(agent => agent.name === agentDraft.name) ? 'Diesen Namen gibt es schon.' : '');
+        if (!agentProblem) {
+          const { name, harness, model, effort, persona } = agentDraft;
+          window.webkit?.messageHandlers?.saveAgent?.postMessage({ name, harness, model, effort, persona });
+          agentDraft = null;
+        }
+        render();
+        return;
+      }
+      const removeAgent = event.target.closest('button[data-agent-delete]');
+      if (removeAgent) {
+        window.webkit?.messageHandlers?.deleteAgent?.postMessage(removeAgent.dataset.agentDelete);
+        agentDraft = null;
+        render();
+        return;
+      }
       const boardTabButton = event.target.closest('button[data-board-tab]');
       if (boardTabButton) {
         chosenBoardTab = boardTabButton.dataset.boardTab;
@@ -962,6 +1139,9 @@
         send.disabled = true;
         send.textContent = 'Gesendet';
         window.webkit?.messageHandlers?.commentTicket?.postMessage({ name: key.replace(/^(proposal|job):/, ''), text });
+        // "@name" in a reply hands the next round of this job to that agent.
+        const handed = mentioned(text, crewOf(snapshot).agents);
+        if (handed && key.startsWith('job-')) window.webkit?.messageHandlers?.setJobAgent?.postMessage({ job: key, agent: handed });
         return;
       }
       const ticketButton = event.target.closest('button[data-ticket]');
@@ -977,11 +1157,14 @@
       if (button) window.webkit?.messageHandlers?.openArtifact?.postMessage({job:button.dataset.job,name:button.dataset.artifact});
     });
     root.addEventListener('input', event => {
+      const part = { 'taik-agent-name': 'name', 'taik-agent-model': 'model', 'taik-agent-persona': 'persona' }[event.target.id];
+      if (part && agentDraft) { agentDraft[part] = event.target.value; return; }
       const field = event.target.closest('.ticket-detail textarea');
       const key = field?.closest('.ticket-detail')?.dataset.detail;
       if (key) ticketDrafts.set(key, field.value);
     });
     root.addEventListener('toggle', event => {
+      if (event.target.dataset?.crewPart === 'harnesses') { crewHarnessesOpen = event.target.open; return; }
       const id = event.target.dataset?.round;
       if (!id || !event.target.isConnected || event.target.dataset.initialOpen === String(event.target.open)) return;
       openRounds.set(id, event.target.open);

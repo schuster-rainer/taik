@@ -33,6 +33,7 @@ private struct Job: Codable {
     let previous: String?
     let cost: Double
     let draft: String?
+    let agent: String?
     let baseline: Round
     let rounds: [Round]
     let progress: [String: [ProgressEvent]]
@@ -81,6 +82,7 @@ private struct Agent: Codable {
 }
 
 private struct Snapshot: Codable {
+    let crew: String?
     let parallel: Int
     let agents: [Agent]
     let proposals: [Proposal]
@@ -112,6 +114,7 @@ private final class FactoryMonitor {
             watchPath(state.appendingPathComponent("service-error.log"))
             watchPath(state.appendingPathComponent("proposals", isDirectory: true))
             watchPath(state.appendingPathComponent("agents", isDirectory: true))
+            watchPath(state.appendingPathComponent("crew", isDirectory: true))
         }
         let jobURLs = latestJobs(in: queue)
         if watch { for url in jobURLs { watchPath(url) } }
@@ -121,14 +124,15 @@ private final class FactoryMonitor {
             for url in workFiles { watchPath(url) }
             let retained = Set(jobURLs + workFiles + [state, queue, state.appendingPathComponent("service-error.log"),
                 state.appendingPathComponent("proposals", isDirectory: true),
-                state.appendingPathComponent("agents", isDirectory: true)])
+                state.appendingPathComponent("agents", isDirectory: true),
+                state.appendingPathComponent("crew", isDirectory: true)])
             for url in Array(directories.keys) where !retained.contains(url) { stopWatching(url) }
         }
         let jobs = jobURLs.compactMap { readJob($0, workFilesByJob[$0] ?? []) }
         let pid = runningService()
         if watch { watchServiceExit(pid) }
         let snapshot = Snapshot(
-            parallel: parallelSlots(), agents: recentAgents(), proposals: waitingProposals(), spent: recentWorkerCost(in: queue), jobs: jobs, pending: jobs.filter(\.pending).count,
+            crew: crewOverview(), parallel: parallelSlots(), agents: recentAgents(), proposals: waitingProposals(), spent: recentWorkerCost(in: queue), jobs: jobs, pending: jobs.filter(\.pending).count,
             service: state == defaultState ? (pid == nil ? "offline" : "running") : "unmanaged", pid: pid
         )
         let encoder = JSONEncoder()
@@ -137,6 +141,20 @@ private final class FactoryMonitor {
               json != lastSnapshot else { return }
         lastSnapshot = json
         onChange(json)
+    }
+
+    // The overview that `taik-seed crew` wrote: harnesses, sign-in state and the defined agents.
+    private func crewOverview() -> String? {
+        let url = state.appendingPathComponent("crew", isDirectory: true).appendingPathComponent("overview.json")
+        guard let data = try? Data(contentsOf: url), data.count < 262_144 else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    // The agent a job names for its next round.
+    private func jobAgent(in job: URL) -> String? {
+        guard let text = try? String(contentsOf: job.appendingPathComponent("agent"), encoding: .utf8) else { return nil }
+        let name = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return name.range(of: #"^[a-z0-9-]{1,32}$"#, options: .regularExpression) != nil ? name : nil
     }
 
     // Slots for software jobs: STATE/parallel as the viewer set it, otherwise the service default of three.
@@ -267,7 +285,7 @@ private final class FactoryMonitor {
         }
         let draft = active ? readSource(at: url.appendingPathComponent(next + ".draft")) : nil
         return Job(id: url.lastPathComponent, goal: goal, preview: preview, previous: previous,
-            cost: (cost * 10000).rounded() / 10000, draft: draft, baseline: baseline, rounds: rounds, progress: progress,
+            cost: (cost * 10000).rounded() / 10000, draft: draft, agent: jobAgent(in: url), baseline: baseline, rounds: rounds, progress: progress,
             sourceQueued: queued, sourceActive: active, sourceStartedAt: startedAt)
     }
 
@@ -412,6 +430,9 @@ private final class FactoryWindow: NSObject, NSApplicationDelegate, WKNavigation
         configuration.userContentController.add(self, name: "approveProposal")
         configuration.userContentController.add(self, name: "commentTicket")
         configuration.userContentController.add(self, name: "setParallel")
+        for name in ["saveAgent", "deleteAgent", "setJobAgent", "refreshCrew"] {
+            configuration.userContentController.add(self, name: name)
+        }
         webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = self
         window.contentView = webView
@@ -424,6 +445,7 @@ private final class FactoryWindow: NSObject, NSApplicationDelegate, WKNavigation
             self?.renderChanges()
         }
         monitor.refresh(watch: true)
+        refreshCrew()
         let content = fragment.replacingOccurrences(of: "/*FACTORY_DATA*/null", with: scriptSafe(snapshot))
         webView.loadHTMLString("""
         <!doctype html><html lang="de" data-appearance="\(appearance.rawValue)"><meta charset="utf-8">
@@ -448,12 +470,76 @@ private final class FactoryWindow: NSObject, NSApplicationDelegate, WKNavigation
         webView.evaluateJavaScript("window.updateFactory(\(scriptSafe(snapshot)))")
     }
 
+    // Asks the installed Factory which harnesses are here and signed in. It writes STATE/crew/overview.json,
+    // which the monitor watches. The service's own settings are passed on so that both see the same accounts.
+    private func refreshCrew() {
+        let seed = state.appendingPathComponent("taik-seed")
+        guard FileManager.default.isExecutableFile(atPath: seed.path) else { return }
+        let probe = Process()
+        probe.executableURL = seed
+        probe.arguments = ["crew", state.path]
+        var environment = ProcessInfo.processInfo.environment
+        let plist = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/LaunchAgents/local.taik.factory.plist")
+        if let service = NSDictionary(contentsOf: plist)?["EnvironmentVariables"] as? [String: String] {
+            for (key, value) in service where key.hasPrefix("TAIK_") || key == "PATH" { environment[key] = value }
+        }
+        probe.environment = environment
+        probe.standardOutput = FileHandle.nullDevice
+        probe.standardError = FileHandle.nullDevice
+        try? probe.run()
+    }
+
     func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
         guard message.frameInfo.isMainFrame else { return }
         if message.name == "setAppearance", let value = message.body as? String,
            let appearance = ViewerAppearance(rawValue: value) {
             UserDefaults.standard.set(appearance.rawValue, forKey: ViewerAppearance.preference)
             window.appearance = appearance.native
+            return
+        }
+        // Agents decide which account a round spends. Every value is checked against a fixed form,
+        // and files are written only into STATE/crew or as the one file `agent` of a known job.
+        let agentName = #"^[a-z0-9-]{1,32}$"#
+        let crew = state.appendingPathComponent("crew", isDirectory: true)
+        if message.name == "refreshCrew" {
+            refreshCrew()
+            return
+        }
+        if message.name == "saveAgent", let body = message.body as? [String: String],
+           let name = body["name"], name.range(of: agentName, options: .regularExpression) != nil,
+           let harness = body["harness"], ["claude", "codex", "savant", "grok", "pi"].contains(harness),
+           let model = body["model"], model.range(of: #"^[A-Za-z0-9._:/-]{0,80}$"#, options: .regularExpression) != nil,
+           let effort = body["effort"], ["", "off", "minimal", "low", "medium", "high", "xhigh", "max"].contains(effort) {
+            let persona = (body["persona"] ?? "").components(separatedBy: .newlines).joined(separator: " ")
+                .trimmingCharacters(in: .whitespaces)
+            guard persona.utf8.count <= 600 else { return }
+            try? FileManager.default.createDirectory(at: crew, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+            let text = "harness=\(harness)\nmodel=\(model)\neffort=\(effort)\npersona=\(persona)\nend\n"
+            try? text.write(to: crew.appendingPathComponent(name + ".agent"), atomically: true, encoding: .utf8)
+            refreshCrew()
+            return
+        }
+        if message.name == "deleteAgent", let name = message.body as? String,
+           name.range(of: agentName, options: .regularExpression) != nil {
+            try? FileManager.default.removeItem(at: crew.appendingPathComponent(name + ".agent"))
+            refreshCrew()
+            return
+        }
+        if message.name == "setJobAgent", let body = message.body as? [String: String],
+           let job = body["job"], job.range(of: #"^job-[A-Za-z0-9-]{1,60}$"#, options: .regularExpression) != nil,
+           let agent = body["agent"] {
+            let folder = state.appendingPathComponent("jobs", isDirectory: true).appendingPathComponent(job, isDirectory: true)
+            var isFolder: ObjCBool = false
+            guard FileManager.default.fileExists(atPath: folder.path, isDirectory: &isFolder), isFolder.boolValue else { return }
+            let choice = folder.appendingPathComponent("agent")
+            if agent.isEmpty {
+                try? FileManager.default.removeItem(at: choice)
+            } else if agent.range(of: agentName, options: .regularExpression) != nil,
+                      FileManager.default.fileExists(atPath: crew.appendingPathComponent(agent + ".agent").path) {
+                try? (agent + "\n").write(to: choice, atomically: true, encoding: .utf8)
+            }
+            monitor.refresh(watch: false)
             return
         }
         if message.name == "setParallel", let slots = message.body as? Int, (1...8).contains(slots) {
