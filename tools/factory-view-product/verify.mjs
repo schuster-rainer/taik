@@ -371,4 +371,27 @@ assert.deepEqual(filterTickets(stock, 'gescheitert').decision.map(entry => entry
 assert.equal(filterTickets(stock, '').decision.length, 4, 'an empty search shows everything');
 assert.equal(stock.decision.length, 4, 'searching leaves the groups untouched');
 
-console.log(`PASS: host contract, offline isolation, ${shadows.length} token shadows without glow, contrast ${Math.min(...measured).toFixed(2)}–${Math.max(...measured).toFixed(2)}, lossless .run highlighting, token flow per round, one workpiece pane with live draft, animated flow, ticket board in one group at a time, crew with agents and harnesses, conversation in the ticket, one ticket with the full history, tickets opened in the viewer, the whole stock on the board`);
+// 17. Top down: where a job stands, what each round changed, then the changed lines.
+for (const hook of ['class="ticket-state"', 'class="round-change"', 'ticketState(', 'changeLine(']) assert(html.includes(hook), `state hook ${hook}`);
+const { ticketState, changeLine } = new Function(threadBlock + '\nreturn { ticketState, changeLine };')();
+const stood = (decision, more = {}) => ({ name: 'round.run', fields: { decision, intent: 'Eine Seite bauen', advance: 'false', ...more } });
+assert.deepEqual(ticketState({ rounds: [], messages: [] }), { done: 'Noch keine Runde gelaufen.', problem: '', question: '', next: 'Wartet auf die erste Runde.' });
+assert.deepEqual(ticketState({ rounds: [stood('accepted')], messages: [] }),
+  { done: 'Runde 1 angenommen: Eine Seite bauen', problem: '', question: '', next: 'Fertig. Eine Antwort von dir gibt eine weitere Runde.' });
+const failed = ticketState({ rounds: [stood('accepted'), stood('rejected', { checks: 'FAIL: kein Titel', worker_failure: '' })], messages: [] });
+assert.equal(failed.done, 'Runde 2 abgelehnt. Der Stand aus Runde 1 gilt weiter.');
+assert.equal(failed.problem, 'FAIL: kein Titel');
+assert.equal(ticketState({ rounds: [stood('rejected', { checks: '', worker_failure: 'timeout' })], messages: [] }).problem, 'Der Agent hat nichts geliefert: timeout');
+assert.equal(ticketState({ rounds: [stood('rejected', { checks: 'x' })], messages: [] }).done, 'Runde 1 abgelehnt. Es gibt noch keinen angenommenen Stand.');
+const asked = ticketState({ rounds: [stood('accepted')], messages: [{ author: 'user', round: 0, text: 'a' }, { author: 'agent', round: 1, text: 'Welche Farbe?' }] });
+assert.deepEqual([asked.question, asked.next], ['Welche Farbe?', 'Deine Antwort im Feld unten.'], 'an open question of the agent is the next step');
+assert.equal(ticketState({ rounds: [stood('accepted')], messages: [{ author: 'user', round: 1, text: 'Blau' }] }).next, 'Deine Antwort wartet auf ihre Runde.');
+assert.equal(ticketState({ rounds: [stood('accepted')], messages: [], sourceActive: true }).next, 'Der Agent arbeitet an Runde 2.');
+assert.equal(ticketState(undefined).done, 'Noch keine Runde gelaufen.');
+assert.equal(changeLine({ file: 'round-02.html', added: 12, removed: 3 }), 'round-02.html · +12 −3 Zeilen');
+assert.equal(changeLine({ file: 'round-01.html', added: 1, removed: 0, fresh: true }), 'round-01.html · neu, 1 Zeile');
+assert.equal(changeLine({ file: 'round-03.rejected.txt', added: 0, removed: 0 }), 'round-03.rejected.txt · unverändert');
+assert.equal(changeLine(undefined), '');
+assert.doesNotMatch(css, /#taik-live \.ticket-state[^{]*\{[^}]*(?:text-overflow|white-space:\s*nowrap|line-clamp)/, 'the state is not cut off');
+
+console.log(`PASS: host contract, offline isolation, ${shadows.length} token shadows without glow, contrast ${Math.min(...measured).toFixed(2)}–${Math.max(...measured).toFixed(2)}, lossless .run highlighting, token flow per round, one workpiece pane with live draft, animated flow, ticket board in one group at a time, crew with agents and harnesses, conversation in the ticket, one ticket with the full history, tickets opened in the viewer, the whole stock on the board, top-down state and changes`);

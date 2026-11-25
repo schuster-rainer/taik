@@ -43,6 +43,7 @@ private struct Job: Codable {
     let agent: String?
     let brief: String?
     let messages: [Message]
+    let changes: [String: Change]
     let baseline: Round
     let rounds: [Round]
     let progress: [String: [ProgressEvent]]
@@ -72,6 +73,63 @@ private struct ProgressEvent: Codable {
             guard fields.count == 3, let elapsed = UInt64(fields[0]) else { return nil }
             return Self(elapsed: elapsed, kind: String(fields[1]), detail: String(fields[2]))
         }
+    }
+}
+
+// What a round changed against the state it started from.
+private struct Change: Codable {
+    let file: String
+    let added: Int
+    let removed: Int
+    let fresh: Bool
+    let rejected: Bool
+    let lines: [String]
+    let more: Int
+
+    private static var cache: [String: Change] = [:]
+
+    static func between(_ old: String?, _ new: String, file: String, rejected: Bool, stamp: String) -> Change {
+        if let known = cache[stamp] { return known }
+        let before = (old ?? "").split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+        let after = new.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+        var marks: [(Character, String)] = []
+        if old == nil {
+            marks = after.map { ("+", $0) }
+        } else {
+            let difference = after.difference(from: before)
+            var removedAt = Set<Int>(), insertedAt = Set<Int>()
+            for step in difference {
+                switch step {
+                case .remove(let offset, _, _): removedAt.insert(offset)
+                case .insert(let offset, _, _): insertedAt.insert(offset)
+                }
+            }
+            var i = 0, j = 0
+            while i < before.count || j < after.count {
+                if i < before.count, removedAt.contains(i) { marks.append(("-", before[i])); i += 1 }
+                else if j < after.count, insertedAt.contains(j) { marks.append(("+", after[j])); j += 1 }
+                else if i < before.count, j < after.count { marks.append((" ", after[j])); i += 1; j += 1 }
+                else { break }
+            }
+        }
+        let added = marks.filter { $0.0 == "+" }.count, removed = marks.filter { $0.0 == "-" }.count
+        // The changed lines with two lines around them, as far as a ticket can carry.
+        var keep = [Bool](repeating: false, count: marks.count)
+        for (index, mark) in marks.enumerated() where mark.0 != " " {
+            for near in max(0, index - 2)...min(marks.count - 1, index + 2) { keep[near] = true }
+        }
+        var lines: [String] = [], gap = false, more = 0
+        for (index, mark) in marks.enumerated() {
+            guard keep[index] else { gap = true; continue }
+            if lines.count >= 240 { more += 1; continue }
+            if gap, !lines.isEmpty { lines.append("···") }
+            gap = false
+            lines.append("\(mark.0) " + String(mark.1.prefix(400)))
+        }
+        let change = Change(file: file, added: added, removed: removed, fresh: old == nil, rejected: rejected, lines: lines, more: more)
+        if cache.count > 400 { cache.removeAll() }
+        cache[stamp] = change
+        return change
     }
 }
 
@@ -390,8 +448,34 @@ private final class FactoryMonitor {
         }
         let draft = active ? readSource(at: url.appendingPathComponent(next + ".draft")) : nil
         return Job(id: url.lastPathComponent, goal: goal, preview: preview, previous: previous,
-            cost: (cost * 10000).rounded() / 10000, draft: draft, agent: jobAgent(in: url), brief: jobBrief(in: url), messages: jobMessages(in: url), baseline: baseline, rounds: rounds, progress: progress,
+            cost: (cost * 10000).rounded() / 10000, draft: draft, agent: jobAgent(in: url), brief: jobBrief(in: url), messages: jobMessages(in: url), changes: roundChanges(rounds, in: url), baseline: baseline, rounds: rounds, progress: progress,
             sourceQueued: queued, sourceActive: active, sourceStartedAt: startedAt)
+    }
+
+    // What each round changed: its artifact, or its rejected candidate, against the state accepted before it.
+    private func roundChanges(_ rounds: [Round], in directory: URL) -> [String: Change] {
+        func text(_ name: String) -> (String, String)? {
+            let url = directory.appendingPathComponent(name)
+            guard let values = try? url.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey, .isRegularFileKey]),
+                  values.isRegularFile == true, let size = values.fileSize, size <= 98_304,
+                  let data = try? Data(contentsOf: url), let content = String(data: data, encoding: .utf8) else { return nil }
+            return (content, "\(url.path):\(size):\(values.contentModificationDate?.timeIntervalSince1970 ?? 0)")
+        }
+        var base = text("submission.seed.html")
+        var changes: [String: Change] = [:]
+        for round in rounds {
+            let stem = String(round.name.dropLast(4))
+            if round.fields["decision"] == "accepted", let artifact = round.fields["artifact"], artifact.hasSuffix(".html"),
+               let new = text(artifact) {
+                // A release keeps what the artifact replaced. That is the state this round started from.
+                if base == nil { base = text("rollback." + stem + ".html") }
+                changes[stem] = Change.between(base?.0, new.0, file: artifact, rejected: false, stamp: (base?.1 ?? "") + "|" + new.1)
+                base = new
+            } else if round.fields["decision"] == "rejected", let new = text(stem + ".rejected.txt") {
+                changes[stem] = Change.between(base?.0, new.0, file: stem + ".rejected.txt", rejected: true, stamp: (base?.1 ?? "") + "|" + new.1)
+            }
+        }
+        return changes
     }
 
     private func readPreview(for round: Round, in directory: URL) -> String? {

@@ -230,6 +230,29 @@ async function runDesignGate(requireOpen) {
       await delayFrame();
       await chooseTicket('job-floorplanner');
     }
+    // Top down: the ticket says where the job stands, each round says what it changed, the lines are behind it.
+    {
+      const told = structuredClone(snapshot);
+      const job = told.jobs.find(entry => entry.id === 'job-floorplanner');
+      const last = job.rounds.at(-1);
+      last.fields.decision = 'rejected';
+      last.fields.checks = 'FAIL: der Grundriss hat keine Tür';
+      job.changes = { [last.name.replace(/\.run$/, '')]: { file: 'round-99.rejected.txt', added: 2, removed: 1, fresh: false, rejected: true,
+        lines: ['  <main>', '- <p>alt</p>', '+ <p>neu</p>', '+ <p>mehr</p>', '···', '  </main>'], more: 0 } };
+      window.updateFactory(told);
+      await delayFrame();
+      const state = find('#taik-ticket .ticket-state');
+      requireFact(rendered(state) && state.textContent.includes('FAIL: der Grundriss hat keine Tür') && state.textContent.includes('abgelehnt'), 'The ticket does not say where the job stands');
+      requireFact(state.getBoundingClientRect().top < find('#taik-ticket .rounds').getBoundingClientRect().top, 'The state is not above the history');
+      const change = find('#taik-ticket details.round-change');
+      requireFact(rendered(change) && change.querySelector('summary').textContent.includes('round-99.rejected.txt · +2 −1 Zeilen'), 'A round does not say what it changed');
+      change.open = true;
+      await delayFrame();
+      requireFact(change.querySelectorAll('.diff-add').length === 2 && change.querySelectorAll('.diff-del').length === 1, 'The changed lines are missing');
+      requireFact(change.scrollWidth <= change.clientWidth + 1, 'The changed lines leave the ticket');
+      window.updateFactory(snapshot);
+      await delayFrame();
+    }
     // Crew: a new agent is typed while the snapshot refreshes. The draft and the focus survive.
     const crew = find('#taik-crew');
     if (crew) {

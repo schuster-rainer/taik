@@ -240,6 +240,15 @@
   #taik-live .rounds .thread-message.agent { margin-right: 14%; }
   #taik-live #taik-ticket .ticket-detail { margin-top: 14px; }
 
+  #taik-live .ticket-state { margin: 12px 0 0; padding: 11px 14px; border-radius: 13px; box-shadow: var(--nm-inset-sm); display: grid; gap: 8px; }
+  #taik-live .ticket-state div { display: grid; grid-template-columns: 7.2rem minmax(0, 1fr); gap: 10px; align-items: baseline; }
+  #taik-live .ticket-state dt { font-size: .68rem; font-weight: 640; letter-spacing: .12em; text-transform: uppercase; color: var(--quiet); }
+  #taik-live .ticket-state dd { margin: 0; font-size: .86rem; line-height: 1.45; overflow-wrap: anywhere; }
+  #taik-live .ticket-state .problem dd { color: var(--bad); }
+  #taik-live .ticket-state .question dd { color: var(--active); }
+  #taik-live .round-change { margin-top: 6px; font-size: .8rem; color: var(--quiet); overflow-wrap: anywhere; }
+  #taik-live .round-change pre { margin-top: 6px; max-height: 18rem; overflow: auto; padding: 9px 12px; border-radius: 11px; box-shadow: var(--nm-inset-sm); font: .72rem/1.5 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+
   /* The conversation of a ticket */
   #taik-live .thread { margin-top: 12px; min-width: 0; }
   #taik-live .thread .who { display: block; font-size: .68rem; font-weight: 640; letter-spacing: .12em; text-transform: uppercase; color: var(--quiet); }
@@ -795,6 +804,38 @@
       messages.filter(message => message.round >= rounds.length).forEach(say);
       return told;
     }
+
+    // Where a job stands, top down: what happened last, what the problem is, what is asked, what comes next.
+    function ticketState(job) {
+      const rounds = job?.rounds ?? [];
+      const messages = job?.messages ?? [];
+      const last = rounds.at(-1)?.fields;
+      const said = messages.at(-1);
+      const state = { done: 'Noch keine Runde gelaufen.', problem: '', question: '', next: 'Wartet auf die erste Runde.' };
+      if (last?.decision === 'accepted') {
+        state.done = `Runde ${rounds.length} angenommen: ${last.intent ?? ''}`.trim();
+        state.next = 'Fertig. Eine Antwort von dir gibt eine weitere Runde.';
+      } else if (last) {
+        let kept = rounds.length - 1;
+        while (kept > 0 && rounds[kept - 1].fields.decision !== 'accepted') kept -= 1;
+        state.done = `Runde ${rounds.length} abgelehnt. ` + (kept ? `Der Stand aus Runde ${kept} gilt weiter.` : 'Es gibt noch keinen angenommenen Stand.');
+        state.problem = last.checks || (last.worker_failure ? 'Der Agent hat nichts geliefert: ' + last.worker_failure : '') || last.feedback || '';
+        state.next = 'Eine Antwort von dir gibt eine weitere Runde.';
+      }
+      if (said?.author === 'agent') { state.question = said.text; state.next = 'Deine Antwort im Feld unten.'; }
+      else if (said?.author === 'user' && said.round >= rounds.length) state.next = 'Deine Antwort wartet auf ihre Runde.';
+      if (job?.sourceActive) state.next = `Der Agent arbeitet an Runde ${rounds.length + 1}.`;
+      else if (last?.advance === 'true') state.next = `Runde ${rounds.length + 1} ist vorgesehen.`;
+      return state;
+    }
+
+    // One line for what a round changed: the file and how many lines.
+    function changeLine(change) {
+      if (!change) return '';
+      if (change.fresh) return `${change.file} · neu, ${change.added} ${change.added === 1 ? 'Zeile' : 'Zeilen'}`;
+      if (!change.added && !change.removed) return `${change.file} · unverändert`;
+      return `${change.file} · +${change.added} −${change.removed} Zeilen`;
+    }
     /*THREAD_END*/
 
     /*CREW_BEGIN*/
@@ -961,6 +1002,20 @@
       return groups ? `<section aria-label="Gemessene Änderung"><h2>Aufwand im Prüflauf</h2><div class="measures">${groups}</div></section>` : '';
     }
 
+    // What the round changed: one line, and the changed lines behind it.
+    function roundChange(job, round, name) {
+      const change = job.changes?.[round.name.replace(/\.run$/, '')];
+      if (!change) return '';
+      const key = `${name}/change`;
+      const open = openRounds.get(key) ?? false;
+      const label = (change.rejected ? 'Abgelehnter Kandidat: ' : 'Geändert: ') + changeLine(change);
+      if (!change.lines?.length) return `<p class="round-change">${escape(label)}</p>`;
+      const lines = change.lines.map(line => line === '···' ? '<span class="diff-gap">···</span>'
+        : `<span class="diff-${line[0] === '+' ? 'add' : line[0] === '-' ? 'del' : 'same'}">${escape(line)}</span>`).join('\n');
+      return `<details class="round-change" data-round="${escape(key)}" data-initial-open="${open}"${open ? ' open' : ''}>
+        <summary>${escape(label)}</summary><pre class="diff">${lines}${change.more ? `\n<span class="diff-gap">··· ${change.more} weitere Zeilen</span>` : ''}</pre></details>`;
+    }
+
     function renderRound(round, index, job, flow) {
       const fields = round.fields;
       const rejected = fields.decision === 'rejected';
@@ -984,6 +1039,7 @@
         <p class="sub">${tokenLine(flow)}</p>` : ''}
         <h3>${escape(ticketTitle(description))}</h3>
         ${fields.checks ? `<p class="round-checks">${escape(fields.checks)}</p>` : ''}
+        ${roundChange(job, round, name)}
         ${events.length ? `<details data-round="${escape(eventKey)}" data-initial-open="${eventsOpen}"${eventsOpen ? ' open' : ''}>
           <summary>Arbeitsschritte (${events.length})</summary>${eventList(events)}</details>` : ''}
         <details data-round="${escape(name)}" data-initial-open="${checksOpen}"${checksOpen ? ' open' : ''}>
@@ -1084,6 +1140,10 @@
       const told = ticketThread(job).map(item => item.kind === 'round'
         ? renderRound(job.rounds[item.number - 1], item.number - 1, job, flows[item.number - 1])
         : `<li class="thread-message ${item.author === 'user' ? 'user' : 'agent'}"><span class="who">${item.author === 'user' ? 'Du' : 'Agent'}</span>${escape(item.text)}</li>`).join('');
+      const stateBlock = state => `<dl class="ticket-state"><div><dt>Stand</dt><dd>${escape(state.done)}</dd></div>
+          ${state.problem ? `<div class="problem"><dt>Problem</dt><dd>${escape(state.problem)}</dd></div>` : ''}
+          ${state.question ? `<div class="question"><dt>Offene Frage</dt><dd>${escape(state.question)}</dd></div>` : ''}
+          <div><dt>Als Nächstes</dt><dd>${escape(state.next)}</dd></div></dl>`;
       const briefKey = `${job.id}/brief`;
       const briefOpen = openRounds.get(briefKey) ?? true;
       const proposalState = { deriving: 'Die Factory leitet Auftrag und Gate ab', declined: 'Die Factory hat daraus keinen Auftrag abgeleitet', failed: 'Das Ableiten ist fehlgeschlagen' };
@@ -1102,6 +1162,7 @@
         : `${ticketOpen} data-job="${escape(job.id)}">
           <div class="section-heading"><h2>Ticket</h2><span class="sub">${escape(job.id)} · ${jobStatus(job)}${job.agent ? ' · @' + escape(job.agent) : ''}${job.cost > 0 ? ' · ' + money(job.cost) : ''}</span></div>
           <div class="ticket-top"><h3 class="ticket-title">${escape(ticketTitle(job.goal) || job.id)}</h3>${artifactButton}</div>
+          ${stateBlock(ticketState(job))}
           ${job.brief ? `<details class="ticket-brief" data-round="${escape(briefKey)}" data-initial-open="${briefOpen}"${briefOpen ? ' open' : ''}><summary>Beschreibung</summary><pre>${escape(job.brief)}</pre></details>` : ''}
           <div class="thread" aria-label="Auftragsverlauf">${totalsLine}
           ${told ? `<ol class="rounds">${told}</ol>` : '<p class="sub lead">Die Factory hat den Auftrag erhalten. Die erste Runde steht noch aus.</p>'}</div>
