@@ -81,6 +81,7 @@ private struct Agent: Codable {
 }
 
 private struct Snapshot: Codable {
+    let parallel: Int
     let agents: [Agent]
     let proposals: [Proposal]
     let spent: Double
@@ -127,7 +128,7 @@ private final class FactoryMonitor {
         let pid = runningService()
         if watch { watchServiceExit(pid) }
         let snapshot = Snapshot(
-            agents: recentAgents(), proposals: waitingProposals(), spent: recentWorkerCost(in: queue), jobs: jobs, pending: jobs.filter(\.pending).count,
+            parallel: parallelSlots(), agents: recentAgents(), proposals: waitingProposals(), spent: recentWorkerCost(in: queue), jobs: jobs, pending: jobs.filter(\.pending).count,
             service: state == defaultState ? (pid == nil ? "offline" : "running") : "unmanaged", pid: pid
         )
         let encoder = JSONEncoder()
@@ -136,6 +137,12 @@ private final class FactoryMonitor {
               json != lastSnapshot else { return }
         lastSnapshot = json
         onChange(json)
+    }
+
+    // Slots for software jobs: STATE/parallel as the viewer set it, otherwise the service default of three.
+    private func parallelSlots() -> Int {
+        let text = try? String(contentsOf: state.appendingPathComponent("parallel"), encoding: .utf8)
+        return min(8, max(1, text.flatMap { Int($0.trimmingCharacters(in: .whitespacesAndNewlines)) } ?? 3))
     }
 
     // Agent sessions that reported through tools/agent-hook.sh during the last ten minutes.
@@ -403,6 +410,7 @@ private final class FactoryWindow: NSObject, NSApplicationDelegate, WKNavigation
         configuration.userContentController.add(self, name: "openArtifact")
         configuration.userContentController.add(self, name: "setAppearance")
         configuration.userContentController.add(self, name: "approveProposal")
+        configuration.userContentController.add(self, name: "setParallel")
         webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = self
         window.contentView = webView
@@ -445,6 +453,11 @@ private final class FactoryWindow: NSObject, NSApplicationDelegate, WKNavigation
            let appearance = ViewerAppearance(rawValue: value) {
             UserDefaults.standard.set(appearance.rawValue, forKey: ViewerAppearance.preference)
             window.appearance = appearance.native
+            return
+        }
+        if message.name == "setParallel", let slots = message.body as? Int, (1...8).contains(slots) {
+            try? "\(slots)\n".write(to: state.appendingPathComponent("parallel"), atomically: true, encoding: .utf8)
+            monitor.refresh(watch: false)
             return
         }
         if message.name == "approveProposal", let name = message.body as? String,

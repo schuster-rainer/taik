@@ -265,9 +265,12 @@ fn drain(
     // folder and records. A job never runs twice at once.
     #[cfg(target_os = "macos")]
     {
-        let width = std::env::var("TAIK_PARALLEL")
-            .ok()
-            .and_then(|value| value.parse::<usize>().ok())
+        // The viewer writes STATE/parallel. It wins over the environment and is read on every pass.
+        let width = jobs
+            .parent()
+            .and_then(|state| fs::read_to_string(state.join("parallel")).ok())
+            .or_else(|| std::env::var("TAIK_PARALLEL").ok())
+            .and_then(|value| value.trim().parse::<usize>().ok())
             .unwrap_or(DEFAULT_PARALLEL)
             .clamp(1, 8);
         // Jobs that arrive while others run are picked up by the next free slot.

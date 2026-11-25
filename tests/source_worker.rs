@@ -615,8 +615,17 @@ fn queued_software_jobs_run_side_by_side() {
     .unwrap();
     fs::set_permissions(&worker, fs::Permissions::from_mode(0o700)).unwrap();
     let mut durations = Vec::new();
-    for (width, state) in [("1", "one-at-a-time"), ("3", "three-at-a-time")] {
+    // The file STATE/parallel, which the viewer writes, wins over the environment.
+    for (width, file, state) in [
+        ("1", None, "one-at-a-time"),
+        ("3", None, "three-at-a-time"),
+        ("3", Some("1\n"), "set-to-one-in-the-viewer"),
+    ] {
         let state = root.path().join(state);
+        if let Some(slots) = file {
+            fs::create_dir_all(&state).unwrap();
+            fs::write(state.join("parallel"), slots).unwrap();
+        }
         for name in ["a", "b", "c"] {
             let queued = factory()
                 .arg("queue-source")
@@ -653,6 +662,7 @@ fn queued_software_jobs_run_side_by_side() {
     );
     assert!(durations[0].as_millis() >= 4500, "{durations:?}");
     assert!(durations[1].as_millis() < 3500, "{durations:?}");
+    assert!(durations[2].as_millis() >= 4500, "{durations:?}");
 }
 
 #[test]

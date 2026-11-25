@@ -92,7 +92,7 @@ A gate may authorise one follow-up job by starting with `// TAIK: allow-follow-u
 
 ## The service
 
-`taik-seed serve STATE` watches `STATE/jobs`, works up to three software jobs side by side (`TAIK_PARALLEL`, at most eight), each to its final decision, and then blocks on the kernel until the next one arrives. It does not poll. `taik-seed drain STATE` runs the same logic once and exits.
+`taik-seed serve STATE` watches `STATE/jobs`, works up to three software jobs side by side (the viewer's setting in `STATE/parallel`, otherwise `TAIK_PARALLEL`, at most eight), each to its final decision, and then blocks on the kernel until the next one arrives. It does not poll. `taik-seed drain STATE` runs the same logic once and exits.
 
 On macOS the service can run under launchd. [tools/service/local.taik.factory.plist](tools/service/local.taik.factory.plist) is a template:
 
@@ -119,6 +119,10 @@ taik-seed approve STATE NAME
 With `TAIK_AUTO_PROPOSE` set, the service reflects once after each finished software job, at most three times in 24 hours, and either writes a proposal or records why it stops. Waiting proposals appear in the viewer with an approve button.
 
 `propose` asks the worker for a brief and a gate, derived from the continuation of a record. Both wait in `STATE/proposals/NAME`. Nothing runs until `approve` queues the job. The worker that later writes the candidate sees the brief and never the gate.
+
+## Requests from GitHub issues
+
+`tools/issues-sync.sh` reads open issues with the label `taik` that the repository owner wrote. Each becomes a proposal that waits. The label `freigegeben` approves it, the decision of the job is posted back, and an accepted job closes the issue. Without the argument `apply` the script only reports what it would do. Text by anyone else never reaches a worker.
 
 ## Changing the backend
 

@@ -1,0 +1,20 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-04
+intent=Die Zahl der parallelen Plätze in der Kopfzeile einstellen.
+baseline=/Users/rainer/projects/ideas/talk/evidence/jobs/job-factory-ansicht-2/round-03.html
+worker=claude-fable-attached
+limits=4 rounds; worker lease 60s up to 900s; verifier 15s; 96KiB source
+gate_sha256=6a36d645ef6450d582a6c35b6e98adceef9eff03f46a62724f17f6ad16346fbb
+gate_ms=62
+patch_blocks=
+checks=PASS: host contract, offline isolation, 16 token shadows without glow, contrast 5.12–13.04, lossless .run highlighting
+artifact=round-04.html
+rejected_candidate=
+feedback=
+follow_up=
+continuation=Retain the accepted artifact. No further work was authorized by this round.
+advance=false
+end
