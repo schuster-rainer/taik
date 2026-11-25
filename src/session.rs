@@ -399,7 +399,7 @@ fn judge(job: &Path, copy: &Path, commit: &str, gate: &str, log: &Path) -> Resul
     }
     git(&checkout, &["checkout", "--quiet", "--detach", commit])?;
     fs::write(scratch.join("gate.sh"), gate)?;
-    let mut command = source::sandbox(&scratch, job, "/bin/sh", false)?;
+    let mut command = source::sandbox_for_build(&scratch, job, "/bin/sh")?;
     command
         .args(["-c", "/bin/sh ../gate.sh > ../gate.log 2>&1"])
         .current_dir(&checkout);

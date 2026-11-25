@@ -748,18 +748,41 @@ fn sandbox_owning(
     network: bool,
     own: &[PathBuf],
 ) -> Result<Command> {
-    let mut command = Command::new("/usr/bin/sandbox-exec");
-    let mut network_rule = String::from(if network { "" } else { " (deny network*)" });
+    let mut rules = String::new();
     for folder in own {
         let folder = folder.to_str().ok_or("harness folder is not UTF-8")?;
         if folder.contains(['"', '\\']) {
             return Err("harness folder cannot be named in the sandbox policy".into());
         }
-        network_rule.push_str(&format!(" (allow file-write* (subpath \"{folder}\"))"));
+        rules.push_str(&format!(" (allow file-write* (subpath \"{folder}\"))"));
     }
     if !own.is_empty() {
-        network_rule.push_str(" (allow file-write* (literal \"/dev/null\"))");
+        rules.push_str(" (allow file-write* (literal \"/dev/null\"))");
     }
+    sandbox_with(scratch, job, program, network, &rules)
+}
+
+/// The sandbox of a gate that builds and tests a checkout. Build scripts write to the null device,
+/// and the tests of this repository keep their fixtures in /tmp under the prefix `taik-`.
+pub(crate) fn sandbox_for_build(scratch: &Path, job: &Path, program: &str) -> Result<Command> {
+    sandbox_with(
+        scratch,
+        job,
+        program,
+        false,
+        " (allow file-write* (literal \"/dev/null\")) (allow file-write* (regex #\"^/private/tmp/taik-\"))",
+    )
+}
+
+fn sandbox_with(
+    scratch: &Path,
+    job: &Path,
+    program: &str,
+    network: bool,
+    rules: &str,
+) -> Result<Command> {
+    let mut command = Command::new("/usr/bin/sandbox-exec");
+    let network_rule = format!("{}{rules}", if network { "" } else { " (deny network*)" });
     command
         .arg("-D")
         .arg(format!("WORK={}", scratch.display()))

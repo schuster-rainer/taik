@@ -1,0 +1,20 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-24
+intent=Das Gate einer Sitzung kann einen Checkout bauen und testen.
+baseline=taik-seed eb09180802d870de6a57ec05ed1e0ed3f6858f18cd5c18651a1921e8c1839f57
+worker=claude-fable
+decided_by=the installed taik-seed eb09180802d870de6a57ec05ed1e0ed3f6858f18cd5c18651a1921e8c1839f57 at /Users/rainer/.local/state/taik-factory/taik-seed
+limits=99 rounds; gate 900s; candidate checks 10s each
+gate_sha256=76b41170f51fa7e1a5424ba01f903bcf2276b8f8f19e4d87f952e88d18b6b0ce
+gate_ms=27440
+checks=PASS: Rust tests, Clippy with warnings denied, release build; candidate seeded, rejected an invalid procedure without touching the accepted record, and extended it
+evidence=round-24.checks.log
+artifact=round-24-taik-seed
+artifact_sha256=478a0aed3c27c12fc91c0850c89b623d7e79ddd6187b93d4fafbe41a1f53d51b
+rollback=round-24.rollback-taik-seed
+continuation=Restart the service so that it runs the accepted binary.
+advance=false
+end
