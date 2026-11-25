@@ -150,17 +150,31 @@ fn a_configured_second_worker_takes_over_and_is_named_in_the_record() {
         fs::set_permissions(&file, fs::Permissions::from_mode(0o700)).unwrap();
         file
     };
-    script("codex", "printf 'synthetic-secret: rate_limit_exceeded\n' >&2; exit 2");
+    script(
+        "codex",
+        "printf 'synthetic-secret: rate_limit_exceeded\n' >&2; exit 2",
+    );
     let answers = [
         (
             "takes-over",
             r#"printf '%s\n' '{"type":"stream_event","event":{"delta":{"type":"text_delta","text":"<!doctype"}}}' 'not json' '{"type":"result","is_error":false,"result":"<!doctype html><p>second</p>","usage":{"output_tokens":7},"total_cost_usd":0.25,"modelUsage":{"model-x":{}}}'"#,
             Some(0),
         ),
-        ("also-fails", "printf 'synthetic-secret\n' >&2; exit 3", Some(1)),
-        ("reports-an-error", r#"printf '%s' '{"type":"result","is_error":true,"result":"<p>second</p>"}'"#, Some(1)),
+        (
+            "also-fails",
+            "printf 'synthetic-secret\n' >&2; exit 3",
+            Some(1),
+        ),
+        (
+            "reports-an-error",
+            r#"printf '%s' '{"type":"result","is_error":true,"result":"<p>second</p>"}'"#,
+            Some(1),
+        ),
     ];
-    script("lead", r#"printf '%s' '{"type":"result","is_error":false,"result":"<!doctype html><p>second</p>","usage":{"output_tokens":3},"total_cost_usd":0.5,"modelUsage":{"model-y":{}}}'"#);
+    script(
+        "lead",
+        r#"printf '%s' '{"type":"result","is_error":false,"result":"<!doctype html><p>second</p>","usage":{"output_tokens":3},"total_cost_usd":0.5,"modelUsage":{"model-y":{}}}'"#,
+    );
     let state = root.path().join("lead");
     let queued = factory()
         .arg("queue-source")
@@ -184,10 +198,21 @@ fn a_configured_second_worker_takes_over_and_is_named_in_the_record() {
     let job = state.join("jobs/job-lead");
     let record = fs::read_to_string(job.join("round-01.run")).unwrap();
     let trace = fs::read_to_string(job.join("round-01.progress")).unwrap();
-    assert!(record.contains("\nworker=claude-cli\nworker_model=model-y\n"), "{record}");
-    assert!(!record.contains("worker_fallback") && !trace.contains("Codex"), "{record}{trace}");
+    assert!(
+        record.contains("\nworker=claude-cli\nworker_model=model-y\n"),
+        "{record}"
+    );
+    assert!(
+        !record.contains("worker_fallback") && !trace.contains("Codex"),
+        "{record}{trace}"
+    );
 
-    assert!(record.lines().any(|line| line.starts_with("gate_ms=") && line.len() > 8), "{record}");
+    assert!(
+        record
+            .lines()
+            .any(|line| line.starts_with("gate_ms=") && line.len() > 8),
+        "{record}"
+    );
 
     script("lead", "exit 4");
     let state = root.path().join("lead-fails");
@@ -211,11 +236,17 @@ fn a_configured_second_worker_takes_over_and_is_named_in_the_record() {
         .unwrap();
     assert_eq!(result.status.code(), Some(1), "{result:?}");
     let record = fs::read_to_string(state.join("jobs/job-lead-fails/round-01.run")).unwrap();
-    assert!(record.contains("\nworker=claude-cli\nworker_stage=execute\n"), "{record}");
+    assert!(
+        record.contains("\nworker=claude-cli\nworker_stage=execute\n"),
+        "{record}"
+    );
     assert!(record.contains("\ngate_ms=\n"), "{record}");
 
     // The day's bound: an earlier round in the same queue already cost more than the limit.
-    script("lead", r#"printf '%s\n' '{"type":"rate_limit_event","rate_limit_info":{"rateLimitType":"seven_day","status":"allowed","utilization":0.5}}' '{"type":"result","is_error":false,"result":"<!doctype html><p>second</p>","usage":{"output_tokens":3},"total_cost_usd":0.75,"modelUsage":{"model-y":{}}}'"#);
+    script(
+        "lead",
+        r#"printf '%s\n' '{"type":"rate_limit_event","rate_limit_info":{"rateLimitType":"seven_day","status":"allowed","utilization":0.5}}' '{"type":"result","is_error":false,"result":"<!doctype html><p>second</p>","usage":{"output_tokens":3},"total_cost_usd":0.75,"modelUsage":{"model-y":{}}}'"#,
+    );
     let state = root.path().join("bounded");
     for (name, expected) in [("first", Some(0)), ("second", Some(1))] {
         let queued = factory()
@@ -241,9 +272,15 @@ fn a_configured_second_worker_takes_over_and_is_named_in_the_record() {
     }
     let first = fs::read_to_string(state.join("jobs/job-first/round-01.run")).unwrap();
     assert!(first.contains("\nworker_cost_usd=0.75\n"), "{first}");
-    assert!(first.contains("\nworker_account_usage=seven_day allowed 0.5\n"), "{first}");
+    assert!(
+        first.contains("\nworker_account_usage=seven_day allowed 0.5\n"),
+        "{first}"
+    );
     let second = fs::read_to_string(state.join("jobs/job-second/round-01.run")).unwrap();
-    assert!(second.contains("\nworker=claude-cli\nworker_stage=setup\nworker_failure=budget\n"), "{second}");
+    assert!(
+        second.contains("\nworker=claude-cli\nworker_stage=setup\nworker_failure=budget\n"),
+        "{second}"
+    );
 
     for (name, answer, expected) in answers {
         let second = script("second", answer);
@@ -281,7 +318,10 @@ fn a_configured_second_worker_takes_over_and_is_named_in_the_record() {
                 "worker_cost_usd=0.25",
                 "artifact=round-01.html",
             ] {
-                assert!(record.lines().any(|found| found.starts_with(line)), "{line}\n{record}");
+                assert!(
+                    record.lines().any(|found| found.starts_with(line)),
+                    "{line}\n{record}"
+                );
             }
             assert_eq!(
                 fs::read_to_string(job.join("round-01.html")).unwrap(),
@@ -291,7 +331,10 @@ fn a_configured_second_worker_takes_over_and_is_named_in_the_record() {
             assert!(record.starts_with("decision=rejected\n"), "{record}");
             assert!(record.contains("\nworker_failure="), "{record}");
             assert!(record.contains("\nchecks=Claude "), "{record}");
-            assert!(record.contains("\nworker=claude-cli\nworker_fallback=Codex "), "{record}");
+            assert!(
+                record.contains("\nworker=claude-cli\nworker_fallback=Codex "),
+                "{record}"
+            );
             assert!(!job.join("round-01.html").exists());
         }
     }

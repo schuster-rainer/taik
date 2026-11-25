@@ -566,7 +566,7 @@ fn history(job: &Path, mut baseline: Option<PathBuf>) -> Result<History> {
     })
 }
 
-fn sandbox(scratch: &Path, job: &Path, program: &str, network: bool) -> Result<Command> {
+pub(crate) fn sandbox(scratch: &Path, job: &Path, program: &str, network: bool) -> Result<Command> {
     let mut command = Command::new("/usr/bin/sandbox-exec");
     let network_rule = if network { "" } else { " (deny network*)" };
     command

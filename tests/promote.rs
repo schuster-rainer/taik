@@ -33,7 +33,11 @@ fn the_installed_binary_judges_installs_and_keeps_its_predecessor() {
     let mut predecessor = fs::read(built).unwrap();
     predecessor.extend_from_slice(b"\0predecessor");
     fs::write(&installed, &predecessor).unwrap();
-    fs::set_permissions(&installed, std::os::unix::fs::PermissionsExt::from_mode(0o755)).unwrap();
+    fs::set_permissions(
+        &installed,
+        std::os::unix::fs::PermissionsExt::from_mode(0o755),
+    )
+    .unwrap();
     let brief = root.path().join("brief.md");
     fs::write(&brief, "Replace the installed binary\n").unwrap();
     let write = |name: &str, body: String| {
@@ -58,7 +62,10 @@ fn the_installed_binary_judges_installs_and_keeps_its_predecessor() {
 
     let gate = write(
         "gate.sh",
-        format!("echo building\ncp '{}' \"$TAIK_CANDIDATE_OUT\"\necho 'PASS: built'\n", built.display()),
+        format!(
+            "echo building\ncp '{}' \"$TAIK_CANDIDATE_OUT\"\necho 'PASS: built'\n",
+            built.display()
+        ),
     );
     let accepted = promote(&installed, &job, &brief, &gate);
     assert_eq!(accepted.status.code(), Some(0), "{accepted:?}");
@@ -69,9 +76,19 @@ fn the_installed_binary_judges_installs_and_keeps_its_predecessor() {
     assert!(field(&record, "checks").starts_with("PASS: built; candidate seeded"));
     assert_eq!(field(&record, "artifact"), "round-01-taik-seed");
     assert_eq!(fs::read(&installed).unwrap(), fs::read(built).unwrap());
-    assert_eq!(fs::read(job.join("round-01-taik-seed")).unwrap(), fs::read(built).unwrap());
-    assert_eq!(fs::read(job.join("round-01.rollback-taik-seed")).unwrap(), predecessor);
-    assert!(fs::read_to_string(job.join("round-01.checks.log")).unwrap().contains("building"));
+    assert_eq!(
+        fs::read(job.join("round-01-taik-seed")).unwrap(),
+        fs::read(built).unwrap()
+    );
+    assert_eq!(
+        fs::read(job.join("round-01.rollback-taik-seed")).unwrap(),
+        predecessor
+    );
+    assert!(
+        fs::read_to_string(job.join("round-01.checks.log"))
+            .unwrap()
+            .contains("building")
+    );
 
     // The gate is pinned: a different gate cannot judge in the same job.
     let other = write("other.sh", "exit 0\n".into());
@@ -114,7 +131,15 @@ fn a_running_service_leaves_the_next_job_to_a_replaced_binary() {
     fs::copy(built, &installed).unwrap();
     let state = root.path().join("state");
     let seed = root.path().join("seed.run");
-    assert!(Command::new(built).arg("seed").arg(&seed).output().unwrap().status.success());
+    assert!(
+        Command::new(built)
+            .arg("seed")
+            .arg(&seed)
+            .output()
+            .unwrap()
+            .status
+            .success()
+    );
     let mut service = Command::new(&installed)
         .arg("serve")
         .arg(&state)
@@ -132,12 +157,20 @@ fn a_running_service_leaves_the_next_job_to_a_replaced_binary() {
     };
     wait_for(&state.join("service.lock"));
     std::thread::sleep(std::time::Duration::from_millis(300));
-    assert!(service.try_wait().unwrap().is_none(), "the service ended before any change");
+    assert!(
+        service.try_wait().unwrap().is_none(),
+        "the service ended before any change"
+    );
 
     let next = root.path().join("taik-seed.next");
     fs::copy(built, &next).unwrap();
     fs::rename(&next, &installed).unwrap();
-    let queued = Command::new(built).arg("queue").arg(&state).arg(&seed).output().unwrap();
+    let queued = Command::new(built)
+        .arg("queue")
+        .arg(&state)
+        .arg(&seed)
+        .output()
+        .unwrap();
     assert!(queued.status.success(), "{queued:?}");
     let job = std::path::PathBuf::from(String::from_utf8(queued.stdout).unwrap().trim());
 
@@ -150,11 +183,22 @@ fn a_running_service_leaves_the_next_job_to_a_replaced_binary() {
         std::thread::sleep(std::time::Duration::from_millis(25));
     }
     let _ = service.kill();
-    assert_eq!(status.and_then(|status| status.code()), Some(0), "the service kept running");
-    assert!(!job.join("round-01.run").exists(), "the replaced binary still did the work");
+    assert_eq!(
+        status.and_then(|status| status.code()),
+        Some(0),
+        "the service kept running"
+    );
+    assert!(
+        !job.join("round-01.run").exists(),
+        "the replaced binary still did the work"
+    );
 
     // The successor finishes the job.
-    let drained = Command::new(&installed).arg("drain").arg(&state).output().unwrap();
+    let drained = Command::new(&installed)
+        .arg("drain")
+        .arg(&state)
+        .output()
+        .unwrap();
     assert!(drained.status.success(), "{drained:?}");
     assert!(job.join("round-01.run").exists());
 }

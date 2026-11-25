@@ -112,7 +112,11 @@ pub fn run(job: &Path, brief: &Path, gate: &Path, target: &Path, worker: &str) -
          gate_sha256={digest}\ngate_ms={gate_ms}\nchecks={checks}\nevidence={log_name}\nartifact={artifact}\nartifact_sha256={}\nrollback={rollback}\n\
          continuation={continuation}\nadvance=false\nend\n",
         judge.display(),
-        if accepted { candidate_digest.as_str() } else { "" },
+        if accepted {
+            candidate_digest.as_str()
+        } else {
+            ""
+        },
     );
     crate::emit(&output, &report)?;
     progress.event(decision, format_args!("{continuation}"));
@@ -167,7 +171,9 @@ fn run_gate(script: &Path, candidate: &Path, log: &Path) -> Result<String> {
         std::thread::sleep(Duration::from_millis(20));
     };
     let length = output.metadata()?.len();
-    output.seek(std::io::SeekFrom::Start(length.saturating_sub(MAX_LOG_TAIL)))?;
+    output.seek(std::io::SeekFrom::Start(
+        length.saturating_sub(MAX_LOG_TAIL),
+    ))?;
     let mut tail = Vec::new();
     output.read_to_end(&mut tail)?;
     let tail = String::from_utf8_lossy(&tail);

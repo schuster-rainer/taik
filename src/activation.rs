@@ -57,8 +57,7 @@ pub fn reflect(jobs: &Path, table: &SearchTable) -> Result<bool> {
             &prompt,
             &mut progress,
         );
-        let report =
-            answer.and_then(|text| Ok(serde_json::from_str::<serde_json::Value>(&text)?));
+        let report = answer.and_then(|text| Ok(serde_json::from_str::<serde_json::Value>(&text)?));
         let (intent, note) = match report {
             Ok(proposal) => match proposal["intent"]
                 .as_str()

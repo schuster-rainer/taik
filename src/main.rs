@@ -3,6 +3,10 @@ mod activation;
 mod experiment;
 mod procedure;
 mod progress;
+#[cfg(target_os = "macos")]
+mod promote;
+#[cfg(target_os = "macos")]
+mod proposal;
 #[cfg(unix)]
 mod queue_events;
 mod record;
@@ -14,8 +18,6 @@ mod restart_probe;
 mod self_improve;
 #[cfg(unix)]
 mod service;
-#[cfg(target_os = "macos")]
-mod promote;
 #[cfg(target_os = "macos")]
 mod source;
 
@@ -41,6 +43,8 @@ const USAGE: &str = "usage: taik-seed seed OUTPUT.run
        taik-seed evaluate BASELINE.run OUTPUT.run ORDER
        taik-seed source JOB BRIEF GATE [--attached[=WORKER]]
        taik-seed promote JOB BRIEF GATE INSTALLED_BINARY WORKER
+       taik-seed propose STATE NAME RECORD.run
+       taik-seed approve STATE NAME
        taik-seed experiment BASELINE.run OUTPUT_DIRECTORY
        taik-seed queue STATE BASELINE.run
        taik-seed queue-source STATE NAME BRIEF GATE
@@ -335,7 +339,8 @@ fn run() -> Result<bool> {
         }
         #[cfg(target_os = "macos")]
         "source"
-            if matches!(rest, [_, _]) || matches!(rest, [_, _, flag] if attached_worker(flag).is_some()) =>
+            if matches!(rest, [_, _])
+                || matches!(rest, [_, _, flag] if attached_worker(flag).is_some()) =>
         {
             source::run(
                 first,
@@ -343,6 +348,21 @@ fn run() -> Result<bool> {
                 Path::new(&rest[1]),
                 rest.get(2).and_then(|flag| attached_worker(flag)),
             )
+        }
+        #[cfg(target_os = "macos")]
+        "propose" if rest.len() == 2 => {
+            let name = rest[0].to_str().ok_or("proposal name must be ASCII")?;
+            println!(
+                "{}",
+                proposal::propose(first, name, Path::new(&rest[1]))?.display()
+            );
+            Ok(true)
+        }
+        #[cfg(target_os = "macos")]
+        "approve" if rest.len() == 1 => {
+            let name = rest[0].to_str().ok_or("proposal name must be ASCII")?;
+            println!("{}", proposal::approve(first, name)?.display());
+            Ok(true)
         }
         #[cfg(target_os = "macos")]
         "promote" if rest.len() == 4 => promote::run(
