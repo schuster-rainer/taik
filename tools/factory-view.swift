@@ -410,6 +410,7 @@ private final class FactoryWindow: NSObject, NSApplicationDelegate, WKNavigation
         configuration.userContentController.add(self, name: "openArtifact")
         configuration.userContentController.add(self, name: "setAppearance")
         configuration.userContentController.add(self, name: "approveProposal")
+        configuration.userContentController.add(self, name: "commentTicket")
         configuration.userContentController.add(self, name: "setParallel")
         webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = self
@@ -467,6 +468,19 @@ private final class FactoryWindow: NSObject, NSApplicationDelegate, WKNavigation
             approval.executableURL = state.appendingPathComponent("taik-seed")
             approval.arguments = ["approve", state.path, name]
             try? approval.run()
+            return
+        }
+        if message.name == "commentTicket", let body = message.body as? [String: String],
+           let name = body["name"], name.range(of: #"^[a-z0-9-]{1,32}$"#, options: .regularExpression) != nil,
+           let text = body["text"], !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, text.count <= 8000 {
+            // The user's comment is the reply to a ticket. The Factory reads STATE/inbox.
+            let inbox = state.appendingPathComponent("inbox", isDirectory: true)
+            try? FileManager.default.createDirectory(at: inbox, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+            // One file per comment, never appended: a reply is a complete record, and nothing reads it half-written.
+            let stem = name + "-" + ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "")
+            let entry = inbox.appendingPathComponent(stem + ".md")
+            let record = "name: \(name)\nat: \(ISO8601DateFormatter().string(from: Date()))\n\n\(text)\n"
+            try? record.write(to: entry, atomically: true, encoding: .utf8)
             return
         }
         guard message.name == "openArtifact", let body = message.body as? [String: String],

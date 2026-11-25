@@ -146,7 +146,8 @@ Only the installed binary may run this. It pins the gate, runs it in the checkou
 
 `./tools/open-factory-view.sh` builds and installs **TAIK Factory.app** into `~/Applications`. The window follows the job with the latest activity and updates on filesystem events. It makes no model calls.
 
-- Left: working agents, waiting proposals, the goal and the history of the selected job. Each round shows its token flow as a bar, with time and cost. **Arbeitsschritte** shows the trace of a round, **Prüfprotokoll** its decision record with keys, outcomes, digests, file names and quantities marked.
+- Left: the ticket board, working agents, waiting proposals, the goal and the history of the selected job. Each round shows its token flow as a bar, with time and cost. **Arbeitsschritte** shows the trace of a round, **Prüfprotokoll** its decision record with keys, outcomes, digests, file names and quantities marked.
+- Tickets: one card for each thing that needs a person. **Wartet auf Antwort** holds a waiting proposal, a queued revision and a job whose last round was rejected; an exhausted round limit is marked on the card. **Läuft** holds active work and pending rounds, **Entschieden** the finished ones. A card opens a detail with a reply field. A reply is written to `STATE/inbox` as one file per comment, and the approve button stays the approval.
 - Right, top: the flow of a round through its five stations. The active station moves while a round runs.
 - Right, below: the workpiece of the selected job, as view, source or diff. During a round it shows the live draft without scripts, marked as unverified, and the accepted result afterwards. An accepted result runs in a script-only sandbox without network.
 - Header: worker cost of the last 24 hours, the number of parallel slots and the appearance.
