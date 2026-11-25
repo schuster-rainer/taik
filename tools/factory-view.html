@@ -183,6 +183,7 @@
   #taik-live .board-column[hidden] { display: none; }
   #taik-live .board-list { list-style: none; margin: 0 -6px; padding: 6px; display: grid; gap: 10px; max-height: 15.5rem; overflow-y: auto; }
   #taik-live .board-list > li { min-width: 0; display: grid; gap: 8px; }
+  #taik-live .board-list:has(.ticket-detail) { max-height: 40rem; }
   #taik-live .board-empty { color: var(--quiet); font-size: .8rem; padding: 6px 2px; }
   #taik-live .ticket { display: grid; gap: 4px; width: 100%; min-width: 0; padding: 10px 13px; border: 0; border-radius: 13px;
     box-shadow: var(--nm-raised-sm); background: var(--nm-base); text-align: left; font: inherit; color: inherit; cursor: pointer; }
@@ -221,6 +222,21 @@
   #taik-live .diff-add { color: var(--good); }
   #taik-live .diff-del { color: var(--bad); }
   #taik-live .diff-same, #taik-live .diff-gap { color: var(--quiet); }
+
+  /* The conversation of a ticket */
+  #taik-live .thread { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; max-height: 17rem; overflow-y: auto; }
+  #taik-live .thread li { min-width: 0; font-size: .82rem; line-height: 1.45; overflow-wrap: anywhere; }
+  #taik-live .thread .who { display: block; font-size: .68rem; font-weight: 640; letter-spacing: .12em; text-transform: uppercase; color: var(--quiet); }
+  #taik-live .thread-message { padding: 8px 11px; border-radius: 11px; box-shadow: var(--nm-raised-sm); white-space: pre-wrap; }
+  #taik-live .thread-message.user { margin-left: 18%; }
+  #taik-live .thread-message.agent { margin-right: 18%; }
+  #taik-live .thread-message.agent .who { color: var(--active); }
+  #taik-live .thread-round { display: flex; gap: 8px; align-items: baseline; color: var(--quiet); font-size: .76rem; }
+  #taik-live .thread-round strong { color: var(--good); font-weight: 600; white-space: nowrap; }
+  #taik-live .thread-round.rejected strong { color: var(--bad); }
+  #taik-live .thread-round span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #taik-live .ticket-brief > summary { font-size: .78rem; }
+  #taik-live .ticket-brief pre { margin-top: 6px; max-height: 11rem; overflow: auto; white-space: pre-wrap; font: .74rem/1.5 var(--mono); }
 
   /* Crew: harnesses, agents and their form */
   #taik-live .crew { display: grid; gap: 12px; margin-top: 12px; }
@@ -421,6 +437,7 @@
     let workpieceKey = '';
     let openTicket = '';
     let chosenBoardTab = '';
+    let waitingBefore = null;
     let agentDraft = null;
     let agentProblem = '';
     let crewHarnessesOpen = false;
@@ -684,8 +701,13 @@
         const id = job.id.replace(/^job-/, '');
         const cost = (job.agent ? ' · @' + job.agent : '') + (job.cost > 0 ? ' · ' + job.cost.toFixed(3).replace('.', ',') + ' $' : '');
         const rounds = job.rounds.length ? ` · ${job.rounds.length} ${job.rounds.length === 1 ? 'Runde' : 'Runden'}` : '';
+        const said = job.messages?.at(-1);
         if (job.sourceActive) {
           run.push({ key: job.id, job: job.id, title: title(job), flag: 'In Arbeit', column: 'run', meta: id + ' · Runde ' + (job.rounds.length + 1) + cost });
+        } else if (said?.author === 'agent') {
+          open.push({ key: job.id, job: job.id, title: title(job), flag: 'Frage', column: 'open', meta: id + ' · fragt nach' + cost });
+        } else if (said?.author === 'user' && said.round >= job.rounds.length) {
+          run.push({ key: job.id, job: job.id, title: title(job), flag: 'Warteschlange', column: 'run', meta: id + ' · Antwort wartet auf ihre Runde' + cost });
         } else if (job.sourceQueued) {
           open.push({ key: job.id, job: job.id, title: title(job), flag: 'Antwort', column: 'open', meta: id + ' · Überarbeitung vorgesehen' + cost });
         } else if (last?.fields.decision === 'rejected') {
@@ -701,6 +723,23 @@
       return { open, run, decision };
     }
     /*BOARD_END*/
+
+    /*THREAD_BEGIN*/
+    // What happened in a job, in order: the messages written before each round, then the round.
+    function ticketThread(job) {
+      const rounds = job?.rounds ?? [];
+      const messages = job?.messages ?? [];
+      const told = [];
+      const say = message => told.push({ kind: 'message', author: message.author, text: message.text });
+      rounds.forEach((round, index) => {
+        messages.filter(message => message.round === index).forEach(say);
+        told.push({ kind: 'round', number: index + 1, decision: round.fields.decision, checks: round.fields.checks ?? '',
+          cost: Number(round.fields.worker_cost_usd) || 0 });
+      });
+      messages.filter(message => message.round >= rounds.length).forEach(say);
+      return told;
+    }
+    /*THREAD_END*/
 
     /*CREW_BEGIN*/
     // The overview that the Factory wrote: harnesses with their sign-in state, and the defined agents.
@@ -813,7 +852,13 @@
       const agents = crewOf(snapshot).agents.filter(agent => !agent.error);
       const chooser = job ? `<label class="ticket-agent">Agent der nächsten Runde<select data-ticket-agent="${escape(job.id)}">
           <option value="">Standard des Dienstes</option>${agents.map(agent => `<option value="${escape(agent.name)}"${job.agent === agent.name ? ' selected' : ''}>@${escape(agent.name)} · ${escape(agentLine(agent))}</option>`).join('')}</select></label>` : '';
-      return `<div class="ticket-detail" data-detail="${escape(entry.key)}">${chooser}
+      const told = ticketThread(job).map(item => item.kind === 'round'
+        ? `<li class="thread-round${item.decision === 'rejected' ? ' rejected' : ''}"><strong>Runde ${item.number} ${item.decision === 'accepted' ? 'angenommen' : item.decision === 'rejected' ? 'abgelehnt' : escape(item.decision)}</strong>
+            <span title="${escape(item.checks)}">${escape(item.checks)}${item.cost ? ' · ' + money(item.cost) : ''}</span></li>`
+        : `<li class="thread-message ${item.author === 'user' ? 'user' : 'agent'}"><span class="who">${item.author === 'user' ? 'Du' : 'Agent'}</span>${escape(item.text)}</li>`).join('');
+      const description = job?.brief ? `<details class="ticket-brief"><summary>Auftrag</summary><pre>${escape(job.brief)}</pre></details>` : '';
+      const thread = told ? `<ol class="thread">${told}</ol>` : '';
+      return `<div class="ticket-detail" data-detail="${escape(entry.key)}">${description}${thread}${chooser}
         <textarea aria-label="Kommentar zu ${escape(entry.key)}" placeholder="Antwort oder Frage an die Factory. Mit @name übernimmt ein Agent die nächste Runde.">${escape(draft)}</textarea>
         <div class="actions">${entry.proposal ? `<button type="button" data-proposal="${escape(entry.proposal)}">Freigeben</button>` : ''}
           <button type="button" data-ticket-close>Später</button>
@@ -940,6 +985,9 @@
         return;
       }
       const board = renderBoard();
+      const waitingNow = boardTickets(snapshot).open.length;
+      if (waitingBefore !== null && waitingNow > waitingBefore) window.webkit?.messageHandlers?.attention?.postMessage(waitingNow);
+      waitingBefore = waitingNow;
       const agentState = agent => agent.event === 'Stop' ? ['', 'wartet']
         : agent.event === 'UserPromptSubmit' ? ['active', 'liest den Auftrag']
         : agent.event === 'PreToolUse' ? ['active', agent.tool] : ['', `${agent.tool} beendet`];
@@ -1135,10 +1183,10 @@
         const field = send.closest('.ticket-detail')?.querySelector('textarea');
         const text = field?.value.trim() ?? '';
         if (!text) { field?.focus(); return; }
-        ticketDrafts.set(key, text);
         send.disabled = true;
         send.textContent = 'Gesendet';
-        window.webkit?.messageHandlers?.commentTicket?.postMessage({ name: key.replace(/^(proposal|job):/, ''), text });
+        window.webkit?.messageHandlers?.commentTicket?.postMessage({ name: key.replace(/^proposal:/, ''), text });
+        ticketDrafts.delete(key);
         // "@name" in a reply hands the next round of this job to that agent.
         const handed = mentioned(text, crewOf(snapshot).agents);
         if (handed && key.startsWith('job-')) window.webkit?.messageHandlers?.setJobAgent?.postMessage({ job: key, agent: handed });

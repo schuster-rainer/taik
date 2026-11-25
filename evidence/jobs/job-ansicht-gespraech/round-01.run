@@ -1,0 +1,20 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=Die Unterhaltung eines Auftrags in seinem Ticket zeigen und führen.
+baseline=(empty)
+worker=claude-fable-attached
+limits=4 rounds; worker lease 60s up to 900s; verifier 15s; 96KiB source
+gate_sha256=961641c712b49d23b21a582f15b7d2141a96a727f03acd3d2467300f450e4cdf
+gate_ms=85
+patch_blocks=
+checks=PASS: host contract, offline isolation, 27 token shadows without glow, contrast 5.12–13.04, lossless .run highlighting, token flow per round, one workpiece pane with live draft, animated flow, ticket board in one group at a time, crew with agents and harnesses, conversation in the ticket
+artifact=round-01.html
+rejected_candidate=
+feedback=
+follow_up=
+continuation=Retain the accepted artifact. No further work was authorized by this round.
+advance=false
+end

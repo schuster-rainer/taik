@@ -1,0 +1,19 @@
+decision=observed
+identity=prozess-reflexion-02
+intent=Die Architektur mit dem Bild des Nutzers vom Ticket abgleichen: Was ist da, was stellt er sich vor, was fehlt.
+scope=Reflection on 2026-11-25 after the user described his model. Each difference was checked in the code before it was named. What was changed afterwards is listed with its round.
+model_of_the_user=A ticket has a description, which is the order. Below it stand the replies of agent and user, like a chat. When the user has to answer he gets a signal and writes into the ticket. The history belongs to the ticket. Agents are configured per ticket and work like the agents of an agent harness.
+what_was_there=A job folder with brief, pinned gate, rounds and records. A reply from the viewer was written to STATE/inbox as one file per comment. No part of the core read that folder. A worker could only deliver a candidate, never ask. The flag "Frage" on a ticket was derived from a rejected round, nobody had asked anything. One environment variable chose the worker for the whole service.
+difference_1=Replies had a place of their own beside the job. Changed in round 17 of job-backend: a message is a create-only file in the job folder, and taik-seed reply writes it and wakes the service.
+difference_2=A reply had no effect. Changed in round 17: a reply to a finished job grants exactly one further round, and its worker reads the conversation.
+difference_3=A worker could not ask. Changed in round 17: a question instead of a candidate is kept as a message, its cost in a record of its own, and the job waits for the user.
+difference_4=The ticket did not show what happened. Changed in job-ansicht-gespraech: description, messages and rounds in order, the reply field, and a sound when a ticket starts to wait.
+difference_5=Agents could not be chosen. Changed in rounds 13 to 16 and job-ansicht-crew: named agents with harness, model, effort and persona, one per job, five harnesses.
+still_different_1=The detailed history with work steps and decision record is a field of its own with its own job list. The user wants it at the ticket. Moving it changes the navigation and the WebKit check, so it is the next viewer job.
+still_different_2=A worker has no tools. It gets the brief, the accepted source and the conversation, and returns one document. It cannot read the checkout, run a command or change several files. The reason is the seed's isolation rule: a candidate must not be able to touch the accepted state, and the gate judges exactly what was returned. An agent with tools needs a checkout of its own, and a gate that judges the difference it leaves.
+still_different_3=A comment on a proposal still goes to STATE/inbox, because a proposal has no job folder yet. Nothing reads it.
+still_different_4=The orchestrator the user wants to talk to in general does not exist. A conversation exists only inside a job.
+found_on_the_way=The service derived its state directory from the resolved job folder and looked for settings, agents and proposals in evidence/ instead of STATE. The parallel setting of the viewer had never taken effect. Fixed in round 16.
+verified=Core: tests for agents, conversation, question, reply and reopening. Live: two agent rounds, one reply that reopened a finished job. Viewer: gate, WebKit check with a driven question, captures. Not verified: no button of the installed app was clicked by a person or an agent, and no real worker has asked a question yet.
+continuation=Move the history into the ticket and drop the separate job list. Then give an agent a checkout and tools, with the gate on the difference.
+end

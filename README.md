@@ -115,9 +115,19 @@ A job names the agent of its next round in a file `agent` in its folder, set at 
 | `grok` | Grok Build CLI, single turn from a prompt file, streamed | off | model, tokens, cost |
 | `pi` | Pi CLI, print mode with JSON events | off | provider and model, tokens, cost |
 
-Every call runs in the write-denying sandbox. Grok and Pi may write their own state folder (`~/.grok`, `~/.pi`) and nothing else. A harness that reports no cost counts with 0.25 USD per call toward the daily bound. `taik-seed crew STATE` writes the overview of harnesses, sign-in state, models and agents that the viewer shows. It reads the sign-in state, never a credential. Gemini and OpenCode are installed on the author's machine but not signed in and not wired.
+Every call runs in the write-denying sandbox. Grok and Pi may write their own state folder (`~/.grok`, `~/.pi`) and nothing else. Codex reports tokens and no amount. Its calls are priced from the list prices that `taik-seed crew` collects from Pi's model catalog and the SubQ documentation. Only a call without tokens or without a listed model counts with a fixed 0.25 USD toward the daily bound. `taik-seed crew STATE` writes the overview of harnesses, sign-in state, models and agents that the viewer shows. It reads the sign-in state, never a credential. Gemini and OpenCode are installed on the author's machine but not signed in and not wired.
 
 Each call is one turn without tools: the worker returns one document and the gate judges it. An agent that works with tools in a checkout, as an agent harness does on its own, is not built.
+
+## The conversation of a job
+
+A job keeps its conversation in its folder: `message-NNN.user.md` and `message-NNN.agent.md`, written once and never replaced.
+
+```sh
+printf 'Bitte die Überschrift kürzen.' | taik-seed reply STATE job-NAME
+```
+
+A reply to a finished job grants exactly one further round, and its worker reads the whole conversation. Each reply grants one round beyond the budget of four, at most eight. A worker may return a question instead of a candidate. Then nothing is judged, the question stands in the job, its cost in a record of its own, and the job waits until the user has answered. The viewer shows description, messages and rounds in the open ticket and plays a sound when a ticket starts to wait.
 
 ## The service
 

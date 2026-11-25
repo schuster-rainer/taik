@@ -36,6 +36,7 @@
 
 ## Reflexion des Prozesses
 
+- [Abgleich der Architektur mit dem Ticket-Bild des Nutzers](jobs/job-prozess-reflexion/summary-02.run)
 - [Die Spec auf den eigenen Betrieb angewendet](jobs/job-prozess-reflexion/summary.run)
 
 ## Galaxy an Software-Aufträgen
@@ -75,6 +76,7 @@
 - [Patch-Format und aufbauende Aufträge](jobs/job-backend/round-07.run) und [Lease mit Heartbeat statt starrer Zeitgrenze](jobs/job-backend/round-08.run)
 - [Nebenläufige Aufträge](jobs/job-backend/round-09.run), [formatneutraler Worker-Auftrag und sofort besetzte Plätze](jobs/job-backend/round-10.run) und [Messung am Dienst](jobs/job-dienst-durchsatz/summary.run)
 - [Freigabeschritt durch den Dienst](jobs/job-backend/round-12.run)
+- [Unterhaltung im Auftrag, Rückfrage des Workers, Preisliste](jobs/job-backend/round-17.run) und [erste Antwort, die einen Auftrag wieder öffnete](jobs/job-probe-pi-grok/round-02.run)
 - [Benannte Agenten, Grok und Pi als Worker](jobs/job-backend/round-13.run), [Agent beim Einreihen](jobs/job-backend/round-14.run), [abgelehnte Runde wegen eines Zeittests](jobs/job-backend/round-15.run), [Zustandsverzeichnis richtig bestimmt](jobs/job-backend/round-16.run)
 - Erste Runden benannter Agenten am Dienst: [Grok](jobs/job-probe-grok-schnell/round-01.run) und [Pi](jobs/job-probe-pi-grok/round-01.run)
 - [Drosselung des Gates unter launchd, gemessen](jobs/job-dienst-drosselung/summary.run)
@@ -112,6 +114,7 @@
 
 - [Neumorphe Ansicht mit ausgezeichneten Prüfprotokollen](jobs/job-factory-neomorph/round-01.html), [Auftrag](jobs/job-factory-neomorph/round-01.brief.md) und [Entscheidung](jobs/job-factory-neomorph/round-01.run)
 - [Bildmarke in der Kopfzeile](jobs/job-factory-neomorph/round-02.run) und [Aufnahme der installierten Ansicht](jobs/job-factory-neomorph/round-02.screenshot.png)
+- [Unterhaltung im Ticket](jobs/job-ansicht-gespraech/round-01.run), [Freigabe](jobs/job-ansicht-gespraech/release-round-01.run) und [Aufnahme](jobs/job-ansicht-gespraech/round-01.open-ticket.png)
 - [Crew: Agenten und Abos in der Ansicht, Agent je Ticket](jobs/job-ansicht-crew/round-01.run), [Freigabe](jobs/job-ansicht-crew/release-round-01.run), Aufnahmen [Standard](jobs/job-ansicht-crew/round-01.default.png), [Formular](jobs/job-ansicht-crew/round-01.agent-form.png) und [Ticket](jobs/job-ansicht-crew/round-01.ticket-agent.png)
 - [Ticket-Board geordnet: eine Gruppe zur Zeit, Karten über die volle Breite](jobs/job-ansicht-tickets/round-01.run), [Freigabe](jobs/job-ansicht-tickets/release-round-01.run), Aufnahmen [Standard](jobs/job-ansicht-tickets/round-01.default.png), [Entschieden in Hell](jobs/job-ansicht-tickets/round-01.decided-light.png) und [geöffnetes Ticket](jobs/job-ansicht-tickets/round-01.open-ticket.png)
 - [Erster Board-Auftrag, viermal abgelehnt](jobs/job-board-ansicht/round-04.run)

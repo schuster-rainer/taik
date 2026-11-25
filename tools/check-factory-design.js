@@ -91,6 +91,26 @@ async function runDesignGate(requireOpen) {
     const result = frame('#taik-result-viewport');
     requireFact(rendered(result), 'Floorplanner is not shown as the workpiece');
     const original = result.srcdoc;
+    // Conversation: a question of the worker puts the job among the waiting tickets, and its ticket tells the thread.
+    if (find('#taik-board')) {
+      const asked = structuredClone(snapshot);
+      const asking = asked.jobs.find(entry => entry.id === 'job-floorplanner');
+      asking.messages = [{ author: 'agent', round: asking.rounds.length, text: 'Gate-Frage: welche Breite?' }];
+      window.updateFactory(asked);
+      await delayFrame();
+      const waitingTicket = find('#taik-board-open button[data-ticket="job-floorplanner"]');
+      requireFact(rendered(waitingTicket), 'A job whose worker asked is not among the waiting tickets');
+      waitingTicket.click();
+      await delayFrame();
+      const thread = find('#taik-board .thread');
+      requireFact(rendered(thread) && thread.textContent.includes('Gate-Frage: welche Breite?'), 'The ticket does not show the question of the worker');
+      requireFact(thread.querySelectorAll('.thread-round').length === asking.rounds.length, 'The ticket does not tell its rounds');
+      requireFact(rendered(find('#taik-board .ticket-detail textarea')), 'The ticket has no reply field');
+      find('#taik-board-open button[data-ticket="job-floorplanner"]').click();
+      window.updateFactory(snapshot);
+      await delayFrame();
+      requireFact(!find('#taik-board .thread'), 'The ticket stayed open');
+    }
     // Crew: a new agent is typed while the snapshot refreshes. The draft and the focus survive.
     const crew = find('#taik-crew');
     if (crew) {

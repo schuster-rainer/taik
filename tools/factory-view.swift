@@ -26,6 +26,13 @@ private struct Round: Codable {
     }
 }
 
+// One message of the conversation that a job keeps in its folder.
+private struct Message: Codable {
+    let author: String
+    let round: Int
+    let text: String
+}
+
 private struct Job: Codable {
     let id: String
     let goal: String?
@@ -34,6 +41,8 @@ private struct Job: Codable {
     let cost: Double
     let draft: String?
     let agent: String?
+    let brief: String?
+    let messages: [Message]
     let baseline: Round
     let rounds: [Round]
     let progress: [String: [ProgressEvent]]
@@ -148,6 +157,35 @@ private final class FactoryMonitor {
         let url = state.appendingPathComponent("crew", isDirectory: true).appendingPathComponent("overview.json")
         guard let data = try? Data(contentsOf: url), data.count < 262_144 else { return nil }
         return String(data: data, encoding: .utf8)
+    }
+
+    // The description of a job: its brief as it was queued.
+    private func jobBrief(in job: URL) -> String? {
+        for name in ["submission.brief.md", "round-01.brief.md"] {
+            if let data = try? Data(contentsOf: job.appendingPathComponent(name)), data.count <= 8192,
+               let text = String(data: data, encoding: .utf8) { return text }
+        }
+        return nil
+    }
+
+    // The conversation of a job, oldest first, as the Factory wrote it into the job folder.
+    private func jobMessages(in job: URL) -> [Message] {
+        var messages: [Message] = []
+        for sequence in 1...200 {
+            var found: Message?
+            for author in ["user", "agent"] {
+                let url = job.appendingPathComponent(String(format: "message-%03d.", sequence) + author + ".md")
+                guard let data = try? Data(contentsOf: url), data.count <= 8300,
+                      let text = String(data: data, encoding: .utf8),
+                      let split = text.range(of: "\n\n"),
+                      let round = Int(text[..<split.lowerBound].replacingOccurrences(of: "round=", with: "")) else { continue }
+                found = Message(author: author, round: round,
+                    text: String(text[split.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines))
+            }
+            guard let message = found else { break }
+            messages.append(message)
+        }
+        return messages
     }
 
     // The agent a job names for its next round.
@@ -285,7 +323,7 @@ private final class FactoryMonitor {
         }
         let draft = active ? readSource(at: url.appendingPathComponent(next + ".draft")) : nil
         return Job(id: url.lastPathComponent, goal: goal, preview: preview, previous: previous,
-            cost: (cost * 10000).rounded() / 10000, draft: draft, agent: jobAgent(in: url), baseline: baseline, rounds: rounds, progress: progress,
+            cost: (cost * 10000).rounded() / 10000, draft: draft, agent: jobAgent(in: url), brief: jobBrief(in: url), messages: jobMessages(in: url), baseline: baseline, rounds: rounds, progress: progress,
             sourceQueued: queued, sourceActive: active, sourceStartedAt: startedAt)
     }
 
@@ -430,7 +468,7 @@ private final class FactoryWindow: NSObject, NSApplicationDelegate, WKNavigation
         configuration.userContentController.add(self, name: "approveProposal")
         configuration.userContentController.add(self, name: "commentTicket")
         configuration.userContentController.add(self, name: "setParallel")
-        for name in ["saveAgent", "deleteAgent", "setJobAgent", "refreshCrew"] {
+        for name in ["saveAgent", "deleteAgent", "setJobAgent", "refreshCrew", "attention"] {
             configuration.userContentController.add(self, name: name)
         }
         webView = WKWebView(frame: .zero, configuration: configuration)
@@ -554,6 +592,29 @@ private final class FactoryWindow: NSObject, NSApplicationDelegate, WKNavigation
             approval.executableURL = state.appendingPathComponent("taik-seed")
             approval.arguments = ["approve", state.path, name]
             try? approval.run()
+            return
+        }
+        if message.name == "attention" {
+            // A ticket started to wait for the user: a sound and the Dock, no notification service.
+            NSSound(named: "Glass")?.play()
+            NSApp.requestUserAttention(.informationalRequest)
+            return
+        }
+        if message.name == "commentTicket", let body = message.body as? [String: String],
+           let name = body["name"], name.range(of: #"^job-[A-Za-z0-9-]{1,60}$"#, options: .regularExpression) != nil,
+           let text = body["text"], !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, text.utf8.count <= 8000 {
+            // A reply to a job belongs into the job. The installed Factory writes it there and wakes the service.
+            let reply = Process()
+            reply.executableURL = state.appendingPathComponent("taik-seed")
+            reply.arguments = ["reply", state.path, name]
+            let input = Pipe()
+            reply.standardInput = input
+            reply.standardOutput = FileHandle.nullDevice
+            reply.standardError = FileHandle.nullDevice
+            if (try? reply.run()) != nil {
+                input.fileHandleForWriting.write(Data(text.utf8))
+                try? input.fileHandleForWriting.close()
+            }
             return
         }
         if message.name == "commentTicket", let body = message.body as? [String: String],
