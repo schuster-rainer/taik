@@ -1,0 +1,20 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-02
+intent=Die Kosten unbeaufsichtigter Claude-Runden auf einen Tagesbetrag begrenzen und die Auslastung des Kontos festhalten.
+baseline=taik-seed a28ba90ab3a784bed2b489fc87f0116f83e6988598964d09ac956d2f56e62961
+worker=claude-fable
+decided_by=the installed taik-seed a28ba90ab3a784bed2b489fc87f0116f83e6988598964d09ac956d2f56e62961 at /Users/rainer/.local/state/taik-factory/taik-seed
+limits=99 rounds; gate 900s; candidate checks 10s each
+gate_sha256=76b41170f51fa7e1a5424ba01f903bcf2276b8f8f19e4d87f952e88d18b6b0ce
+gate_ms=14771
+checks=PASS: Rust tests, Clippy with warnings denied, release build; candidate seeded, rejected an invalid procedure without touching the accepted record, and extended it
+evidence=round-02.checks.log
+artifact=round-02-taik-seed
+artifact_sha256=4da8f81957018d69b6a9ddace6e134569f62efe434b6c4ecf9a2d9c0bc2e8c2b
+rollback=round-02.rollback-taik-seed
+continuation=Restart the service so that it runs the accepted binary.
+advance=false
+end

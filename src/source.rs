@@ -28,6 +28,9 @@ const SECOND_WORKER: &str = "TAIK_SECOND_WORKER";
 const LEAD_WORKER: &str = "TAIK_LEAD_WORKER";
 // A streamed answer wraps each few characters in an event, so it is far larger than the document.
 const STREAM_LIMIT: usize = 64 * LIMIT;
+// Upper bound in USD at list price for Claude rounds within 24 hours. The variable overrides it.
+const DAILY_BUDGET: &str = "TAIK_DAILY_BUDGET_USD";
+const DEFAULT_DAILY_BUDGET_USD: f64 = 3.0;
 const POLICY: &str = r#"(version 1) (allow default) (deny file-write*)
     (allow file-write* (subpath (param "WORK")))
     (deny file-read* (subpath (param "PROJECT")))
@@ -717,6 +720,32 @@ fn unfenced(source: &str) -> Option<String> {
     Some(format!("{answer}\n"))
 }
 
+// Cost that Claude rounds recorded in this queue during the last 24 hours.
+fn recent_worker_cost(job: &Path) -> f64 {
+    let Some(jobs) = job.parent().and_then(|jobs| fs::read_dir(jobs).ok()) else {
+        return 0.0;
+    };
+    let recent = |path: &Path| {
+        path.metadata()
+            .and_then(|metadata| metadata.modified())
+            .ok()
+            .and_then(|modified| modified.elapsed().ok())
+            .is_some_and(|age| age < Duration::from_secs(24 * 60 * 60))
+    };
+    jobs.flatten()
+        .filter_map(|entry| fs::read_dir(entry.path()).ok())
+        .flat_map(|rounds| rounds.flatten())
+        .map(|round| round.path())
+        .filter(|path| path.extension().is_some_and(|extension| extension == "run") && recent(path))
+        .filter_map(|path| record::read_regular(&path, record::MAX_RECORD_BYTES).ok())
+        .flat_map(|text| {
+            text.lines()
+                .filter_map(|line| line.strip_prefix("worker_cost_usd=")?.parse::<f64>().ok())
+                .collect::<Vec<_>>()
+        })
+        .sum()
+}
+
 // A second worker without tools. It sees the prompt and nothing of the project or the job.
 fn claude(
     program: &str,
@@ -730,6 +759,14 @@ fn claude(
         failure.worker = "Claude";
         failure
     };
+    // The worker spends the user's account. Refuse before the call once the day's bound is reached.
+    let budget = env::var(DAILY_BUDGET)
+        .ok()
+        .and_then(|value| value.parse::<f64>().ok())
+        .unwrap_or(DEFAULT_DAILY_BUDGET_USD);
+    if recent_worker_cost(job) >= budget {
+        return Err(named(WorkerFailure::new("setup", "budget", started)).into());
+    }
     let mut command = sandbox(scratch, job, program, true)
         .map_err(|_| named(WorkerFailure::new("setup", "sandbox", started)))?;
     command
@@ -757,6 +794,7 @@ fn claude(
     // Each text delta extends the draft that the viewer shows while the worker writes.
     let mut next_line = 0;
     let mut written = String::new();
+    let mut account = String::new();
     let response = run_worker_limited(
         &mut command,
         WORKER_TIMEOUT,
@@ -773,6 +811,17 @@ fn claude(
                 {
                     written.push_str(text);
                     show_code(&written);
+                } else if let Ok(event) =
+                    serde_json::from_slice::<serde_json::Value>(&data[next_line..end])
+                    && event["type"] == "rate_limit_event"
+                {
+                    let info = &event["rate_limit_info"];
+                    account = format!(
+                        "{} {} {}",
+                        info["rateLimitType"].as_str().unwrap_or(""),
+                        info["status"].as_str().unwrap_or(""),
+                        info["utilization"].as_f64().unwrap_or(0.0),
+                    );
                 }
                 next_line = end + 1;
             }
@@ -803,11 +852,12 @@ fn claude(
         .and_then(|models| models.keys().next())
         .map_or("", String::as_str);
     let usage = format!(
-        "worker_model={}\nworker_output_tokens={}\nworker_cost_usd={}\nworker_duration_ms={}\n",
+        "worker_model={}\nworker_output_tokens={}\nworker_cost_usd={}\nworker_duration_ms={}\nworker_account_usage={}\n",
         single_line(model),
         report["usage"]["output_tokens"].as_u64().unwrap_or(0),
         report["total_cost_usd"].as_f64().unwrap_or(0.0),
         started.elapsed().as_millis(),
+        single_line(account.trim()),
     );
     Ok((html, usage))
 }

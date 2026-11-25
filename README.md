@@ -79,8 +79,9 @@ Unattended rounds need a worker command:
 | `TAIK_LEAD_WORKER` | Path to a Claude CLI. It runs first, without tools, as Opus 5.5 at medium effort. Codex is not called for source rounds. |
 | `TAIK_SECOND_WORKER` | Path to a Claude CLI that takes over when the Codex worker fails before a gate judgement. |
 | neither | The signed-in Codex subscription does the work. |
+| `TAIK_DAILY_BUDGET_USD` | Bound on the cost of Claude rounds within 24 hours, at list price. Default 3. A round beyond it is rejected before the worker is called. |
 
-Both workers get the same prompt and the same sandbox. A Claude round records model, output tokens, cost and duration. A failed worker records its stage, kind and duration, never its raw output. Setting either variable lets the service spend usage on your account.
+Both workers get the same prompt and the same sandbox. The Claude CLI runs headless as a subprocess (`claude -p`) with the login of the account, without tools. A Claude round records model, output tokens, cost, duration and the usage state the account reported. A failed worker records its stage, kind and duration, never its raw output. Setting either variable lets the service spend usage on your account.
 
 A gate may authorise one follow-up job by starting with `// TAIK: allow-follow-up` and printing one `TAIK_FOLLOWUP: <next intent>` line when it accepts.
 
@@ -101,7 +102,7 @@ launchctl bootstrap "gui/$(id -u)" ~/Library/LaunchAgents/local.taik.factory.pli
 
 The template sets `ProcessType` to `Interactive`. Without it launchd throttled the gate process to between 2.5 and 13.8 s instead of 90 ms.
 
-Whether the service should stay a persistent process is open. A cold `drain` over the current 22 jobs takes about 5 ms. The in-memory cache of completed jobs pays off from a few hundred archived jobs.
+The service stays a persistent process. It finished tag jobs in 55 to 72 ms. A `drain` started by launchd on demand took 81 to 293 ms. See [the measurement](evidence/jobs/job-dienst-form/summary.run).
 
 ## Changing the backend
 

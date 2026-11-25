@@ -214,6 +214,37 @@ fn a_configured_second_worker_takes_over_and_is_named_in_the_record() {
     assert!(record.contains("\nworker=claude-cli\nworker_stage=execute\n"), "{record}");
     assert!(record.contains("\ngate_ms=\n"), "{record}");
 
+    // The day's bound: an earlier round in the same queue already cost more than the limit.
+    script("lead", r#"printf '%s\n' '{"type":"rate_limit_event","rate_limit_info":{"rateLimitType":"seven_day","status":"allowed","utilization":0.5}}' '{"type":"result","is_error":false,"result":"<!doctype html><p>second</p>","usage":{"output_tokens":3},"total_cost_usd":0.75,"modelUsage":{"model-y":{}}}'"#);
+    let state = root.path().join("bounded");
+    for (name, expected) in [("first", Some(0)), ("second", Some(1))] {
+        let queued = factory()
+            .arg("queue-source")
+            .arg(&state)
+            .arg(name)
+            .arg(&brief)
+            .arg(&gate)
+            .output()
+            .unwrap();
+        assert!(queued.status.success(), "{queued:?}");
+        let result = factory()
+            .arg("drain")
+            .arg(&state)
+            .env("PATH", &path)
+            .env("CODEX_HOME", &auth)
+            .env("TAIK_LEAD_WORKER", bin.join("lead"))
+            .env("TAIK_DAILY_BUDGET_USD", "0.5")
+            .env_remove("TAIK_SECOND_WORKER")
+            .output()
+            .unwrap();
+        assert_eq!(result.status.code(), expected, "{name}: {result:?}");
+    }
+    let first = fs::read_to_string(state.join("jobs/job-first/round-01.run")).unwrap();
+    assert!(first.contains("\nworker_cost_usd=0.75\n"), "{first}");
+    assert!(first.contains("\nworker_account_usage=seven_day allowed 0.5\n"), "{first}");
+    let second = fs::read_to_string(state.join("jobs/job-second/round-01.run")).unwrap();
+    assert!(second.contains("\nworker=claude-cli\nworker_stage=setup\nworker_failure=budget\n"), "{second}");
+
     for (name, answer, expected) in answers {
         let second = script("second", answer);
         let state = root.path().join(name);

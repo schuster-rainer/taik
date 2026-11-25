@@ -1,0 +1,13 @@
+decision=observed
+identity=dienst-form-01
+intent=Entscheiden, ob der Dienst ein Dauerprozess bleibt oder von launchd bei Bedarf gestartet wird.
+scope=Time from queueing a three-round tag job to its final record, six jobs per variant, empty archive at the start, release binary of job-backend round 1, launchd with ProcessType Interactive.
+persistent_ms=54.9, 60.3, 71.9, 56.2, 58.3, 70.4
+on_demand_gap_1s_ms=111.9, 81.0, 132.0, 81.7, 286.1, 215.0
+on_demand_gap_12s_ms=193.7, 151.7, 84.2, 293.1, 154.6, 197.6
+observation=The persistent service finished every job in 55 to 72 ms. A drain started by launchd through WatchPaths finished every job as well, in 81 to 293 ms, with a median of 122 ms at 1 s gaps and 174 ms at 12 s gaps.
+decision_on_form=Keep the persistent process. It is two to three times faster and steadier, it holds the cache of completed jobs, and it does not poll. Starting on demand works and stays the fallback.
+limitations=One machine, tag jobs only, six jobs per variant. For software jobs the worker takes 7 to 80 s, so the difference does not matter there. No job was lost in either variant, and no burst of simultaneous jobs was tried.
+measurement=measure.py, results.json
+continuation=No change to the service form. The next bound to add is on worker cost, because the weekly usage of the account stood at 96 percent and nothing in the Factory limits it.
+end
