@@ -1,0 +1,9 @@
+decision=observed
+identity=round-04.analysis
+worker=savant
+worker_model=subq-savant-1.4
+worker_input_tokens=3269
+worker_output_tokens=3964
+worker_cost_usd=0.002309
+worker_duration_ms=10398
+end

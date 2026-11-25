@@ -525,6 +525,13 @@ fn run_source_job(home: &Path, jobs: &Path, job: &Path) -> Result<bool> {
     {
         eprintln!("{}: release: {error}", job.display());
     }
+    // A rejection is explained in the ticket, in a few plain lines.
+    #[cfg(target_os = "macos")]
+    if outcome == Some(false)
+        && let Err(error) = crate::analysis::of_last_round(job)
+    {
+        eprintln!("{}: analysis: {error}", job.display());
+    }
     // A round ran in this call and the job is final. Ask once what follows, if the user enabled it.
     #[cfg(target_os = "macos")]
     if outcome.is_some()

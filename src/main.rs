@@ -1,6 +1,8 @@
 #[cfg(target_os = "macos")]
 mod activation;
 #[cfg(target_os = "macos")]
+mod analysis;
+#[cfg(target_os = "macos")]
 mod crew;
 mod experiment;
 mod procedure;
@@ -50,6 +52,7 @@ const USAGE: &str = "usage: taik-seed seed OUTPUT.run
        taik-seed crew STATE
        taik-seed reply STATE JOB < MESSAGE
        taik-seed request STATE < REQUEST
+       taik-seed analyse JOB
        taik-seed propose STATE NAME RECORD.run
        taik-seed approve STATE NAME
        taik-seed experiment BASELINE.run OUTPUT_DIRECTORY
@@ -365,6 +368,14 @@ fn run() -> Result<bool> {
                 .take(talk::MAX_MESSAGE_BYTES as u64 + 1)
                 .read_to_string(&mut text)?;
             println!("{}", service::reply(first, name, &text)?.display());
+            Ok(true)
+        }
+        #[cfg(target_os = "macos")]
+        "analyse" if rest.is_empty() => {
+            match analysis::of_last_round(&first.canonicalize()?)? {
+                Some(path) => println!("{}", path.display()),
+                None => println!("nothing to analyse"),
+            }
             Ok(true)
         }
         #[cfg(target_os = "macos")]

@@ -308,3 +308,71 @@ fn a_request_of_the_user_becomes_a_proposal_and_keeps_what_was_said() {
         Some(2)
     );
 }
+
+#[test]
+fn a_rejected_round_gets_a_short_analysis_once() {
+    let root = tempfile::Builder::new()
+        .prefix("taik-analysis-")
+        .tempdir_in("/tmp")
+        .unwrap();
+    let factory = || Command::new(env!("CARGO_BIN_EXE_taik-seed"));
+    let job = root.path().join("jobs/job-seite");
+    fs::create_dir_all(&job).unwrap();
+    fs::write(job.join("submission.brief.md"), "Eine Seite mit Titel\n").unwrap();
+    fs::write(job.join("submission.gate.mjs"), "// checks the title\n").unwrap();
+    let worker = root.path().join("lead");
+    let answer = |text: &str| {
+        let body = serde_json::json!({"type": "result", "is_error": false, "result": text,
+            "usage": {"output_tokens": 1}, "total_cost_usd": 0.01, "modelUsage": {"m": {}}});
+        fs::write(root.path().join("answer.json"), body.to_string()).unwrap();
+        fs::write(
+            &worker,
+            format!(
+                "#!/bin/sh\ncat '{}'\n",
+                root.path().join("answer.json").display()
+            ),
+        )
+        .unwrap();
+        fs::set_permissions(&worker, fs::Permissions::from_mode(0o700)).unwrap();
+    };
+    let analyse = || {
+        factory()
+            .arg("analyse")
+            .arg(&job)
+            .env("TAIK_LEAD_WORKER", &worker)
+            .output()
+            .unwrap()
+    };
+    let said =
+        |output: &std::process::Output| String::from_utf8_lossy(&output.stdout).trim().to_owned();
+
+    // An accepted round needs no analysis, and no worker is asked.
+    fs::write(job.join("round-01.run"), "decision=accepted\nend\n").unwrap();
+    answer("Verlangt: x");
+    assert_eq!(said(&analyse()), "nothing to analyse");
+
+    fs::write(
+        job.join("round-02.run"),
+        "decision=rejected\nchecks=AssertionError: the page has no title\nend\n",
+    )
+    .unwrap();
+    // An answer without the four lines is refused and leaves nothing behind.
+    answer("Der Titel fehlt, glaube ich.");
+    assert_eq!(analyse().status.code(), Some(2));
+    assert!(!job.join("round-02.analysis.md").exists());
+
+    answer(
+        "Hier die Analyse:\n- **Verlangt:** Die Seite braucht einen Titel.\nGescheitert an: Der Kandidat hat keinen.\nUrsache: Fehler im Kandidaten.\nNächster Schritt: Der Agent ergänzt den Titel.\nNoch ein Satz, den niemand braucht.",
+    );
+    let written = analyse();
+    assert_eq!(written.status.code(), Some(0), "{written:?}");
+    assert_eq!(
+        fs::read_to_string(job.join("round-02.analysis.md")).unwrap(),
+        "Verlangt: Die Seite braucht einen Titel.\nGescheitert an: Der Kandidat hat keinen.\nUrsache: Fehler im Kandidaten.\nNächster Schritt: Der Agent ergänzt den Titel.\n"
+    );
+    let ledger = fs::read_to_string(job.join("round-02.analysis.run")).unwrap();
+    assert!(ledger.contains("worker_cost_usd=0.01"), "{ledger}");
+    // Written once.
+    answer("Verlangt: a\nGescheitert an: b\nUrsache: c\nNächster Schritt: d");
+    assert_eq!(said(&analyse()), "nothing to analyse");
+}

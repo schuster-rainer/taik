@@ -13,14 +13,18 @@ use sha2::{Digest, Sha256};
 
 use crate::{Outcome, Progress, Result, record};
 
-pub const LIMIT: usize = 96 * 1024;
+// One text document. The bound keeps a runaway worker from filling the disk; it is not a design rule.
+// It was 96 KiB until the viewer, a product of this Factory, grew to 95 KiB with a gate time of 60 ms.
+pub const LIMIT: usize = 512 * 1024;
 const ROUNDS: usize = 4;
 // Replies of the user can grant further rounds, up to this many records in one job.
 const MAX_ROUNDS: usize = ROUNDS + 8;
 // A worker holds a lease that every piece of output renews. Silence beyond the lease ends the call
 // as stalled, and no call runs past the ceiling. The job lock keeps a second worker off the job.
 const WORKER_LEASE: Duration = Duration::from_secs(60);
-const WORKER_CEILING: Duration = Duration::from_secs(900);
+// No call has a ceiling of its own: a worker runs as long as it keeps its lease by output. The user
+// called the former bound of 900 s arbitrary on 2026-11-25. The variable below still sets one for tests.
+const WORKER_CEILING: Duration = Duration::from_secs(30 * 24 * 60 * 60);
 const HEARTBEAT: Duration = Duration::from_secs(15);
 
 fn duration_from(variable: &str, default: Duration) -> Duration {
@@ -622,7 +626,7 @@ fn run_round(
     let feedback_record = feedback.map_or("", |feedback| feedback.record.as_str());
     let further = further.as_deref().unwrap_or("");
     let report = format!(
-        "decision={decision}\nkind=software\nprocedure=\ntags=\nidentity={stem}\nintent={intent}\nbaseline={baseline}\nworker={worker}\n{second_worker}{worker_observation}limits={budget} rounds; worker lease 60s up to 900s; verifier 15s; 96KiB source\n\
+        "decision={decision}\nkind=software\nprocedure=\ntags=\nidentity={stem}\nintent={intent}\nbaseline={baseline}\nworker={worker}\n{second_worker}{worker_observation}limits={budget} rounds; worker lease 60s without ceiling; verifier 15s; 512KiB source\n\
          gate_sha256={digest}\ngate_ms={}\npatch_blocks={}\nchecks={checks}\nartifact={artifact}\nrejected_candidate={rejected_candidate}\nfeedback={feedback_record}\nfollow_up={further}\ncontinuation={continuation}\nadvance={advance}\nend\n",
         gate_ms.map_or_else(String::new, |ms| ms.to_string()),
         patch_blocks.map_or_else(String::new, |blocks: usize| blocks.to_string()),
@@ -1135,8 +1139,6 @@ fn savant(
         "-sS",
         "-N",
         "--fail-with-body",
-        "--max-time",
-        "900",
         "-K",
         "request.conf",
         "-d",

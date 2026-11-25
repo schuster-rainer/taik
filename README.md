@@ -35,7 +35,7 @@ This is a running seed, not a product. What the evidence supports today:
 4. The Factory writes a **`.run` record** with the decision, the worker, the gate digest, the checks and the continuation. Records are create-only.
 5. A job has at most four source rounds. A rejected candidate with an actionable assertion goes back to the worker with the diagnosis.
 
-A worker holds a lease of 60 s that each piece of its output renews. A worker that stays silent longer ends as `stalled`. No call runs longer than 900 s. A lock on the job keeps a second worker away. When an accepted source exists, the worker may return a patch of SEARCH/REPLACE blocks instead of the whole document. The gate always judges the complete result.
+A worker holds a lease of 60 s that each piece of its output renews. A worker that stays silent longer ends as `stalled`. A call has no time ceiling of its own. A lock on the job keeps a second worker away. When an accepted source exists, the worker may return a patch of SEARCH/REPLACE blocks instead of the whole document. The gate always judges the complete result.
 
 ## Build and try
 
