@@ -86,6 +86,10 @@
 
 - [Sechs abgelehnte Runden klassifiziert](jobs/job-snap-kategorisierer/summary.run) und [Antworten](jobs/job-snap-kategorisierer/results.json)
 
+## Savant als Worker
+
+- [Zwei Aufträge mit Savant statt Opus, gleiche Gates](jobs/job-savant-worker/summary.run)
+
 ## Marke
 
 - [Markenblatt](jobs/job-markenblatt/round-01.html), [Auftrag](jobs/job-markenblatt/submission.brief.md) und [Entscheidung](jobs/job-markenblatt/round-01.run)

@@ -1,0 +1,13 @@
+decision=observed
+identity=savant-worker-01
+intent=Savant von Subquadratic als Code-Worker an zwei Aufträgen prüfen, die Opus schon gelöst hat.
+scope=Two jobs, same brief and same pinned gate as the Opus runs, same worker prompt as the Factory uses. Model subq-savant-1.4 with reasoning_effort low over the chat completions endpoint. One run each. The Factory judged both candidates as attached rounds.
+mehrdatei_programm_savant=accepted in round 1, 10.3 s, 1271 input and 4908 output tokens, 0.0026 USD. Record ../job-mehrdatei-programm-savant/round-01.run
+mehrdatei_programm_opus=accepted in round 1, 24.3 s, 2698 output tokens, 0.075 USD. Record ../job-mehrdatei-programm/round-01.run
+markenblatt_savant=accepted in round 1, 39.6 s, 833 input and 19951 output tokens, 0.010 USD. Record ../job-markenblatt-savant/round-01.run
+markenblatt_opus=accepted in round 1, 66.8 s, 6808 output tokens, 0.150 USD. Record ../job-markenblatt/round-01.run
+observation=Savant passed both gates at the first attempt, in about half the time and at one fifteenth to one thirtieth of the list price. Its output token counts include reasoning.
+cost_basis=Savant prices from the SubQ documentation on 2026-11-25: 0.10 USD per million input tokens, 0.50 per million output tokens. The Opus figures are the list prices the Claude CLI reported. Opus ran on a subscription, so no money was charged for it.
+limitations=Two jobs, one run each, both solved by Opus in the first round as well. No job was tried that either model fails. Quality beyond the gate was not compared. The calls were made from a script outside the Factory with the key of the snap CLI, as the user allowed. The service itself cannot call Savant yet.
+continuation=Savant is a candidate for the unattended worker. Adding it means letting the service read an API key, which is a new permission and the user's decision. Compare the two models on harder jobs before making either the default for all work.
+end

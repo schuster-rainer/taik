@@ -151,6 +151,8 @@ The viewer is `tools/factory-view.html`. It changes only through a source job. B
 | Time to the first result with 2000 archived jobs | 239.8 ms to 50.2 ms, median of 8 | [round 9](evidence/jobs/job-rust-entrypoint/round-09.run) |
 | Unattended round without a working worker | rejected, then accepted after a second worker was configured | [before](evidence/jobs/job-worker-verfuegbarkeit/round-01.run), [after](evidence/jobs/job-worker-verfuegbarkeit-2/round-01.run) |
 | Gate process under launchd | 2.5 to 13.8 s with the default process type, 75 to 90 ms with `Interactive`, four runs each | [summary](evidence/jobs/job-dienst-drosselung/summary.run) |
+| Savant against Opus as the worker, same briefs and gates | both accepted in round 1 on two jobs. Savant took 10 s and 40 s at 0.003 and 0.010 USD, Opus 24 s and 67 s at 0.075 and 0.150 USD list price | [summary](evidence/jobs/job-savant-worker/summary.run) |
+| Snap as a classifier of rejected rounds | 6 of 6 matched the expected cause, labels not independent | [summary](evidence/jobs/job-snap-kategorisierer/summary.run) |
 | Reuse of an accepted operator in another software job | no benefit: 0.122 against 0.100 USD mean, all four runs accepted in round 1 | [summary](evidence/jobs/job-galaxy-quellcode/summary.run) |
 | Reuse including setup on tag batches | slower than both comparators at that sample size | [summary](evidence/jobs/job-galaxy-intelligence/summary.run) |
 

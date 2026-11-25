@@ -1,0 +1,1 @@
+{"name": "markenblatt", "ms": 39592, "finish": "stop", "usage": {"prompt_tokens": 833, "completion_tokens": 19951, "total_tokens": 20784, "prompt_tokens_details": {"cached_tokens": 0}, "completion_tokens_details": {"reasoning_tokens": 14770}}, "cost_usd": 0.010059, "model": "subq-savant-1.4"}

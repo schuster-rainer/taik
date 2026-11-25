@@ -1,0 +1,9 @@
+111	start	Factory hat den Auftrag übernommen
+567	worker	Eingehängter Worker savant-1-4 liefert Quellcode
+604	worker	4096 Bytes Quellcode empfangen
+624	worker	8192 Bytes Quellcode empfangen
+639	worker	12288 Bytes Quellcode empfangen
+651	worker	13001 Bytes Quellcode empfangen
+658	evaluate	Unabhängiges, gespeichertes Prüfgate ausführen
+108325	checks	PASS: inert brand sheet with the unchanged mark 7 times, six colours and readable in light and dark
+118696	accepted	Retain the accepted artifact. No further work was authorized by this round.

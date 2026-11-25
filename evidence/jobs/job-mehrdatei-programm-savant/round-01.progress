@@ -1,0 +1,6 @@
+357	start	Factory hat den Auftrag übernommen
+1102	worker	Eingehängter Worker savant-1-4 liefert Quellcode
+1176	worker	3979 Bytes Quellcode empfangen
+1184	evaluate	Unabhängiges, gespeichertes Prüfgate ausführen
+1498364	checks	PASS: taik-stats aus 4 Dateien übersetzt, alle Module nötig, Zusammenfassungen und Fehlerausgänge korrekt (cargo build ok)
+1518660	accepted	Retain the accepted artifact. No further work was authorized by this round.

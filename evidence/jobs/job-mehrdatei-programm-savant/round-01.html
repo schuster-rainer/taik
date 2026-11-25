@@ -1,0 +1,156 @@
+=== Cargo.toml ===
+[package]
+name = "taik-stats"
+version = "0.1.0"
+edition = "2021"
+=== src/main.rs ===
+mod record;
+mod summary;
+
+use std::env;
+use std::fs;
+use std::process;
+
+use record::Record;
+use summary::Summary;
+
+fn main() {
+    let paths: Vec<String> = env::args().skip(1).collect();
+    if paths.is_empty() {
+        process::exit(2);
+    }
+
+    let mut contents = Vec::with_capacity(paths.len());
+    for path in &paths {
+        match fs::read_to_string(path) {
+            Ok(text) => contents.push(text),
+            Err(_) => {
+                eprintln!("{}", path);
+                process::exit(2);
+            }
+        }
+    }
+
+    let mut summary = Summary::new();
+    for text in &contents {
+        summary.add(&Record::parse(text));
+    }
+
+    print!("{}", summary.render());
+}
+=== src/record.rs ===
+#[derive(Default)]
+pub struct Record {
+    pub decision: Option<String>,
+    pub worker: Option<String>,
+    pub cost_usd: f64,
+    pub gate_ms: i64,
+}
+
+impl Record {
+    pub fn parse(text: &str) -> Record {
+        let mut record = Record::default();
+
+        for raw in text.lines() {
+            let line = raw.trim_end_matches('\r');
+
+            if line.trim() == "end" {
+                break;
+            }
+
+            let (key, value) = match line.split_once('=') {
+                Some(parts) => parts,
+                None => continue,
+            };
+
+            match key {
+                "decision" => {
+                    record.decision = Some(value.trim().to_string());
+                }
+                "worker" => {
+                    let name = value.trim();
+                    if !name.is_empty() {
+                        record.worker = Some(name.to_string());
+                    }
+                }
+                "worker_cost_usd" => {
+                    let parsed = value.trim().parse::<f64>().unwrap_or(0.0);
+                    record.cost_usd = if parsed.is_finite() { parsed } else { 0.0 };
+                }
+                "gate_ms" => {
+                    record.gate_ms = value.trim().parse::<i64>().unwrap_or(0);
+                }
+                _ => {}
+            }
+        }
+
+        record
+    }
+}
+=== src/summary.rs ===
+use std::collections::BTreeMap;
+
+use crate::record::Record;
+
+pub struct Summary {
+    records: usize,
+    accepted: usize,
+    rejected: usize,
+    other: usize,
+    cost_usd: f64,
+    gate_ms_max: i64,
+    workers: BTreeMap<String, usize>,
+}
+
+impl Summary {
+    pub fn new() -> Summary {
+        Summary {
+            records: 0,
+            accepted: 0,
+            rejected: 0,
+            other: 0,
+            cost_usd: 0.0,
+            gate_ms_max: 0,
+            workers: BTreeMap::new(),
+        }
+    }
+
+    pub fn add(&mut self, record: &Record) {
+        self.records += 1;
+
+        match record.decision.as_deref() {
+            Some("accepted") => self.accepted += 1,
+            Some("rejected") => self.rejected += 1,
+            _ => self.other += 1,
+        }
+
+        self.cost_usd += record.cost_usd;
+
+        if record.gate_ms > self.gate_ms_max {
+            self.gate_ms_max = record.gate_ms;
+        }
+
+        if let Some(worker) = &record.worker {
+            *self.workers.entry(worker.clone()).or_insert(0) += 1;
+        }
+    }
+
+    pub fn render(&self) -> String {
+        let workers = self
+            .workers
+            .iter()
+            .map(|(name, count)| format!("{}:{}", name, count))
+            .collect::<Vec<String>>()
+            .join(",");
+
+        let mut out = String::new();
+        out.push_str(&format!("records={}\n", self.records));
+        out.push_str(&format!("accepted={}\n", self.accepted));
+        out.push_str(&format!("rejected={}\n", self.rejected));
+        out.push_str(&format!("other={}\n", self.other));
+        out.push_str(&format!("cost_usd={:.3}\n", self.cost_usd));
+        out.push_str(&format!("gate_ms_max={}\n", self.gate_ms_max));
+        out.push_str(&format!("workers={}\n", workers));
+        out
+    }
+}
