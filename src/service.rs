@@ -374,6 +374,14 @@ fn run_source_job(jobs: &Path, job: &Path) -> Result<bool> {
             outcome = crate::source::run_queued(&destination)?.0.or(outcome);
         }
     }
+    // A gate may name a release step for its accepted artifact. The job's author wrote that line
+    // before the candidate existed, and the approval of the job covers it.
+    #[cfg(target_os = "macos")]
+    if outcome == Some(true)
+        && let Err(error) = release(job)
+    {
+        eprintln!("{}: release: {error}", job.display());
+    }
     // A round ran in this call and the job is final. Ask once what follows, if the user enabled it.
     #[cfg(target_os = "macos")]
     if outcome.is_some()
@@ -516,5 +524,53 @@ fn read_outcome(path: &Path) -> Result<Outcome> {
         })
     } else {
         Err("published round lacks an outcome".into())
+    }
+}
+
+// Runs the script named by a gate line "// TAIK: release tools/NAME.sh" with the job folder.
+#[cfg(target_os = "macos")]
+fn release(job: &Path) -> Result<()> {
+    let gate = record::read_regular(&job.join("submission.gate.mjs"), crate::source::LIMIT)?;
+    let Some(script) = gate
+        .lines()
+        .find_map(|line| line.strip_prefix("// TAIK: release "))
+        .map(str::trim)
+    else {
+        return Ok(());
+    };
+    let name = script.strip_prefix("tools/").unwrap_or("");
+    let plain = !name.is_empty()
+        && name
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.'))
+        && !name.contains("..");
+    if !plain {
+        return Err("a release step must be a script directly in tools/".into());
+    }
+    let log = File::options()
+        .create(true)
+        .append(true)
+        .open(job.join("release.log"))?;
+    let mut child = std::process::Command::new(script)
+        .arg(job)
+        .stdin(std::process::Stdio::null())
+        .stdout(log.try_clone()?)
+        .stderr(log)
+        .spawn()?;
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(300);
+    loop {
+        if let Some(status) = child.try_wait()? {
+            return if status.success() {
+                Ok(())
+            } else {
+                Err(format!("{script} ended with {status}").into())
+            };
+        }
+        if std::time::Instant::now() >= deadline {
+            let _ = child.kill();
+            let _ = child.wait();
+            return Err(format!("{script} exceeded 300 s").into());
+        }
+        std::thread::sleep(std::time::Duration::from_millis(50));
     }
 }

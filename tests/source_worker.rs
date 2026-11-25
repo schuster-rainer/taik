@@ -720,3 +720,83 @@ fn a_job_that_arrives_during_work_takes_a_free_slot() {
         "the late job waited: {elapsed:?}"
     );
 }
+
+#[test]
+fn a_gate_can_name_a_release_step_for_its_accepted_artifact() {
+    let root = tempfile::Builder::new()
+        .prefix("taik-release-")
+        .tempdir_in("/tmp")
+        .unwrap();
+    // The checkout is the working directory. The sandbox hides it from worker and gate.
+    let checkout = root.path().join("checkout");
+    fs::create_dir_all(checkout.join("tools")).unwrap();
+    let script = checkout.join("tools/mark.sh");
+    fs::write(&script, "#!/bin/sh\necho released > \"$1/released.txt\"\n").unwrap();
+    fs::set_permissions(&script, fs::Permissions::from_mode(0o700)).unwrap();
+    let brief = root.path().join("brief.md");
+    fs::write(&brief, "Deliver a marked document\n").unwrap();
+    let worker = root.path().join("lead");
+    fs::write(
+        &worker,
+        "#!/bin/sh\necho '{\"type\":\"result\",\"is_error\":false,\"result\":\"<!doctype html><p>ok</p>\",\"usage\":{\"output_tokens\":1},\"total_cost_usd\":0,\"modelUsage\":{\"m\":{}}}'\n",
+    )
+    .unwrap();
+    fs::set_permissions(&worker, fs::Permissions::from_mode(0o700)).unwrap();
+    let cases = [
+        (
+            "released",
+            "// TAIK: release tools/mark.sh\nconsole.log('PASS: any');\n",
+            true,
+        ),
+        (
+            "rejected",
+            "// TAIK: release tools/mark.sh\nthrow new Error('no');\n",
+            false,
+        ),
+        (
+            "outside",
+            "// TAIK: release ../tools/mark.sh\nconsole.log('PASS: any');\n",
+            false,
+        ),
+        ("unnamed", "console.log('PASS: any');\n", false),
+    ];
+    for (name, gate_text, released) in cases {
+        let gate = root.path().join(format!("{name}.mjs"));
+        fs::write(&gate, gate_text).unwrap();
+        let state = root.path().join(name);
+        let queued = factory()
+            .arg("queue-source")
+            .arg(&state)
+            .arg(name)
+            .arg(&brief)
+            .arg(&gate)
+            .output()
+            .unwrap();
+        assert!(queued.status.success(), "{queued:?}");
+        factory()
+            .arg("drain")
+            .arg(&state)
+            .current_dir(&checkout)
+            .env("TAIK_LEAD_WORKER", &worker)
+            .env_remove("TAIK_SECOND_WORKER")
+            .env_remove("TAIK_AUTO_PROPOSE")
+            .output()
+            .unwrap();
+        let job = state.join(format!("jobs/job-{name}"));
+        assert_eq!(job.join("released.txt").exists(), released, "{name}");
+        // A second pass over the finished job does not release again.
+        if released {
+            fs::remove_file(job.join("released.txt")).unwrap();
+            factory()
+                .arg("drain")
+                .arg(&state)
+                .current_dir(&checkout)
+                .output()
+                .unwrap();
+            assert!(
+                !job.join("released.txt").exists(),
+                "{name} was released twice"
+            );
+        }
+    }
+}

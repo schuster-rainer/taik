@@ -1,0 +1,20 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-12
+intent=Den Freigabeschritt vom Dienst ausführen lassen, wenn das Gate ihn nennt.
+baseline=taik-seed c6fdbf1820c92f51fb2d76620d3d375d3a70e013c6dfe36571cc55843e8a6bcd
+worker=claude-fable
+decided_by=the installed taik-seed c6fdbf1820c92f51fb2d76620d3d375d3a70e013c6dfe36571cc55843e8a6bcd at /Users/rainer/.local/state/taik-factory/taik-seed
+limits=99 rounds; gate 900s; candidate checks 10s each
+gate_sha256=76b41170f51fa7e1a5424ba01f903bcf2276b8f8f19e4d87f952e88d18b6b0ce
+gate_ms=20351
+checks=PASS: Rust tests, Clippy with warnings denied, release build; candidate seeded, rejected an invalid procedure without touching the accepted record, and extended it
+evidence=round-12.checks.log
+artifact=round-12-taik-seed
+artifact_sha256=f3f5893e06684e79a5ab0744abf0456d8e5e862d5e4cae8d565eb31badeaedf7
+rollback=round-12.rollback-taik-seed
+continuation=Restart the service so that it runs the accepted binary.
+advance=false
+end
