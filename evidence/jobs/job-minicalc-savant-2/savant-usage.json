@@ -1,0 +1,11 @@
+[
+ {
+  "round": 1,
+  "ms": 30720,
+  "prompt_tokens": 1431,
+  "completion_tokens": 16245,
+  "cost_usd": 0.008266,
+  "decision": "accepted",
+  "checks": "PASS: 40 Verhaltenspr\u00fcfungen bestanden"
+ }
+]

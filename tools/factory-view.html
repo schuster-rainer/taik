@@ -55,7 +55,7 @@
   #taik-activity { min-width: 0; min-height: 0; overflow-y: auto; padding: 10px 12px 18px; margin-left: -12px;
     display: flex; flex-direction: column; gap: 20px; }
   #taik-live .preview { min-width: 0; min-height: 0; padding: 10px 12px 18px; margin-right: -12px; display: grid;
-    grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1.5fr) minmax(0, 1fr); gap: 20px; }
+    grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1.5fr) minmax(0, 1fr); gap: 20px; }
 
   /* Raised surfaces */
   #taik-activity > section, #taik-live .preview-pane { margin: 0; padding: 16px 18px 18px; border-radius: 20px;
@@ -144,6 +144,26 @@
   #taik-live .metric-bar { display: block; height: 100%; border-radius: 4px; background: var(--active); }
   #taik-live .metric-bar.before { background: var(--quiet); }
 
+  /* Flow of a round */
+  #taik-live .flow { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  #taik-live .flow-node { position: relative; margin: 0 10px; padding: 9px 12px 10px; border-radius: 14px; box-shadow: var(--nm-raised-sm); min-width: 0; }
+  #taik-live .flow-node + .flow-node::before { content: ""; position: absolute; left: -20px; top: 50%; width: 20px; height: 3px; margin-top: -1.5px;
+    border-radius: 2px; background: var(--nm-shade); }
+  #taik-live .flow-node.done + .flow-node::before { background: var(--active); }
+  #taik-live .flow-node.done + .flow-node.active::before { background: repeating-linear-gradient(90deg, var(--active) 0 5px, transparent 5px 10px);
+    background-size: 10px 3px; animation: taik-flow .6s linear infinite; }
+  @keyframes taik-flow { to { background-position: 10px 0; } }
+  @media (prefers-reduced-motion: reduce) { #taik-live .flow-node.done + .flow-node.active::before { animation: none; } }
+  #taik-live .flow-node.active { box-shadow: var(--nm-inset); }
+  #taik-live .flow-op { display: block; font: 600 .6rem var(--mono); letter-spacing: .14em; color: var(--quiet); }
+  #taik-live .flow-node.done .flow-op, #taik-live .flow-node.active .flow-op { color: var(--active); }
+  #taik-live .flow-node.failed .flow-op { color: var(--bad); }
+  #taik-live .flow-name { display: flex; align-items: center; gap: 7px; font-size: .86rem; font-weight: 620; margin-top: 2px; }
+  #taik-live .flow-node.active .flow-name::after { content: ""; width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--active);
+    border-right-color: transparent; animation: taik-working .9s linear infinite; }
+  #taik-live .flow-detail { display: block; margin-top: 1px; color: var(--quiet); font-size: .72rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #taik-live .flow-pane { gap: 10px; padding-bottom: 14px; }
+
   /* Right column */
   #taik-live taik-artifact-preview { flex: 1; min-height: 0; }
   #taik-live .work-panels { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: 18px; }
@@ -151,9 +171,8 @@
   #taik-live .work-output { display: flex; flex-direction: column; gap: 10px; min-width: 0; min-height: 0; }
   #taik-live #taik-job-content { min-width: 0; min-height: 0; overflow: auto; flex: 0 1 auto; }
   #taik-live #taik-job-content[data-mode="code"] { flex: 1 1 0; padding: 10px 14px; }
-  #taik-live #taik-job-content[data-mode="code"] .sub { position: sticky; top: -10px; left: 0; margin: -10px -14px 6px; padding: 8px 14px 6px;
-    background: var(--nm-base); border-radius: 13px 13px 0 0; }
-  #taik-live #taik-draft-viewport { order: -1; flex: 1.6 1 0; }
+  #taik-live #taik-draft-viewport { order: -1; flex: 1.4 1 0; }
+  #taik-live .work-output:has(#taik-draft-viewport:not([hidden])) #taik-job-content[data-mode="code"] { flex: 1 1 0; }
   #taik-live #taik-job-observation { min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
   #taik-live #taik-job-observation[hidden] { display: none; }
   #taik-live #taik-job-observation .events { flex: 1; min-height: 0; overflow: auto; margin-top: 10px; }
@@ -163,7 +182,9 @@
     #taik-live { height: auto; padding: 14px 16px 20px; }
     #taik-live .split { grid-template-columns: minmax(0, 1fr); gap: 8px; }
     #taik-activity { overflow: visible; }
-    #taik-live .preview { margin-left: -12px; grid-template-rows: minmax(360px, 55vh) minmax(420px, 60vh); }
+    #taik-live .preview { margin-left: -12px; grid-template-rows: auto minmax(360px, 55vh) minmax(420px, 60vh); }
+    #taik-live .flow { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 0; }
+    #taik-live .flow-node + .flow-node::before { display: none; }
   }
   @media (max-width: 450px) {
     #taik-live .measures { grid-template-columns: 1fr; }
@@ -176,6 +197,10 @@
   <div class="split">
     <main id="taik-activity"></main>
     <aside id="taik-preview" class="preview" aria-label="Vorschau">
+      <section class="preview-pane flow-pane" aria-labelledby="taik-flow-heading">
+        <div class="section-heading"><h2 id="taik-flow-heading">Ablauf</h2><span id="taik-flow-label" class="sub"></span></div>
+        <ol id="taik-flow" class="flow"></ol>
+      </section>
       <section class="preview-pane" aria-labelledby="taik-result-heading">
         <div class="section-heading"><h2 id="taik-result-heading">Ergebnis</h2><span id="taik-result-label" class="sub"></span></div>
         <taik-artifact-preview id="taik-result-viewport" hidden></taik-artifact-preview>
@@ -329,6 +354,41 @@
       }
       renderJobPreview(selectedJob, resultJob);
       renderJobObservation(selectedJob);
+      renderFlow(selectedJob);
+    }
+
+    const flowEl = document.getElementById('taik-flow');
+    const flowLabel = document.getElementById('taik-flow-label');
+    let flowKey = '';
+    function renderFlow(job) {
+      const round = Object.keys(job?.progress ?? {}).sort().at(-1);
+      const events = job?.progress?.[round] ?? [];
+      const last = events.at(-1);
+      const record = job?.rounds.at(-1)?.fields ?? {};
+      const running = !!job && isPending(job) && !['accepted', 'retained', 'rejected', 'error'].includes(last?.kind);
+      const reached = !job ? -1 : !last ? (job.rounds.length ? 4 : 0)
+        : ({ start: 0, evaluate: 2, checks: 2, compare: 2, accepted: 4, retained: 4, rejected: 4, error: 4 })[last.kind] ?? 1;
+      const failed = !running && (record.decision === 'rejected' || last?.kind === 'error');
+      const software = job?.baseline.fields.kind === 'software';
+      const worker = record.worker_model || record.worker || (software ? 'Code-Worker' : 'lokale Suche');
+      const cost = record.worker_cost_usd ? ` · ${Number(record.worker_cost_usd).toFixed(3)} $` : '';
+      const nodes = [
+        ['STRUCTURE', 'Auftrag', job ? job.id.replace(/^job-/, '') : 'kein Auftrag'],
+        ['ADD', 'Worker', running && reached === 1 ? (last.detail ?? '') : worker + cost],
+        ['REDUCE', 'Gate', record.gate_ms ? `${record.gate_ms} ms` : software ? 'fixiertes Prüfgate' : 'feste Prüfungen'],
+        ['REFLECT', 'Entscheidung', running ? 'steht aus' : failed ? 'abgelehnt' : record.decision === 'accepted' ? 'angenommen' : (record.decision ?? 'steht aus')],
+        ['RETAIN', 'Bestand', job ? `${job.rounds.length} ${job.rounds.length === 1 ? 'Protokoll' : 'Protokolle'}` : ''],
+      ];
+      const html = nodes.map(([operation, name, detail], index) => {
+        const state = index < reached || (!running && index <= reached) ? 'done' : index === reached && running ? 'active' : '';
+        const tone = failed && index === 3 ? ' failed' : '';
+        return `<li class="flow-node ${state}${tone}"><span class="flow-op">${operation}</span><span class="flow-name">${name}</span><span class="flow-detail" title="${escape(detail)}">${escape(detail)}</span></li>`;
+      }).join('');
+      const label = !job ? '' : running ? `Runde ${job.rounds.length + 1} läuft` : job.rounds.length ? `Runde ${job.rounds.length} abgeschlossen` : 'eingereiht';
+      if (html + label === flowKey) return;
+      flowKey = html + label;
+      flowEl.innerHTML = html;
+      flowLabel.textContent = label;
     }
 
     function renderJobObservation(job) {
@@ -365,7 +425,7 @@
       const showDraft = /^\s*<(?:!doctype\b|html\b|head\b|body\b|[a-z][\w-]*[\s/>])/i.test(draft ?? '');
       draftViewport.hidden = !showDraft;
       if (showDraft) draftViewport.show(job.id, draft);
-      jobLabel.textContent = job?.id ?? '';
+      jobLabel.textContent = (job?.id ?? '').replace(/^job-/, '');
 
       if (code) {
         const offset = jobContent.scrollTop;
@@ -373,7 +433,8 @@
         const status = showDraft ? 'Arbeitsvorschau · Live-Entwurf ohne Skripte'
           : job.draft ? 'Quellcode · Live-Entwurf' : program ? `Freigegebenes Programm · ${escape(accepted.fields.artifact)}` : 'Freigegebener Quellcode';
         jobContent.dataset.mode = 'code';
-        jobContent.innerHTML = `<p class="sub">${status}</p><pre class="source-code"><code>${highlight(code)}</code></pre>`;
+        jobLabel.textContent = `${job.id.replace(/^job-/, '')} · ${status}`;
+        jobContent.innerHTML = `<pre class="source-code"><code>${highlight(code)}</code></pre>`;
         jobContent.scrollTop = job.draft && follow ? jobContent.scrollHeight : offset;
       } else if (showArtifact) {
         jobContent.dataset.mode = 'note';

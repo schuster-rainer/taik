@@ -1,0 +1,12 @@
+decision=observed
+identity=savant-worker-02
+intent=Savant und Opus an einem komplexeren Problem über die Factory vergleichen, nach Preis und Leistung.
+scope=One job: an interpreter for a small expression language in Rust with operator precedence, overflow rules and error positions. Same brief, same gate with 40 behaviour checks, same worker prompt and repair loop, two runs per model. Opus ran as the unattended worker of the service, Savant through attached rounds from a script.
+job_author=Brief and gate were written by Savant from request-harder.run. A proposal by Opus through taik-seed propose ran into the 150 s worker limit. claude-fable checked all 40 cases against the brief before the runs.
+savant=2 of 2 accepted in round 1. 25.3 s and 30.7 s. 0.0069 and 0.0083 USD. Records ../job-minicalc-savant-1/round-01.run, ../job-minicalc-savant-2/round-01.run
+opus=2 of 2 accepted in round 1. 39.0 s and 37.1 s. 0.118 and 0.096 USD list price. Records ../job-minicalc-opus-1/round-01.run, ../job-minicalc-opus-2/round-01.run
+observation=Same result on the gate. Savant took about three quarters of the time and one fourteenth of the list price.
+bias=The job was written by Savant, which may favour Savant. The first comparison used jobs written by Opus and claude-fable, with the same outcome.
+limitations=Three jobs in total, none of which either model failed. The gate measures correctness on its cases, not design or maintainability. Savant reasoning effort was low, Opus effort medium. Opus cost nothing extra on the subscription. Savant is paid per token.
+continuation=On the evidence so far Savant is the cheaper worker at equal acceptance. A job that separates the models still has to be found. Whether the service may call Savant is the user's decision.
+end

@@ -1,0 +1,19 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=Entwickle in Rust einen Interpreter für die kleine Ausdruckssprache MiniCalc als einzelne Datei main.rs.
+baseline=(empty)
+worker=savant-1-4-attached
+limits=4 rounds; worker 150s; verifier 15s; 96KiB source
+gate_sha256=7b32ba31f96473bef9187e7253ee81412bdddd90364181fdf57d1372ae1f9bde
+gate_ms=676
+checks=PASS: 40 Verhaltensprüfungen bestanden
+artifact=round-01.html
+rejected_candidate=
+feedback=
+follow_up=
+continuation=Retain the accepted artifact. No further work was authorized by this round.
+advance=false
+end
