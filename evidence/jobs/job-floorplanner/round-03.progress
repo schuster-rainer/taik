@@ -1,0 +1,10 @@
+2192	start	Factory hat den Auftrag übernommen
+3312	worker	Codex erhält Auftrag und akzeptierten Ausgangsstand
+810753	worker	thread.started
+1356792	worker	item.completed/error
+1358307	worker	turn.started
+76371284	worker	item.completed/agent_message
+76379396	worker	turn.completed
+76594697	evaluate	Die Factory führt die unveränderte unabhängige Prüfung aus
+76644163	checks	PASS: offline document, independent fixture geometry, 2×2 cart route across 21 steps, legal and illegal moves, projection round-trip, undo
+76652255	accepted	round-03.html Use the accepted artifact in the next justified round, or run it locally.

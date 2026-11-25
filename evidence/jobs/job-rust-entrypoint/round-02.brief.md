@@ -1,0 +1,2 @@
+Quellcode-Aufträge durch den Factory-Dienst annehmen und prüfen
+Nutze dieselbe Verzeichniswarteschlange und denselben gespeicherten Eingabestand. Wecke den Dienst mit dem vorhandenen Dateisystem-Ereignis. Erhalte das unabhängige Gate, die Codex-Anmeldung und veröffentlichte Aufträge. Prüfe die Wiederverwendung einer gemessenen Suchreduktion nach Dienstneustart und zeige eingereihte Aufträge und Runden im Viewer.

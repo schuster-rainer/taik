@@ -1,0 +1,17 @@
+decision=accepted
+procedure=trim-then-lower
+tags=ash,birch-2,cedar,elm,pine
+intent=Add tags using the retained procedure
+baseline="evidence/04-refined.run"
+operations=Reuse the retained procedure and tags; add, sort and deduplicate tags; check output
+scope=ASCII tags; local record only
+limits=8 added tags, 64 bytes per tag, 32 retained tags, 8192 bytes per record; one candidate, one probe input
+input=["ash", "cedar", "elm", "   BIRCH-2\t", " \tPINE  ", "birch-2", " \t ", " ELM "]
+expected_tags=["ash", "birch-2", "cedar", "elm", "pine"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+lowercase_bytes=artifact:32, probe:9
+continuation=Stop this invocation. The record is available for a later composition.
+end

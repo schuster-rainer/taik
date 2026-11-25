@@ -1,0 +1,92 @@
+    Checking taik-seed v0.1.0 (/Users/rainer/projects/ideas/talk/target/working/rust-entrypoint)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.17s
+   Compiling taik-seed v0.1.0 (/Users/rainer/projects/ideas/talk/target/working/rust-entrypoint)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.21s
+     Running unittests src/main.rs (target/debug/build/taik-seed/e9698ef83c16a673/out/taik_seed-e9698ef83c16a673)
+
+running 1 test
+test procedure::tests::every_admitted_order_agrees_with_the_independent_reference ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/factory.rs (target/debug/build/taik-seed/b329e1d0f433d8ac/out/factory-b329e1d0f433d8ac)
+
+running 4 tests
+expected a regular file
+test accepted_records_reject_a_fifo_without_blocking ... ok
+test concurrent_publication_has_one_winner ... ok
+test invalid_proposal_and_staging_cannot_replace_or_seed_accepted_work ... ok
+test service_resumes_from_an_accepted_round_and_wakes_for_new_work ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.36s
+
+   Compiling taik-seed v0.1.0 (/Users/rainer/projects/ideas/talk/target/working/rust-entrypoint)
+    Finished `release` profile [optimized] target(s) in 1.43s
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=Build a minimal offline HTML document containing the heading Factory Probe. Return only the complete document with doctype and heading.
+baseline=(empty)
+worker=codex-subscription
+limits=4 rounds; worker 150s; verifier 15s; 96KiB source
+gate_sha256=fc1d6958c92ad5f03512ac6ac80b1da12c0fb1c533d69d6e08e7d131e48433ee
+checks=PASS: complete offline document with Factory Probe heading
+artifact=round-01.html
+continuation=Run the accepted artifact or supply the next justified brief.
+advance=false
+end
+
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-04
+intent=Extend the accepted isometric supermarket planner with real undo.
+baseline=/Users/rainer/projects/ideas/talk/target/working/rust-entrypoint/proof/floorplanner/round-03.html
+worker=codex-attached
+limits=4 rounds; worker 150s; verifier 15s; 96KiB source
+gate_sha256=d40c92793601f29f354d69b61156755c57e084a4ac5a408af3f56f76e2b31573
+checks=PASS: offline document, independent fixture geometry, 2×2 cart route across 21 steps, legal and illegal moves, projection round-trip, undo
+artifact=round-04.html
+continuation=Run the accepted artifact or supply the next justified brief.
+advance=false
+end
+
+changed pinned input: /Users/rainer/projects/ideas/talk/target/working/rust-entrypoint/proof/floorplanner/gate.sha256
+decision=rejected
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=Build an isometric floor planner for a fictional 24 by 18 tile ALDI-style discount supermarket.
+baseline=(empty)
+worker=codex-attached
+limits=4 rounds; worker 150s; verifier 15s; 96KiB source
+gate_sha256=d40c92793601f29f354d69b61156755c57e084a4ac5a408af3f56f76e2b31573
+checks=Verifier exited with exit status: 1
+artifact=
+continuation=Retain the previous accepted source and inspect the failed evidence.
+advance=false
+end
+
+checks=validated feedback retains fir; original, reused and rederived procedures agree on every held-out output
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-04
+intent=Extend the accepted isometric supermarket planner with real undo.
+baseline=/Users/rainer/projects/ideas/talk/target/working/rust-entrypoint/proof/final/floorplanner/round-03.html
+worker=codex-attached
+limits=4 rounds; worker 150s; verifier 15s; 96KiB source
+gate_sha256=d40c92793601f29f354d69b61156755c57e084a4ac5a408af3f56f76e2b31573
+checks=PASS: offline document, independent fixture geometry, 2×2 cart route across 21 steps, legal and illegal moves, projection round-trip, undo
+artifact=round-04.html
+continuation=Run the accepted artifact or supply the next justified brief.
+advance=false
+end
+PASS: held-out results and work counts match archived runs
+
+Factory LaunchAgent running as PID 6365; installed binary matches accepted artifact.

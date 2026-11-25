@@ -1,0 +1,24 @@
+decision=accepted
+procedure=lower,trim,sort,dedup,drop-blank
+tags=ash,cedar
+identity="event-verification.run"
+intent=Create a canonical tag list and retain its procedure
+baseline=None
+baseline_procedure=None
+operations=Add raw tags, sort canonical forms, reduce duplicates, and inspect the result and probes
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=["  CEDAR ", "cedar", "\tASH"]
+expected_tags=["ash", "cedar"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:17, sort_items:3
+probe_work=lowercase_bytes:14, sort_items:4
+evaluation_elapsed_us=7
+limitations=This invocation checked canonical ASCII output and both independent probes.
+continuation=Stop at the one-candidate limit. Verified 2 canonical tags from 3 input tags. The retained procedure passed both probes.
+advance=false
+end

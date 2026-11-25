@@ -1,0 +1,15 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=Kurzanleitung zur Auftragsannahme der TAIK Factory erstellen
+baseline=(empty)
+worker=codex-subscription
+limits=4 rounds; worker 150s; verifier 15s; 96KiB source
+gate_sha256=74ee5e9bd337d4d0742558f80dd484e2ef39519f96a171c81469c03ffccd3b8c
+checks=PASS: offline HTML, heading, runnable example and named output paths
+artifact=round-01.html
+continuation=Run the accepted artifact or supply the next justified brief.
+advance=false
+end

@@ -1,0 +1,8 @@
+decision=accepted
+kind=search
+procedure=valid-unique
+tags=
+intent=Wiederholte Suchentscheidungen aus gemessener Prüfleistung ableiten und wiederverwenden
+evidence=../job-selbstverbesserung/round-02.run
+observed_candidate_probes=16
+end

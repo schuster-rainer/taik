@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Template. Replace STATE, CHECKOUT, NODE_BIN and CLAUDE with absolute paths, then copy to ~/Library/LaunchAgents/. -->
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>local.taik.factory</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>STATE/taik-seed</string>
+		<string>serve</string>
+		<string>STATE</string>
+		<string>--reflect</string>
+	</array>
+	<key>WorkingDirectory</key>
+	<string>CHECKOUT</string>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>PATH</key>
+		<string>NODE_BIN:/usr/bin:/bin:/usr/sbin:/sbin</string>
+		<!-- Grants the service the right to spend Claude usage on queued rounds. Remove to use Codex. -->
+		<key>TAIK_LEAD_WORKER</key>
+		<string>CLAUDE</string>
+	</dict>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>KeepAlive</key>
+	<true/>
+	<key>ThrottleInterval</key>
+	<integer>5</integer>
+	<key>Umask</key>
+	<integer>63</integer>
+	<key>StandardOutPath</key>
+	<string>STATE/service.log</string>
+	<key>StandardErrorPath</key>
+	<string>STATE/service-error.log</string>
+</dict>
+</plist>

@@ -1,0 +1,30 @@
+   Compiling taik-seed v0.1.0 (/Users/rainer/projects/ideas/talk)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.95s
+     Running unittests src/main.rs (target/debug/deps/taik_seed-c3a5d7c891872f43)
+
+running 2 tests
+test procedure::tests::reference_rejects_a_changed_search_decision ... ok
+test procedure::tests::every_admitted_order_agrees_with_the_independent_reference ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/factory.rs (target/debug/deps/factory-005f187fc64c1821)
+
+running 4 tests
+expected a regular file
+test accepted_records_reject_a_fifo_without_blocking ... ok
+test concurrent_publication_has_one_winner ... ok
+test invalid_proposal_and_staging_cannot_replace_or_seed_accepted_work ... ok
+test service_resumes_from_an_accepted_round_and_wakes_for_new_work ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.55s
+
+    Checking taik-seed v0.1.0 (/Users/rainer/projects/ideas/talk)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.46s
+   Compiling taik-seed v0.1.0 (/Users/rainer/projects/ideas/talk)
+    Finished `release` profile [optimized] target(s) in 1.37s
+PASS: LaunchAgent started the reflection, retained the worker timeout and automatically used a local proposal from the published measurement.
+PASS: Four replay workloads compare equal search decisions and verify the selected first-use policy before any table lookup.
+PASS: Service test confirms a restart with no work does not load the table. The next tag job verifies it before using it.
+PASS: The native viewer observed two real source chunks through file notifications, then the accepted output after its gate.
+PASS: WebKit highlighted accepted source, rendered the retained Floorplanner Canvas in the right pane and blocked a network request.

@@ -1,0 +1,12 @@
+decision=accepted
+kind=search
+procedure=precomputed
+tags=
+intent=Prüfung der Suchtabelle erst bei tatsächlicher Nutzung untersuchen
+evidence=request.run
+worker=codex-subscription
+startup_candidate_probes=22
+checks=Measured eager verification on a replay with no tag jobs.
+continuation=Worker unavailable: process deadline exceeded
+advance=false
+end

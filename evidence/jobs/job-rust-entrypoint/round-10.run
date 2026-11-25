@@ -1,0 +1,19 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-10
+intent=Einen zweiten unbeaufsichtigten Code-Worker einsetzen, wenn der Codex-Worker ausfällt.
+baseline=round-09-taik-seed
+rollback=round-09-taik-seed and round-10.rollback.plist
+worker=claude-fable
+operations=When the Codex worker fails before a gate judgement and TAIK_SECOND_WORKER names a Claude CLI, run it without tools in the same sandbox on the same prompt. Record the takeover, model, output tokens, cost and duration. The gate and the round budget are unchanged.
+checks=PASS: Rust tests including takeover, a failing and an error-reporting second worker, Clippy, release build. The live service rejected a probe job before the change and accepted the same brief and gate afterwards with worker=claude-cli.
+evidence=round-10.checks.log
+experiment=../job-worker-verfuegbarkeit/round-01.run -> ../job-worker-verfuegbarkeit-2/round-01.run
+artifact=round-10-taik-seed
+artifact_sha256=d4c7f1f2b98125399b3447480fc166ceccc1357018640c8dad6202d412b295df
+limitations=One probe job. The second worker shows no live draft while it writes. Each round still waits about 5 s for the failing Codex login first. The LaunchAgent now carries TAIK_SECOND_WORKER, a permission the user granted in this session.
+continuation=The user named Opus the leading worker. Skip the Codex attempt when a leading worker is configured.
+advance=false
+end

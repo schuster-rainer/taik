@@ -1,0 +1,17 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=Unify the Factory entrypoint.
+baseline=round-01.baseline.tar.gz
+worker=codex
+operations=Reuse Rust publication and progress tracking; integrate Codex, independent source verification and experiment 12; retire two Python launchers.
+scope=preserve accepted floorplanner, gate hashes, historical experiment and macOS service
+checks=PASS: Rust tests and release build, real signed-in Codex with Node gate, attached floorplanner with original gate, gate change refused, invalid candidate unpublished, same held-out experiment results, LaunchAgent restarted on accepted artifact
+evidence=round-01.checks.log
+artifact=round-01-taik-seed
+artifact_sha256=bb18b0f2affb082c1fae2548ac65dea7670757d1fd34de26b12645963a7408e7
+continuation=Retain the accepted Rust entrypoint. Node remains the runner for JavaScript checks.
+advance=false
+end

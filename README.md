@@ -1,0 +1,154 @@
+<p align="center"><img src="assets/taik-lockup.png" alt="TAIK Factory" width="560"></p>
+
+# TAIK
+
+TAIK is an experiment in a software factory that applies its own creative process to itself. A job states an intent, a worker proposes a candidate, an independent gate judges it, and the decision is kept as a record that later work can build on.
+
+The name is a visual pun on *talk*, as in Smalltalk but not small. It also sounds like the German *Teig*, dough: material that is worked, rests and is worked again. And it is *talk* with the **l** replaced by an **i**, which puts **AI** in the middle. A Teig factory bakes bread.
+
+The specification is [TAIK-FACTORY-SEED-v0.4.md](TAIK-FACTORY-SEED-v0.4.md). It is frozen. [AGENTS.md](AGENTS.md) holds the working rules for agents.
+
+## Status
+
+This is a running seed, not a product. What the evidence supports today:
+
+| Claim | State |
+| --- | --- |
+| A bounded round runs real work and an independent gate decides it | Shown for tag procedures and for HTML software jobs |
+| A rejected candidate leaves the accepted result intact | Shown |
+| Accepted work survives a restart and is reused by later rounds | Shown |
+| The Factory changes its own procedures and viewer through its own gate | Shown for the search procedure and the viewer |
+| The Factory judges and installs its own backend | Not yet. Backend rounds were decided by their authors. See [the process reflection](evidence/jobs/job-prozess-reflexion/summary.run) |
+| Reusing a result across jobs lowers cost (G-03, I-03) | Not supported on software jobs. See [the experiment](evidence/jobs/job-galaxy-quellcode/summary.run) |
+| The seed derives its own learning procedure (I-01) | Not shown. Every learning rule so far was written by an external agent |
+
+[evidence/README.md](evidence/README.md) indexes every job with its brief, gate and decision.
+
+## How a job runs
+
+1. A **brief** states the intent. Its first line names the round.
+2. A **gate** is a Node.js script written before the candidate exists. The Factory pins its SHA-256 for the life of the job.
+3. A **worker** supplies the candidate. The Factory runs the gate on it in a sandbox without network or write access.
+4. The Factory writes a **`.run` record** with the decision, the worker, the gate digest, the checks and the continuation. Records are create-only.
+5. A job has at most four source rounds. A rejected candidate with an actionable assertion goes back to the worker with the diagnosis.
+
+## Build and try
+
+Requires Rust with edition 2024 and a filesystem with hard links. Software jobs need macOS and Node.js.
+
+```sh
+cargo build --release --offline --locked
+run_dir=$(mktemp -d)
+seed=target/release/taik-seed
+
+"$seed" seed "$run_dir/seed.run"
+"$seed" reject "$run_dir/seed.run" "$run_dir/rejected.run" || test "$?" -eq 1
+"$seed" extend "$run_dir/seed.run" "$run_dir/extended.run" '  ELM ' ' ASH' '  '
+"$seed" evolve "$run_dir/extended.run" "$run_dir/evolved.run"
+```
+
+The seed domain is a sorted list of unique ASCII tags together with the order of the operations that normalise it. `reject` proposes a deliberately wrong procedure. `evolve` searches one-step reorderings and accepts one only if it preserves the output and reduces measured work.
+
+Exit codes are `0` for acceptance, `1` for an evaluated rejection and `2` for an invocation or file error.
+
+```sh
+cargo test --offline --locked
+cargo clippy --offline --locked --all-targets -- -D warnings
+```
+
+## Software jobs
+
+One attached round, with the candidate on standard input. `NAME` goes into the record as the worker:
+
+```sh
+taik-seed source evidence/jobs/job-NAME brief.md verify.mjs --attached=NAME < candidate.html
+```
+
+A queued job, worked by the service without supervision:
+
+```sh
+taik-seed queue-source STATE NAME brief.md verify.mjs
+```
+
+`STATE` is the service's state directory. The command snapshots brief and gate into `STATE/jobs/job-NAME` and wakes the service.
+
+Unattended rounds need a worker command:
+
+| Variable | Effect |
+| --- | --- |
+| `TAIK_LEAD_WORKER` | Path to a Claude CLI. It runs first, without tools, as Opus 5.5 at medium effort. Codex is not called for source rounds. |
+| `TAIK_SECOND_WORKER` | Path to a Claude CLI that takes over when the Codex worker fails before a gate judgement. |
+| neither | The signed-in Codex subscription does the work. |
+
+Both workers get the same prompt and the same sandbox. A Claude round records model, output tokens, cost and duration. A failed worker records its stage, kind and duration, never its raw output. Setting either variable lets the service spend usage on your account.
+
+A gate may authorise one follow-up job by starting with `// TAIK: allow-follow-up` and printing one `TAIK_FOLLOWUP: <next intent>` line when it accepts.
+
+## The service
+
+`taik-seed serve STATE` watches `STATE/jobs`, works each job to its final decision and then blocks on the kernel until the next one arrives. It does not poll. `taik-seed drain STATE` runs the same logic once and exits.
+
+On macOS the service can run under launchd. [tools/service/local.taik.factory.plist](tools/service/local.taik.factory.plist) is a template:
+
+```sh
+state="$HOME/.local/state/taik-factory"        # any directory
+mkdir -p "$state" && cp target/release/taik-seed "$state/"
+ln -s "$PWD/evidence/jobs" "$state/jobs"        # keep records in the checkout
+# fill in the template, then:
+cp tools/service/local.taik.factory.plist ~/Library/LaunchAgents/
+launchctl bootstrap "gui/$(id -u)" ~/Library/LaunchAgents/local.taik.factory.plist
+```
+
+Whether the service should stay a persistent process is open. A cold `drain` over the current 22 jobs takes about 5 ms. The in-memory cache of completed jobs pays off from a few hundred archived jobs.
+
+## The viewer
+
+<img src="evidence/jobs/job-factory-neomorph/round-01.screenshot.png" alt="TAIK Factory viewer" width="820">
+
+`./tools/open-factory-view.sh` builds and installs **TAIK Factory.app** into `~/Applications`. The window follows the job with the latest activity and updates on filesystem events. It makes no model calls.
+
+- Left: the goal and the history of the selected job. **Arbeitsschritte** shows the trace of a round, **Prüfprotokoll** its decision record with keys, outcomes, digests, file names and quantities marked.
+- Right, top: the published Floorplanner, running in a script-only sandbox without network.
+- Right, bottom: the selected job. During a round it renders the draft without scripts above its source, next to the live progress.
+
+The viewer is `tools/factory-view.html`. It changes only through a source job. Before installing, check a snapshot:
+
+```sh
+"$HOME/Applications/TAIK Factory.app/Contents/MacOS/factory-view" --snapshot |
+  swift tools/check-factory-design.swift --require-open
+```
+
+## What has been measured
+
+| Observation | Result | Evidence |
+| --- | --- | --- |
+| Reordering the tag procedure | 14 to 9 bytes sent to lowercasing, 4 to 3 items sorted, same output | [job-tag-prozedur](evidence/jobs/job-tag-prozedur/08-local-reduce.run) |
+| Time to the first result with 2000 archived jobs | 239.8 ms to 50.2 ms, median of 8 | [round 9](evidence/jobs/job-rust-entrypoint/round-09.run) |
+| Unattended round without a working worker | rejected, then accepted after a second worker was configured | [before](evidence/jobs/job-worker-verfuegbarkeit/round-01.run), [after](evidence/jobs/job-worker-verfuegbarkeit-2/round-01.run) |
+| Reuse of an accepted operator in another software job | no benefit: 0.122 against 0.100 USD mean, all four runs accepted in round 1 | [summary](evidence/jobs/job-galaxy-quellcode/summary.run) |
+| Reuse including setup on tag batches | slower than both comparators at that sample size | [summary](evidence/jobs/job-galaxy-intelligence/summary.run) |
+
+## Limits
+
+- macOS only for software jobs, the service template and the viewer. The Linux watcher is untested.
+- Records and gates are trusted local files. Power-loss recovery is untested.
+- Accepted backend binaries are not in this repository. Each record carries the SHA-256 of its binary.
+- Records contain absolute paths of the machine they were written on.
+- Most jobs so far changed the Factory itself. Capability growth in the sense of section 2.5 of the specification is not shown.
+
+## Commands
+
+```text
+taik-seed seed OUTPUT.run
+taik-seed extend BASELINE.run OUTPUT.run TAG [TAG ...]
+taik-seed reject|refine BASELINE.run OUTPUT.run
+taik-seed evolve BASELINE.run OUTPUT.run
+taik-seed evaluate BASELINE.run OUTPUT.run ORDER
+taik-seed source JOB BRIEF GATE [--attached[=WORKER]]
+taik-seed experiment BASELINE.run OUTPUT_DIRECTORY
+taik-seed queue STATE BASELINE.run
+taik-seed queue-source STATE NAME BRIEF GATE
+taik-seed queue-self STATE
+taik-seed drain|serve STATE
+taik-seed serve STATE --reflect
+```

@@ -1,0 +1,19 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-08
+intent=Den Worker, der Quellcode einhängt, im Entscheidungsprotokoll beim Namen nennen.
+baseline=round-07-taik-seed
+rollback=round-08.rollback-taik-seed
+worker=claude-fable
+operations=Replace the fixed worker label of attached source rounds with a validated name from the command line. Use it for a real viewer round before installing.
+checks=PASS: Rust tests, Clippy, release build, an invalid worker name exits 2 without creating a job, a named attached round was accepted and recorded, launchd restarted the service on the new binary.
+evidence=round-08.checks.log
+experiment=../job-factory-neomorph/round-01.run
+artifact=round-08-taik-seed
+artifact_sha256=a41f5e88089ff5226b2fe08da8998a8b623a13739b2b404256a95135b8fae461
+limitations=The viewer round ran on the debug build of the same source. Queued rounds still use the Codex subscription worker, which had no quota during this round.
+continuation=Queued jobs cannot run while the only unattended worker has no quota. Measure whether a second worker command is needed before adding one.
+advance=false
+end

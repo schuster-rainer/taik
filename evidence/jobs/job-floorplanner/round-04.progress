@@ -1,0 +1,9 @@
+122	start	Factory hat den Auftrag übernommen
+451	worker	Eingehängter Codex-Worker liefert Quellcode
+1324	worker	4096 Bytes Quellcode empfangen
+1483	worker	8192 Bytes Quellcode empfangen
+1499	worker	12288 Bytes Quellcode empfangen
+1513	worker	13402 Bytes Quellcode empfangen
+1520	evaluate	Unabhängiges, gespeichertes Prüfgate ausführen
+99068	checks	PASS: offline document, independent fixture geometry, 2×2 cart route across 21 steps, legal and illegal moves, projection round-trip, undo
+109750	accepted	Run the accepted artifact or supply the next justified brief.

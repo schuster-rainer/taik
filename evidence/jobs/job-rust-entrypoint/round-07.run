@@ -1,0 +1,18 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-07
+intent=Follow a simulated activation result with an isolated cold-start and fallback check.
+baseline=round-06-taik-seed
+rollback=round-07.baseline.tar.gz
+worker=codex
+operations=Use the published simulation as a work input, invoke the current Factory process in isolated control and recovery states, reject a deliberately wrong decision and verify its fallback.
+checks=PASS: Rust tests, Clippy, release build, live service creates and accepts the isolated cold-start job, real search table remains byte-identical.
+evidence=round-07.checks.log
+experiment=../job-suchtabelle-kaltstart/round-01.run
+artifact=round-07-taik-seed
+artifact_sha256=8b568cf9d6fa96baa52b645f95f54e2446c8c18d600d184cf2acff8fcd255206
+continuation=Retain the existing search policy and stop this experiment after both policies produced the same accepted result.
+advance=false
+end

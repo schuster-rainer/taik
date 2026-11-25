@@ -1,0 +1,119 @@
+{
+  "machine": {
+    "platform": "darwin",
+    "architecture": "arm64",
+    "release": "24.6.0",
+    "cpu": "Apple M1 Max",
+    "node": "v20.19.4"
+  },
+  "binaries": [
+    {
+      "path": "/Users/rainer/projects/ideas/talk/evidence/jobs/job-rust-entrypoint/round-08-taik-seed",
+      "sha256": "a41f5e88089ff5226b2fe08da8998a8b623a13739b2b404256a95135b8fae461"
+    },
+    {
+      "path": "/private/tmp/claude-501/-Users-rainer-projects-ideas-talk/104344f5-1071-4318-a9e7-f9f055250648/scratchpad/round-09-candidate",
+      "sha256": "d8ad0efbe976cf85735ffa4df236dbbb6bf3bb6b43d7cb230ea3d621647c7099"
+    }
+  ],
+  "process": "Warm persistent serve. Atomic local job publication to readable terminal .run. One warmup plus balanced serial trials. Output and archived bytes checked.",
+  "limits": "One 3-round local tag workload, warm filesystem, approximately 1 ms observation interval, no submission fsync or remote software jobs. Archive grows by one job per trial.",
+  "results": [
+    {
+      "version": 0,
+      "completed_before_warmup": 0,
+      "median_ms": 29.652228999999807,
+      "empirical_p95_ms": 49.96179200000006,
+      "samples_ms": [
+        30.54662499999995,
+        26.07262499999979,
+        28.757832999999664,
+        28.51337499999954,
+        28.359166999999616,
+        33.659332999999606,
+        49.96179200000006,
+        33.2554999999993
+      ]
+    },
+    {
+      "version": 1,
+      "completed_before_warmup": 0,
+      "median_ms": 27.33312449999994,
+      "empirical_p95_ms": 34.38349999999991,
+      "samples_ms": [
+        27.166457999999693,
+        32.08879199999956,
+        27.20091599999978,
+        26.936416999999892,
+        34.38349999999991,
+        27.620332999999846,
+        26.367582999999286,
+        27.4653330000001
+      ]
+    },
+    {
+      "version": 0,
+      "completed_before_warmup": 500,
+      "median_ms": 81.83716700000014,
+      "empirical_p95_ms": 111.46250000000055,
+      "samples_ms": [
+        80.35141699999986,
+        81.72662500000024,
+        81.94770900000003,
+        89.29575000000023,
+        80.26491600000008,
+        111.46250000000055,
+        79.45870800000012,
+        82.22404199999983
+      ]
+    },
+    {
+      "version": 1,
+      "completed_before_warmup": 500,
+      "median_ms": 33.85504149999997,
+      "empirical_p95_ms": 39.439916999999696,
+      "samples_ms": [
+        33.13737500000025,
+        34.31170800000018,
+        35.60124999999971,
+        35.22529100000065,
+        32.031167000000096,
+        33.39837499999976,
+        39.439916999999696,
+        33.08887499999946
+      ]
+    },
+    {
+      "version": 0,
+      "completed_before_warmup": 2000,
+      "median_ms": 239.82858350000015,
+      "empirical_p95_ms": 261.2227499999999,
+      "samples_ms": [
+        237.33058299999993,
+        237.83016700000007,
+        240.59679199999937,
+        261.2227499999999,
+        242.03799999999956,
+        238.97620800000004,
+        245.90683399999944,
+        239.06037500000093
+      ]
+    },
+    {
+      "version": 1,
+      "completed_before_warmup": 2000,
+      "median_ms": 50.21462500000007,
+      "empirical_p95_ms": 63.50500000000011,
+      "samples_ms": [
+        53.635833000000275,
+        49.479041999999936,
+        49.63312500000029,
+        63.50500000000011,
+        50.79612499999985,
+        53.28045800000018,
+        49.07383300000038,
+        48.720375000000786
+      ]
+    }
+  ]
+}

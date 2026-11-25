@@ -1,0 +1,17 @@
+decision=accepted
+procedure=lower-then-trim
+tags=ash,cedar,elm
+intent=Add tags using the retained procedure
+baseline="evidence/01-seed.run"
+operations=Reuse the retained procedure and tags; add, sort and deduplicate tags; check output
+scope=ASCII tags; local record only
+limits=8 added tags, 64 bytes per tag, 32 retained tags, 8192 bytes per record; one candidate and one probe
+input=["ash", "cedar", "  ELM ", " ASH", "  "]
+expected_tags=["ash", "cedar", "elm"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+lowercase_bytes=artifact:20, probe:14
+continuation=Stop this invocation. The record is available for a later composition.
+end

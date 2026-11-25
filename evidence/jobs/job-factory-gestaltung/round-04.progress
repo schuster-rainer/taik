@@ -1,0 +1,11 @@
+600	start	Factory hat den Auftrag übernommen
+4381	worker	Eingehängter Codex-Worker liefert Quellcode
+4420	worker	4096 Bytes Quellcode empfangen
+4437	worker	8192 Bytes Quellcode empfangen
+4452	worker	12288 Bytes Quellcode empfangen
+4467	worker	16384 Bytes Quellcode empfangen
+6903	worker	20480 Bytes Quellcode empfangen
+6949	worker	23813 Bytes Quellcode empfangen
+6956	evaluate	Unabhängiges, gespeichertes Prüfgate ausführen
+78036	checks	PASS: local evidence panel with intact embedded JPEG
+91062	accepted	Retain the accepted artifact. No further work was authorized by this round.

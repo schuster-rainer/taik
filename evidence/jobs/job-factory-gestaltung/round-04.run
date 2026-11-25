@@ -1,0 +1,18 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-04
+intent=Den geprüften UI-Stand veröffentlichen und in die laufende Factory laden.
+baseline=/Users/rainer/projects/ideas/talk/evidence/jobs/job-factory-gestaltung/round-02.html
+worker=codex-attached
+limits=4 rounds; worker 150s; verifier 15s; 96KiB source
+gate_sha256=d4feb1f67cf6a0db364dbde521301794bc734be22fab94f6eae09519703760ef
+checks=PASS: local evidence panel with intact embedded JPEG
+artifact=round-04.html
+rejected_candidate=
+feedback=
+follow_up=
+continuation=Retain the accepted artifact. No further work was authorized by this round.
+advance=false
+end

@@ -1,0 +1,3 @@
+Unify the Factory entrypoint.
+Reflection: The same tool owns admission and progress, but its tag and source workflows have different executables. Users see this as two factories. The source workflow and experiment 12 should use the existing Rust Factory entrypoint.
+Preserve the accepted floorplanner, existing run journal, gate hashes, prior evidence paths, FIFO handling and independent checks. Prove the Rust command can run a new code job independently and reuse the previous accepted source without changing the gate. Keep this candidate separate until the checks pass. Reduce the two Python entrypoints, not the retained evidence.

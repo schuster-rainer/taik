@@ -1,0 +1,28 @@
+140	start	Factory hat den Auftrag übernommen
+759	worker	Eingehängter Codex-Worker liefert Quellcode
+801	worker	4096 Bytes Quellcode empfangen
+818	worker	8192 Bytes Quellcode empfangen
+833	worker	12288 Bytes Quellcode empfangen
+850	worker	16384 Bytes Quellcode empfangen
+866	worker	20480 Bytes Quellcode empfangen
+880	worker	24576 Bytes Quellcode empfangen
+894	worker	28672 Bytes Quellcode empfangen
+908	worker	32768 Bytes Quellcode empfangen
+940	worker	36864 Bytes Quellcode empfangen
+954	worker	40960 Bytes Quellcode empfangen
+967	worker	45056 Bytes Quellcode empfangen
+979	worker	49152 Bytes Quellcode empfangen
+997	worker	53248 Bytes Quellcode empfangen
+1010	worker	57344 Bytes Quellcode empfangen
+1024	worker	61440 Bytes Quellcode empfangen
+1038	worker	65536 Bytes Quellcode empfangen
+1059	worker	69632 Bytes Quellcode empfangen
+1075	worker	73728 Bytes Quellcode empfangen
+1089	worker	77824 Bytes Quellcode empfangen
+1104	worker	81920 Bytes Quellcode empfangen
+1121	worker	86016 Bytes Quellcode empfangen
+1136	worker	90112 Bytes Quellcode empfangen
+1151	worker	94208 Bytes Quellcode empfangen
+1165	worker	98304 Bytes Quellcode empfangen
+1174	error	worker output exceeded byte limit
+11289	rejected	Execution ended before a repairable gate judgement. Inspect the recorded error.

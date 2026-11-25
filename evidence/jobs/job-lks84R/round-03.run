@@ -1,0 +1,27 @@
+decision=accepted
+procedure=trim,drop-blank,lower,sort,dedup
+tags=ash,cedar
+identity="round-03.run"
+intent=Improve the retained procedure from measured work
+baseline=Some("/Users/rainer/.local/state/taik-factory/jobs/job-lks84R/round-02.run")
+baseline_procedure=Some("trim,drop-blank,lower,sort,dedup")
+operations=Explore bounded relocations and recheck the retained executable procedure
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=[]
+expected_tags=["ash", "cedar"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:8, sort_items:2
+probe_work=lowercase_bytes:9, sort_items:3
+worker=local
+search_limit=20 one-step relocations
+search_elapsed_us=12
+evaluation_elapsed_us=6
+limitations=The work counters describe the probe only. The gate gives no end-to-end speed guarantee.
+continuation=Stop proposing and retain the verified procedure. No single relocation reduced probe work within the trust boundary.
+advance=false
+end

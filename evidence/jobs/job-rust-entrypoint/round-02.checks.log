@@ -1,0 +1,44 @@
+   Compiling taik-seed v0.1.0 (/Users/rainer/projects/ideas/talk)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.06s
+     Running unittests src/main.rs (target/debug/deps/taik_seed-c3a5d7c891872f43)
+
+running 1 test
+test procedure::tests::every_admitted_order_agrees_with_the_independent_reference ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/factory.rs (target/debug/deps/factory-005f187fc64c1821)
+
+running 4 tests
+expected a regular file
+test accepted_records_reject_a_fifo_without_blocking ... ok
+test concurrent_publication_has_one_winner ... ok
+test invalid_proposal_and_staging_cannot_replace_or_seed_accepted_work ... ok
+test service_resumes_from_an_accepted_round_and_wakes_for_new_work ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.39s
+
+    Checking taik-seed v0.1.0 (/Users/rainer/projects/ideas/talk)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.42s
+   Compiling version_check v0.9.5
+   Compiling typenum v1.20.1
+   Compiling serde_core v1.0.229
+   Compiling zmij v1.0.23
+   Compiling serde_json v1.0.154
+   Compiling itoa v1.0.18
+   Compiling memchr v2.8.3
+   Compiling cpufeatures v0.2.17
+   Compiling generic-array v0.14.7
+   Compiling block-buffer v0.10.4
+   Compiling crypto-common v0.1.7
+   Compiling digest v0.10.7
+   Compiling sha2 v0.10.9
+   Compiling taik-seed v0.1.0 (/Users/rainer/projects/ideas/talk)
+    Finished `release` profile [optimized] target(s) in 3.93s
+PASS: live LaunchAgent consumed queue-source with a real signed-in Codex worker and ran the stored Node gate.
+PASS: both search policy reductions passed on all seven legal orders and fed the next round.
+PASS: a negative heading control was rejected by the same Node gate.
+PASS: restarting the LaunchAgent left the accepted source and all search decision records byte-identical.
+PASS: installed macOS viewer reads the real linked jobs directory and lists both new jobs.
+PASS: deployed binary is byte-identical to tested staged release. Staged and promoted source trees match; the checkout release also builds.
+PASS: service working directory preserves the repository read boundary used by the Codex worker's sandbox.

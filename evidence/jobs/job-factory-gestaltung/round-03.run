@@ -1,0 +1,18 @@
+decision=rejected
+kind=software
+procedure=
+tags=
+identity=round-03
+intent=Den offenen Auftragsverlauf und den rechten Split aus dem Entwurf in der Factory umsetzen.
+baseline=/Users/rainer/projects/ideas/talk/evidence/jobs/job-factory-gestaltung/round-02.html
+worker=codex-attached
+limits=4 rounds; worker 150s; verifier 15s; 96KiB source
+gate_sha256=d4feb1f67cf6a0db364dbde521301794bc734be22fab94f6eae09519703760ef
+checks=worker output exceeded byte limit
+artifact=
+rejected_candidate=
+feedback=
+follow_up=
+continuation=Execution ended before a repairable gate judgement. Inspect the recorded error.
+advance=false
+end

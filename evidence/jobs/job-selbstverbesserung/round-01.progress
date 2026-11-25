@@ -1,0 +1,3 @@
+46	start	Search policy: all
+125	checks	policies agreed with the reference and reduced work: true; legal orders tested: 7; candidates constructed: 72 -> 59; probe executions: 22 -> 16
+17450	accepted	Use the accepted policy in the next round and subsequent tag jobs.

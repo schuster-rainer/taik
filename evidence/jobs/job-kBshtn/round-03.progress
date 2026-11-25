@@ -1,0 +1,26 @@
+158	start	Single-step relocation search
+401	baseline	trim,drop-blank,lower,sort,dedup
+415	probe	lowercase_bytes:9, sort_items:3
+425	skip	drop-blank,trim,lower,sort,dedup
+434	skip	drop-blank,lower,trim,sort,dedup
+442	skip	drop-blank,lower,sort,trim,dedup
+451	skip	drop-blank,lower,sort,dedup,trim
+459	skip	drop-blank,trim,lower,sort,dedup
+468	trial	trim,lower,drop-blank,sort,dedup · lowercase_bytes:9, sort_items:3
+477	trial	trim,lower,sort,drop-blank,dedup · lowercase_bytes:9, sort_items:4
+487	trial	trim,lower,sort,dedup,drop-blank · lowercase_bytes:9, sort_items:4
+497	trial	lower,trim,drop-blank,sort,dedup · lowercase_bytes:14, sort_items:3
+507	trial	trim,lower,drop-blank,sort,dedup · lowercase_bytes:9, sort_items:3
+516	skip	trim,drop-blank,sort,lower,dedup
+525	skip	trim,drop-blank,sort,dedup,lower
+533	skip	sort,trim,drop-blank,lower,dedup
+542	skip	trim,sort,drop-blank,lower,dedup
+550	skip	trim,drop-blank,sort,lower,dedup
+558	skip	trim,drop-blank,lower,dedup,sort
+566	skip	dedup,trim,drop-blank,lower,sort
+574	skip	trim,dedup,drop-blank,lower,sort
+582	skip	trim,drop-blank,dedup,lower,sort
+594	skip	trim,drop-blank,lower,dedup,sort
+604	evaluate	trim,drop-blank,lower,sort,dedup
+617	checks	artifact:true, probes:true, limit:true, order:true
+10823	retained	Stop proposing and retain the verified procedure. No single relocation reduced probe work within the trust boundary.

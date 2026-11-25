@@ -1,0 +1,4 @@
+213	start	Wiederholte Suchentscheidungen aus gemessener Prüfleistung ableiten und wiederverwenden
+363	probe	16 wiederholbare Kandidatenprüfungen im gesamten Suchraum
+515	checks	all seven admitted orders compared with exhaustive search: true
+48213	accepted	Use the retained search decisions in subsequent tag jobs. No further repeated candidate probes remain in this search space.

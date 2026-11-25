@@ -1,0 +1,10 @@
+256	start	Factory hat den Auftrag übernommen
+4165	worker	Codex erhält Auftrag und akzeptierten Ausgangsstand
+724205	worker	thread.started 
+1277645	worker	item.completed error
+1277681	worker	turn.started 
+8005374	worker	item.completed agent_message
+8010877	worker	turn.completed 
+8419629	evaluate	Unabhängiges, gespeichertes Prüfgate ausführen
+8516035	checks	PASS: offline HTML, heading, runnable example and named output paths
+8527409	accepted	Run the accepted artifact or supply the next justified brief.

@@ -1,0 +1,21 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-02
+intent=Accept source jobs and reuse a verified search procedure in the running Factory.
+baseline=round-01-taik-seed
+rollback=round-02.baseline.tar.gz
+worker=codex
+limits=one queued HTML round per job; 150s worker; 15s gate; three search rounds
+operations=Reuse the directory queue, source worker and independent gate; snapshot complete intake; compare search candidates, retain two verified reductions; resolve linked job directory in the viewer.
+checks=PASS: Rust tests and release build, real LaunchAgent queue and Codex worker, Node gate plus negative control, search policy reused after restart, installed viewer reads live state.
+evidence=round-02.checks.log
+source_trial=../job-auftragsannahme/round-01.run
+search_trial=../job-selbstverbesserung/round-03.run
+artifact=round-02-taik-seed
+artifact_sha256=10a6e8fbd7297ec3678677f921fac0a84b8bbff6d6347b581d1326e37cab38b7
+limitations=The queue accepts standalone HTML; the scoped search experiment can adopt known policies; binary promotion remains operator-run.
+continuation=Retain the deployed service and process the next submitted job.
+advance=false
+end

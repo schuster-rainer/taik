@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Protokoll-Leser</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --base: light-dark(#ffffff, #121212);
+  --ink: light-dark(#1a1a1a, #eeeeee);
+  --line: light-dark(#8a8a8a, #6a6a6a);
+  --field: light-dark(#f6f6f6, #1c1c1c);
+  --c-key: light-dark(#00449e, #8cc4ff);
+  --c-good: light-dark(#116329, #7ee2a0);
+  --c-bad: light-dark(#a40e26, #ff9aa8);
+  --c-end: light-dark(#6f2da8, #d9b3ff);
+  --c-hash: light-dark(#7a4500, #f5c37a);
+  --c-path: light-dark(#005a6e, #7fdcef);
+  --c-number: light-dark(#5c3d00, #ffd98a);
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 1.5rem;
+  background: var(--base);
+  color: var(--ink);
+  font: 16px/1.5 system-ui, sans-serif;
+}
+main { max-width: 60rem; margin: 0 auto; }
+h1 { margin: 0 0 1rem; font-size: 1.6rem; }
+label { display: block; font-weight: 600; margin: 1rem 0 .3rem; }
+textarea, pre {
+  width: 100%;
+  margin: 0;
+  padding: .75rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--field);
+  color: var(--ink);
+  font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+textarea { min-height: 12rem; resize: vertical; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; min-height: 3rem; }
+textarea:focus-visible { outline: 3px solid var(--c-key); outline-offset: 2px; }
+.run-key { color: var(--c-key); font-weight: 600; }
+.run-good { color: var(--c-good); font-weight: 600; }
+.run-bad { color: var(--c-bad); font-weight: 600; }
+.run-end { color: var(--c-end); font-weight: 700; }
+.run-hash { color: var(--c-hash); }
+.run-path { color: var(--c-path); text-decoration: underline; text-underline-offset: 2px; }
+.run-number { color: var(--c-number); }
+</style>
+</head>
+<body>
+<main>
+<h1>Protokoll-Leser</h1>
+<label for="record">Protokolltext (.run)</label>
+<textarea id="record" spellcheck="false" autocomplete="off">job=round-02
+source=../job-x/round-01.run
+baseline=round-09.baseline.tar.gz
+seed=round-08-taik-seed
+digest=3f2a9c0d4e5b6a7c8d9e0f1a2b3c4d5e6f7a8b9c
+size=18.4KiB
+elapsed=1250ms latency 42 µs
+ratio=97.5%
+verdict=accepted
+tests=PASS
+note=a=b bleibt Wert, false bei error
+rejected 3 von 12 Fällen
+end</textarea>
+<label for="view">Ansicht</label>
+<pre id="view" aria-live="polite"></pre>
+</main>
+<script>
+/*RUN_HIGHLIGHT_BEGIN*/
+function highlightRun(text) {
+  function esc(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+  function wrap(cls, s) {
+    return '<span class="run-' + cls + '">' + esc(s) + "</span>";
+  }
+  var EXT = "(?:run|html|mjs|md|log|json|txt|png|jpg|gz)";
+  var DIRS = "(?:[A-Za-z0-9_.-]+\\/)*";
+  var rules = [
+    ["path", new RegExp(DIRS + "[A-Za-z0-9_.-]*\\." + EXT + "(?![A-Za-z0-9_\\/-]|\\.[A-Za-z0-9_])", "y")],
+    ["path", new RegExp(DIRS + "[A-Za-z0-9_.-]*-taik-seed(?![A-Za-z0-9_\\/-]|\\.[A-Za-z0-9_])", "y")],
+    ["hash", /[0-9a-f]{40,64}(?![A-Za-z0-9_-]|\.[A-Za-z0-9_])/y],
+    ["good", /(?:accepted|PASS|true|retained)(?![A-Za-z0-9_-]|\.[A-Za-z0-9_])/y],
+    ["bad", /(?:rejected|FAIL|false|error)(?![A-Za-z0-9_-]|\.[A-Za-z0-9_])/y],
+    ["number", /\d+(?:\.\d+)?(?:KiB|MiB|ms|s|%)?(?![A-Za-z0-9_\/-]|\.[A-Za-z0-9_])/y]
+  ];
+  var nameChar = /[\p{L}\p{N}_.\/-]/u;
+  function value(s) {
+    var out = "", plain = "", i = 0;
+    while (i < s.length) {
+      var hit = null;
+      if (i === 0 || !nameChar.test(s[i - 1])) {
+        for (var r = 0; r < rules.length; r++) {
+          var re = rules[r][1];
+          re.lastIndex = i;
+          var m = re.exec(s);
+          if (m && m[0].length) { hit = [rules[r][0], m[0]]; break; }
+        }
+      }
+      if (hit) {
+        out += esc(plain) + wrap(hit[0], hit[1]);
+        plain = "";
+        i += hit[1].length;
+      } else {
+        plain += s[i];
+        i++;
+      }
+    }
+    return out + esc(plain);
+  }
+  var lines = String(text).split("\n");
+  var res = [];
+  for (var n = 0; n < lines.length; n++) {
+    var line = lines[n], cr = "";
+    if (line.charAt(line.length - 1) === "\r") { cr = "\r"; line = line.slice(0, -1); }
+    var html;
+    if (line === "end") {
+      html = wrap("end", line);
+    } else {
+      var km = /^([a-z_][a-z0-9_]*)=/.exec(line);
+      if (km) {
+        html = wrap("key", km[1]) + "=" + value(line.slice(km[0].length));
+      } else {
+        html = value(line);
+      }
+    }
+    res.push(html + cr);
+  }
+  return res.join("\n");
+}
+/*RUN_HIGHLIGHT_END*/
+(function () {
+  var record = document.getElementById("record");
+  var view = document.getElementById("view");
+  function render() { view.innerHTML = highlightRun(record.value); }
+  record.addEventListener("input", render);
+  render();
+})();
+</script>
+</body>
+</html>

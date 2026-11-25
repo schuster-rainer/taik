@@ -1,0 +1,24 @@
+decision=rejected
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=Prüfen, ob der unbeaufsichtigte Code-Worker des Dienstes einen kleinen Auftrag liefern kann.
+baseline=(empty)
+worker=codex-subscription
+worker_stage=login
+worker_failure=timeout
+worker_elapsed_ms=5078
+worker_exit_code=
+worker_signal=
+worker_provider_hint=
+limits=4 rounds; worker 150s; verifier 15s; 96KiB source
+gate_sha256=c1d47eff4ddd4e3cd943623d2c4ee0ba469838f5fdd150bc5d744375e16684f6
+checks=Codex login timeout after 5078 ms
+artifact=
+rejected_candidate=
+feedback=
+follow_up=
+continuation=Execution ended before a repairable gate judgement. Inspect the recorded error.
+advance=false
+end

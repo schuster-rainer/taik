@@ -1,0 +1,18 @@
+decision=accepted
+kind=search
+procedure=precomputed
+tags=
+identity=round-01
+intent=Wiederholte Suchentscheidungen aus gemessener Prüfleistung ableiten und wiederverwenden
+baseline_policy=valid-unique
+policy=precomputed
+evidence=request.run
+operations=Retain one measured decision per admissible procedure and verify each against exhaustive search.
+checks=all seven admitted orders compared with exhaustive search: true
+discovery_candidate_probes=16
+reference_candidate_probes=22
+retained_search_decisions=lower,trim,sort,dedup,drop-blank>trim,lower,sort,dedup,drop-blank;lower,trim,sort,drop-blank,dedup>trim,lower,sort,drop-blank,dedup;lower,trim,drop-blank,sort,dedup>trim,lower,drop-blank,sort,dedup;trim,lower,sort,dedup,drop-blank>trim,drop-blank,lower,sort,dedup;trim,lower,sort,drop-blank,dedup>trim,lower,drop-blank,sort,dedup;trim,lower,drop-blank,sort,dedup>-;trim,drop-blank,lower,sort,dedup>-
+limitations=One bounded tag search; the reference runs again after service restart; per-round artifact checks still execute; elapsed speed was not measured.
+continuation=Use the retained search decisions in subsequent tag jobs. No further repeated candidate probes remain in this search space.
+advance=false
+end

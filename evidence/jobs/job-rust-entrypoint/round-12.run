@@ -1,0 +1,20 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-12
+intent=Eine fehlgeschlagene Claude-Runde dem richtigen Worker zuschreiben und die Dauer des Gates getrennt festhalten.
+baseline=round-11-taik-seed
+rollback=round-11-taik-seed
+worker=claude-fable
+decided_by=claude-fable, the author of the change. No independent gate judged this round. Rounds 1 to 11 of this job were decided the same way by their authors.
+operations=Name claude-cli as the worker whenever the Claude CLI was called, also when it fails. Write gate_ms, the duration of the gate process alone, into each source decision.
+checks=PASS: Rust tests including a failing leading worker and a failing takeover, Clippy, release build, service restart.
+evidence=round-12.checks.log
+artifact=round-12-taik-seed
+artifact_sha256=05f8a8763acaaca8178935ffc370cac20e7642adc352d3ff55b2b1529d6c339d
+correction=round-11.run and ../job-galaxy-quellcode/summary.run call the 3 s between evaluate and checks a gate run. That interval also contains the fsynced publication of the artifact. Which part was slow is not known. Six attached runs under launchd with default and Interactive process type took 52 to 224 ms and did not reproduce it.
+limitations=The startup reflection in activation.rs still calls Codex directly. No live round has produced a gate_ms value yet.
+continuation=Read gate_ms from the next unattended rounds before deciding whether the slow interval is the gate or the publication.
+advance=false
+end

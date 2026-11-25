@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Protokoll-Leser</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --base: light-dark(#ffffff, #121212);
+  --ink: light-dark(#1a1a1a, #ededed);
+  --line: light-dark(#8a8a8a, #5a5a5a);
+  --key: light-dark(#0b3d91, #9cc4ff);
+  --good: light-dark(#14532d, #86efac);
+  --bad: light-dark(#8b0000, #ffa3a3);
+  --end: light-dark(#4a1d7a, #d8b4fe);
+  --hash: light-dark(#5c3d00, #f5d58a);
+  --path: light-dark(#004d4d, #8ee6e6);
+  --number: light-dark(#7a2e00, #ffc08a);
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 1.5rem;
+  background: var(--base);
+  color: var(--ink);
+  font: 16px/1.5 system-ui, sans-serif;
+}
+h1 { margin: 0 0 1rem; font-size: 1.6rem; }
+label { display: block; font-weight: 600; margin: 0 0 .4rem; }
+textarea, pre {
+  width: 100%;
+  font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--ink);
+  background: var(--base);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: .75rem;
+}
+textarea { min-height: 12rem; resize: vertical; margin-bottom: 1rem; }
+textarea:focus-visible { outline: 3px solid var(--key); outline-offset: 2px; }
+pre { margin: 0; min-height: 4rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.run-key { color: var(--key); font-weight: 600; }
+.run-good { color: var(--good); font-weight: 600; }
+.run-bad { color: var(--bad); font-weight: 600; }
+.run-end { color: var(--end); font-weight: 700; }
+.run-hash { color: var(--hash); }
+.run-path { color: var(--path); text-decoration: underline dotted; }
+.run-number { color: var(--number); }
+</style>
+</head>
+<body>
+<h1>Protokoll-Leser</h1>
+<label for="record">Protokolltext (.run)</label>
+<textarea id="record" spellcheck="false" autocomplete="off">job=job-x
+round=round-02
+source=../job-x/round-01.run
+baseline=round-09.baseline.tar.gz
+seed=round-08-taik-seed
+sha=3f786850e387550fdab836ed7e6dc881de23001b
+size=18.4KiB
+duration=1250ms
+latency=12 µs
+gate=PASS
+verdict=accepted
+note=a=b retained
+end</textarea>
+<label for="view">Ansicht</label>
+<pre id="view" aria-live="polite"></pre>
+<script>
+/*RUN_HIGHLIGHT_BEGIN*/
+function highlightRun(text) {
+  const esc = value => value.replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
+  const span = (kind, value) => '<span class="run-' + kind + '">' + esc(value) + '</span>';
+  const tokens = new RegExp(
+    '(?<path>[\\w.\\/-]*\\.(?:run|html|mjs|md|log|json|txt|png|jpg|gz)(?![\\w-])|[\\w.\\/-]*-taik-seed(?![\\w-]))' +
+    '|(?<hash>(?<![\\w-])[a-f0-9]{40,64}(?![\\w-]))' +
+    '|(?<good>(?<![\\w-])(?:accepted|PASS|true|retained)(?![\\w-]))' +
+    '|(?<bad>(?<![\\w-])(?:rejected|FAIL|false|error)(?![\\w-]))' +
+    '|(?<number>(?<![\\w.-])\\d+(?:\\.\\d+)?(?:KiB|MiB|ms|s|%)?(?![\\w-]|\\.\\w))',
+    'g');
+  const kindOf = groups => {
+    for (const kind of ['path', 'hash', 'good', 'bad', 'number']) {
+      if (groups[kind] !== undefined) return kind;
+    }
+    return null;
+  };
+  const value = line => {
+    let cursor = 0;
+    let markup = '';
+    for (const token of line.matchAll(tokens)) {
+      if (!token[0]) continue;
+      const kind = kindOf(token.groups);
+      if (!kind) continue;
+      markup += esc(line.slice(cursor, token.index)) + span(kind, token[0]);
+      cursor = token.index + token[0].length;
+    }
+    return markup + esc(line.slice(cursor));
+  };
+  const renderLine = line => {
+    if (line === 'end') return span('end', line);
+    const at = line.indexOf('=');
+    if (at > 0) {
+      const key = line.slice(0, at);
+      if (/^[a-z_][a-z0-9_]*$/.test(key)) return span('key', key) + '=' + value(line.slice(at + 1));
+    }
+    return value(line);
+  };
+  const parts = String(text ?? '').split(/(\r\n|\n|\r)/);
+  let out = '';
+  for (let i = 0; i < parts.length; i++) {
+    out += i % 2 ? esc(parts[i]) : renderLine(parts[i]);
+  }
+  return out;
+}
+/*RUN_HIGHLIGHT_END*/
+(() => {
+  const record = document.getElementById('record');
+  const view = document.getElementById('view');
+  const render = () => { view.innerHTML = highlightRun(record.value); };
+  record.addEventListener('input', render);
+  render();
+})();
+</script>
+</body>
+</html>

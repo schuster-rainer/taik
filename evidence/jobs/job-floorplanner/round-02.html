@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<title>TAIK · Isometrischer Marktplan</title>
+<style>
+:root{font-family:system-ui,sans-serif;color:#1c3135;background:#f3f4ee;--line:#cad3ca;--quiet:#546760;--green:#1e6857}
+*{box-sizing:border-box}body{max-width:1380px;margin:auto;padding:clamp(12px,3vw,38px)}
+header{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:16px}
+h1,h2,p{margin:0}h1{font-size:clamp(28px,5vw,52px);letter-spacing:-.055em;line-height:1.02}
+header p{margin-top:7px;color:var(--quiet)}.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(200px,248px);gap:22px;margin-top:20px}
+.board{position:relative;background:#e6ebe0;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+canvas{display:block;width:100%;height:clamp(320px,49vw,630px)}
+.boardfoot{display:flex;gap:15px;flex-wrap:wrap;padding:8px 12px;color:var(--quiet);font-size:13px;border-top:1px solid var(--line)}
+.key{display:inline-flex;gap:5px;align-items:center}.key i{width:10px;height:10px;border-radius:2px}
+aside{border-left:1px solid var(--line);padding-left:17px;min-width:0}h2{font-size:20px;letter-spacing:-.02em}
+label{display:block;margin-top:10px;color:var(--quiet);font-size:13px}
+select,button{font:inherit;color:inherit;border:1px solid #aebeb4;border-radius:5px;background:#fbfcf8;min-height:36px;padding:6px 10px}
+select{width:100%;margin-top:4px}button:hover{background:#deebe1}button:focus-visible,select:focus-visible{outline:2px solid #167a64;outline-offset:2px}
+.move{display:grid;grid-template-columns:repeat(3,36px);justify-content:start;gap:4px;margin:12px 0}
+.move button{padding:0}.north{grid-column:2}.west{grid-column:1}.south{grid-column:2}.east{grid-column:3}
+#details{margin:12px 0;font-size:14px;color:var(--quiet)}#feedback{min-height:45px;margin:9px 0;color:var(--green);font-size:14px}#feedback[data-bad]{color:#9a3b3c}
+#route{font-size:14px;color:var(--green);font-weight:600}
+@media(max-width:720px){.grid{grid-template-columns:1fr;gap:16px}aside{border-left:0;border-top:1px solid var(--line);padding:14px 0 0}}
+</style>
+</head>
+<body>
+<header><div><h1>Marktplan</h1><p>Fiktiver Discounter · 24 × 18 Rasterfelder</p></div><span id="route" role="status"></span></header>
+<div class="grid">
+<main class="board" aria-label="Isometrischer Grundriss">
+<canvas id="map" aria-label="Grundriss mit Eingang, Laufweg, Regalen und Ausgang"></canvas>
+<div class="boardfoot" id="legend" aria-label="Legende"></div>
+</main>
+<aside aria-label="Einrichtung bearbeiten">
+<h2>Einrichtung</h2><label for="fixture">Element wählen</label><select id="fixture"></select>
+<p id="details"></p><div class="move" aria-label="Element verschieben">
+<button class="north" data-dx="0" data-dy="-1" aria-label="Ein Feld nach Norden">↑</button>
+<button class="west" data-dx="-1" data-dy="0" aria-label="Ein Feld nach Westen">←</button>
+<button class="south" data-dx="0" data-dy="1" aria-label="Ein Feld nach Süden">↓</button>
+<button class="east" data-dx="1" data-dy="0" aria-label="Ein Feld nach Osten">→</button>
+</div><p id="feedback" role="status"></p><button id="reset" type="button">Plan zurücksetzen</button>
+</aside>
+</div>
+<script id="layout-model">
+(() => {
+const rows=[
+["cold","Kühlung","cold",3,0,17,2],["stock","Lager","storage",21,0,3,5],
+["bakery","Backwaren","bakery",0,7,2,4],["produce","Obst und Gemüse","produce",2,12,5,2],
+["shelf-a","Regal A","shelf",4,4,1,6],["shelf-b","Regal B","shelf",7,4,1,6],
+["shelf-c","Regal C","shelf",10,4,1,6],["shelf-d","Regal D","shelf",13,4,1,6],
+["shelf-e","Regal E","shelf",16,4,1,6],["till-a","Kasse 1","checkout",16,13,2,2],
+["till-b","Kasse 2","checkout",20,13,2,2]];
+function initial(){
+ return {width:24,depth:18,entrance:[1,16],exit:[22,16],fixtures:rows.map(([id,label,kind,x,y,w,d])=>({id,label,kind,x,y,w,d}))};
+}
+function validate(plan){
+ const {width,depth,entrance,exit,fixtures}=plan, occupied=new Set(), invalid={valid:false,route:[]};
+ const key=(x,y)=>y*width+x;
+ for(const {x,y,w,d} of fixtures){
+  if(![x,y,w,d].every(Number.isInteger)||x<0||y<0||w<1||d<1||x+w>width||y+d>depth)return invalid;
+  for(let i=x;i<x+w;i++)for(let j=y;j<y+d;j++){const cell=key(i,j);if(occupied.has(cell))return invalid;occupied.add(cell);}
+ }
+ const free=(x,y)=>x>=0&&y>=0&&x+1<width&&y+1<depth
+  && ![[x,y],[x+1,y],[x,y+1],[x+1,y+1]].some(([a,b])=>occupied.has(key(a,b)));
+ if(!free(...entrance)||!free(...exit))return invalid;
+ const goal=key(...exit), queue=[entrance], seen=new Map([[key(...entrance),null]]);
+ for(let i=0;i<queue.length;i++){
+  const [x,y]=queue[i], current=key(x,y);
+  if(current===goal){
+   const route=[];for(let j=goal;j!==null;j=seen.get(j))route.push([j%width,Math.floor(j/width)]);
+   return {valid:true,route:route.reverse()};
+  }
+  for(const [nx,ny] of [[x-1,y],[x+1,y],[x,y-1],[x,y+1]]) {
+   const target=key(nx,ny);if(free(nx,ny)&&!seen.has(target)){seen.set(target,current);queue.push([nx,ny]);}
+  }
+ }
+ return invalid;
+}
+function move(plan,id,x,y){
+ if(!Number.isInteger(x)||!Number.isInteger(y)||!plan.fixtures.some(f=>f.id===id))return null;
+ const candidate={...plan,fixtures:plan.fixtures.map(f=>f.id===id?{...f,x,y}:f)};
+ return validate(candidate).valid?candidate:null;
+}
+const project=(x,y)=>[(x-y)*20,(x+y)*11];
+const unproject=(a,b)=>[(a/20+b/11)/2,(b/11-a/20)/2];
+globalThis.floorPlan={initial,validate,move,project,unproject};
+})();
+</script>
+<script>
+(() => {
+const {initial,validate,move,project}=globalThis.floorPlan;
+const canvas=document.getElementById("map"), ctx=canvas.getContext("2d");
+const select=document.getElementById("fixture"), details=document.getElementById("details");
+const feedback=document.getElementById("feedback"), routeStatus=document.getElementById("route");
+const palette={
+ produce:["Obst & Gemüse","#9cca86","#68a052","#7bb966",22],
+ bakery:["Backwaren","#deb181","#b37f52","#c79664",24],
+ shelf:["Regale","#b6c6d7","#74899d","#8fa5b8",30],
+ cold:["Kühlung","#97c4d6","#5d92a8","#74a9be",30],
+ checkout:["Kassen","#e0a48e","#a96d59","#c68972",20],
+ storage:["Lager","#b8bfac","#808d75","#9ca790",29]
+};
+let plan=initial(),selected=plan.fixtures[3].id,scale=1,origin=[0,0],faces=[];
+for(const f of plan.fixtures){const option=document.createElement("option");option.value=f.id;option.textContent=f.label;select.append(option);}
+for(const [label,color] of Object.values(palette)){
+ const item=document.createElement("span");item.className="key";const swatch=document.createElement("i");swatch.style.background=color;
+ item.append(swatch,document.createTextNode(label));document.getElementById("legend").append(item);
+}
+function surface(points,color,outline){
+ ctx.beginPath();points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();
+ ctx.fillStyle=color;ctx.fill();if(outline){ctx.strokeStyle=outline;ctx.stroke();}
+}
+function ground(x,y,z=0){const [a,b]=project(x,y);return [a,b-z];}
+function quad(x,y,w,d,z=0){return [ground(x,y,z),ground(x+w,y,z),ground(x+w,y+d,z),ground(x,y+d,z)];}
+function line(points,color,width){
+ ctx.beginPath();points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));
+ ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineCap="round";ctx.lineJoin="round";ctx.stroke();
+}
+function text(content,x,y,color,size=12){ctx.fillStyle=color;ctx.font="600 "+size+"px system-ui";ctx.textAlign="center";ctx.fillText(content,x,y);}
+function render(){
+ const w=canvas.clientWidth,h=canvas.clientHeight;if(!w||!h)return;
+ const pixel=window.devicePixelRatio||1;
+ canvas.width=Math.round(w*pixel);canvas.height=Math.round(h*pixel);
+ ctx.setTransform(pixel,0,0,pixel,0,0);
+ scale=Math.min((w-40)/840,(h-64)/462);origin=[(w-840*scale)/2+360*scale,(h-462*scale)/2];
+ ctx.translate(...origin);ctx.scale(scale,scale);
+ const perimeter=quad(0,0,24,18);
+ surface(perimeter.map(([x,y])=>[x,y+9]),"#b1beb2");
+ surface(perimeter,"#f7f5e9","#87a099");
+ for(let x=1;x<24;x++)line([ground(x,0),ground(x,18)],"#d9dfd0",.65);
+ for(let y=1;y<18;y++)line([ground(0,y),ground(24,y)],"#d9dfd0",.65);
+ const info=validate(plan);
+ if(info.valid)line(info.route.map(([x,y])=>ground(x+1,y+1)),"#279a7c",6);
+ for(const [coordinate,name] of [[plan.entrance,"Eingang"],[plan.exit,"Ausgang"]]){
+  const [x,y]=coordinate;surface(quad(x,y,2,2),"#c6e5c9");
+  const [a,b]=ground(x+1,y+1);text(name,a,b+3,"#225448",11);
+ }
+ faces=[];
+ for(const f of [...plan.fixtures].sort((a,b)=>a.x+a.y-b.x-b.y)){
+  const [,top,sideA,sideB,z]=palette[f.kind], [a,b,c,d]=quad(f.x,f.y,f.w,f.d,z),
+   [,bb,cc,dd]=quad(f.x,f.y,f.w,f.d);
+  surface([b,c,cc,bb],sideA);surface([d,c,cc,dd],sideB);
+  ctx.lineWidth=f.id===selected?3:1;surface([a,b,c,d],top,f.id===selected?"#125b4e":"#526d64");
+  faces.push({id:f.id,vertices:[a,b,c,d]});
+  const [x,y]=ground(f.x+f.w/2,f.y+f.d/2,z);
+  const label=f.kind==="shelf"?f.label.slice(-1):f.kind==="produce"?"Obst":f.kind==="cold"?"Kühlung":f.label;
+  text(label,x,y+3,"#193b3d",f.id===selected?13:11);
+ }
+ select.value=selected;
+ const f=plan.fixtures.find(f=>f.id===selected);
+ details.textContent=f.w+" × "+f.d+" Felder · Position "+f.x+", "+f.y;
+ routeStatus.textContent=info.valid?("Wagenweg frei · "+(info.route.length-1)+" Raster-Schritte"):"Wagenweg blockiert";
+}
+function choose(id){selected=id;feedback.textContent="";feedback.removeAttribute("data-bad");render();}
+function shift(dx,dy){
+ const f=plan.fixtures.find(f=>f.id===selected);
+ const candidate=move(plan,selected,f.x+dx,f.y+dy);
+ if(!candidate){feedback.textContent="Der Platz ist belegt, ausserhalb des Plans oder blockiert den Wagenweg.";feedback.setAttribute("data-bad","");return;}
+ plan=candidate;feedback.removeAttribute("data-bad");feedback.textContent=f.label+" wurde verschoben.";render();
+}
+function pointInShape(x,y,vertices){
+ let match=false;
+ for(let i=0,j=vertices.length-1;i<vertices.length;j=i++){
+  const [a,b]=vertices[i],[c,d]=vertices[j];
+  if((b>y)!==(d>y)&&x<(c-a)*(y-b)/(d-b)+a)match=!match;
+ }
+ return match;
+}
+canvas.addEventListener("click",event=>{
+ const rect=canvas.getBoundingClientRect();
+ const x=(event.clientX-rect.left-origin[0])/scale,y=(event.clientY-rect.top-origin[1])/scale;
+ const hit=[...faces].reverse().find(face=>pointInShape(x,y,face.vertices));if(hit)choose(hit.id);
+});
+select.addEventListener("change",()=>choose(select.value));
+document.querySelectorAll("button[data-dx]").forEach(button=>button.addEventListener("click",()=>shift(Number(button.dataset.dx),Number(button.dataset.dy))));
+document.getElementById("reset").addEventListener("click",()=>{plan=initial();choose(selected);feedback.textContent="Der Ausgangsplan ist wiederhergestellt.";});
+new ResizeObserver(render).observe(canvas);
+render();
+})();
+</script>
+</body></html>

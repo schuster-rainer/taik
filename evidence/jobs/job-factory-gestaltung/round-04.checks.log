@@ -1,0 +1,9 @@
+Factory accepted evidence/jobs/job-factory-gestaltung/round-04.run
+321defa0513c720db845cc1d39dbf20eb0fd4a0783db9bcc32e7f9984bc17a35  evidence/jobs/job-factory-gestaltung/round-03.viewer.html
+74e2e18fda0da9231bfb69441cfb62433e01a25ec015878bc9f852949b396982  evidence/jobs/job-factory-gestaltung/round-03.screenshot.png
+43e748b8e465d8c6dc92e611a8ef09f2d016611ea3e49c54bcee6e216034c1b9  evidence/jobs/job-factory-gestaltung/round-04.html
+40399 /Users/rainer/Applications/TAIK Factory.app/Contents/MacOS/factory-view
+{"darkSurface":"rgb(16, 25, 35)","defaultOpenDetails":1,"historyCount":4,"historyY":213,"lightSurface":"rgb(248, 250, 252)","live":{"bottom":623.21875,"height":88,"left":509.390625,"right":934.40625,"top":535.21875,"width":425.015625,"x":509.390625,"y":535.21875},"mode":"desktop","openDetails":2,"result":{"bottom":480.21875,"height":414.21875,"left":509.390625,"right":1248,"top":66,"width":738.609375,"x":509.390625,"y":66},"scrollWidth":1285,"verifiedCanvasThemes":["light","dark","light"],"viewport":1300}
+{"historyCount":4,"historyY":192,"live":{"bottom":2002,"height":88,"left":25,"right":380,"top":1914,"width":355,"x":25,"y":1914},"mode":"narrow","openDetails":2,"result":{"bottom":1859,"height":400,"left":25,"right":380,"top":1459,"width":355,"x":25,"y":1459},"scrollWidth":405,"viewport":420}
+PASS: Desktop and narrow history/viewport, live draft, Canvas interaction and theme checks passed.
+PASS: installed viewer observed real source drafts at 4096 and 8192 bytes, real progress and verified publication from filesystem events.

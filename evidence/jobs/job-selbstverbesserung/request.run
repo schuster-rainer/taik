@@ -1,0 +1,6 @@
+decision=accepted
+kind=search
+procedure=all
+tags=
+intent=Reduce repeated and invalid search candidates while preserving the selected procedure.
+end

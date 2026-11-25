@@ -1,0 +1,22 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=Einen eigenständigen Protokoll-Leser für `.run`-Entscheidungsprotokolle bauen.
+baseline=(empty)
+worker=claude-cli
+worker_model=claude-opus-5-5
+worker_output_tokens=4315
+worker_cost_usd=0.089521
+worker_duration_ms=54444
+limits=4 rounds; worker 150s; verifier 15s; 96KiB source
+gate_sha256=eda0aa7a61f0a9bca932a0ac5451ed1db0e0c72cfad1fa056585d52f545a3b9f
+checks=PASS: offline reader, held-out record highlighted without loss, readable in light and dark
+artifact=round-01.html
+rejected_candidate=
+feedback=
+follow_up=
+continuation=Retain the accepted artifact. No further work was authorized by this round.
+advance=false
+end

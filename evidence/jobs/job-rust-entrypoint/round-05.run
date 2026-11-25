@@ -1,0 +1,19 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-05
+intent=Close the verification feedback loop for queued HTML jobs.
+baseline=round-04-taik-seed
+rollback=round-05.baseline.tar.gz
+worker=codex
+operations=Retain a rejected draft as text and its gate assertion, feed both to the next round and check under the same pinned verification.
+checks=PASS: Rust tests and Clippy, actual Node gate with fixture worker, recovery from a saved rejection, stop on repeated draft or gate error, launchd replacement, viewer smoke test.
+evidence=round-05.checks.log
+artifact=round-05-taik-seed
+artifact_sha256=29cb703fc5db0bfc1ccee6c08818ac28ce96e06640f7f0ec46d729ed0cdc10f2
+limits=Four rounds; unchanged worker and gate limits.
+limitations=The repair test used a local fixture worker. Continuation applies within the submitted scope and only to actionable gate assertions.
+continuation=Resume queued repairs from their persisted diagnosis when new work is present.
+advance=false
+end

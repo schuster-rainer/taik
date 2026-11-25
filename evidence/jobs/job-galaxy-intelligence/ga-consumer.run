@@ -1,0 +1,24 @@
+decision=accepted
+procedure=trim,lower,sort,dedup,drop-blank
+tags=ash,cedar,fir
+identity="ga-consumer.run"
+intent=Add tags using the retained procedure
+baseline=Some("evidence/12-galaxy-intelligence/ga-producer.run")
+baseline_procedure=Some("trim,lower,sort,dedup,drop-blank")
+operations=Reuse the retained tags and executable procedure, add tags, sort, reduce and check output
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=["  FIR ", " ASH ", "  "]
+expected_tags=["ash", "cedar", "fir"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:14, sort_items:5
+probe_work=lowercase_bytes:9, sort_items:4
+evaluation_elapsed_us=14
+limitations=This invocation checked canonical ASCII output and both independent probes.
+continuation=Stop at the one-candidate limit. Verified 3 canonical tags from 5 input tags. The retained procedure passed both probes.
+advance=false
+end

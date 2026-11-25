@@ -1,0 +1,16 @@
+decision=accepted
+kind=search
+procedure=valid-unique
+tags=
+identity=round-03
+intent=Reduce unnecessary work in the Factory's own procedure search
+baseline_policy=valid-unique
+policy=valid-unique
+limits=three rounds; all seven legal orders; fixed probes and promotion criteria
+operations=Compare bounded search candidates against the unrestricted reference search
+checks=Both scoped reductions have already been evaluated.
+artifact=
+limitations=counts cover constructed candidates and probes; elapsed speed was not established
+continuation=Keep the accepted search policy. Await new evidence or work.
+advance=false
+end

@@ -1,0 +1,17 @@
+decision=rejected
+procedure=trim-only
+tags=ash,cedar
+intent=Check whether removing lowercase preserves canonical tags
+baseline="evidence/01-seed.run"
+operations=Remove lowercasing from the procedure; run the candidate and check output
+scope=ASCII tags; local record only
+limits=8 added tags, 64 bytes per tag, 32 retained tags, 8192 bytes per record; one candidate and one probe
+input=["ash", "cedar"]
+expected_tags=["ash", "cedar"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["ELM", "OAK", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:false, size_within_limit:true
+lowercase_bytes=artifact:0, probe:0
+continuation=Stop this invocation. Use a previously accepted record to continue.
+end

@@ -1,0 +1,18 @@
+{
+  "execute": "extend",
+  "baseline": "evidence/12-galaxy-intelligence/learn-producer.run",
+  "observed_training_costs": [
+    [
+      62,
+      15
+    ],
+    [
+      50,
+      15
+    ],
+    [
+      50,
+      12
+    ]
+  ]
+}

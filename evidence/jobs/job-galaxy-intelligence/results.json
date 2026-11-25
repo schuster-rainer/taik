@@ -1,0 +1,614 @@
+{
+  "producer": "evidence/12-galaxy-intelligence/ga-producer.run",
+  "consumer": "evidence/12-galaxy-intelligence/ga-consumer.run",
+  "feedback": "evidence/12-galaxy-intelligence/ga-feedback.run",
+  "policy": "evidence/12-galaxy-intelligence/learned-selector.json",
+  "setup_ns": 198339417,
+  "reused_total_ns": 279143167,
+  "rederived_total_ns": 247014377,
+  "original_total_ns": 81389875,
+  "held": [
+    {
+      "original_ns": 13371875,
+      "reuse_ns": 12892875,
+      "rediscover_ns": 39736376,
+      "original_work": [
+        19,
+        5
+      ],
+      "retained_work": [
+        16,
+        4
+      ],
+      "tags": "ash,cedar,seed"
+    },
+    {
+      "original_ns": 12753917,
+      "reuse_ns": 13046750,
+      "rediscover_ns": 39643042,
+      "original_work": [
+        24,
+        5
+      ],
+      "retained_work": [
+        18,
+        4
+      ],
+      "tags": "ash,cedar,pear,quince"
+    },
+    {
+      "original_ns": 13389958,
+      "reuse_ns": 13426000,
+      "rediscover_ns": 43682625,
+      "original_work": [
+        23,
+        5
+      ],
+      "retained_work": [
+        20,
+        5
+      ],
+      "tags": "ash,cedar,d-19,lime"
+    },
+    {
+      "original_ns": 14909166,
+      "reuse_ns": 13843167,
+      "rediscover_ns": 44719875,
+      "original_work": [
+        23,
+        5
+      ],
+      "retained_work": [
+        23,
+        5
+      ],
+      "tags": "ash,birch-7,cedar,rock"
+    },
+    {
+      "original_ns": 13922542,
+      "reuse_ns": 13857625,
+      "rediscover_ns": 41620418,
+      "original_work": [
+        18,
+        5
+      ],
+      "retained_work": [
+        18,
+        5
+      ],
+      "tags": "ash,bark,cedar,tea"
+    },
+    {
+      "original_ns": 13042417,
+      "reuse_ns": 13737333,
+      "rediscover_ns": 37612041,
+      "original_work": [
+        12,
+        5
+      ],
+      "retained_work": [
+        8,
+        2
+      ],
+      "tags": "ash,cedar"
+    }
+  ],
+  "observations": [
+    {
+      "name": "ga-producer",
+      "path": "evidence/12-galaxy-intelligence/ga-producer.run",
+      "operation": "evolve",
+      "source": "evidence/01-seed.run",
+      "elapsed_ns": 17861583,
+      "work": [
+        8,
+        2
+      ],
+      "tags": "ash,cedar"
+    },
+    {
+      "name": "ga-consumer",
+      "path": "evidence/12-galaxy-intelligence/ga-consumer.run",
+      "operation": "extend",
+      "source": "evidence/12-galaxy-intelligence/ga-producer.run",
+      "elapsed_ns": 13780500,
+      "work": [
+        14,
+        5
+      ],
+      "tags": "ash,cedar,fir"
+    },
+    {
+      "name": "ga-feedback",
+      "path": "evidence/12-galaxy-intelligence/ga-feedback.run",
+      "operation": "evolve",
+      "source": "evidence/12-galaxy-intelligence/ga-consumer.run",
+      "elapsed_ns": 18629042,
+      "work": [
+        11,
+        3
+      ],
+      "tags": "ash,cedar,fir"
+    },
+    {
+      "name": "learn-producer",
+      "path": "evidence/12-galaxy-intelligence/learn-producer.run",
+      "operation": "evolve",
+      "source": "evidence/12-galaxy-intelligence/ga-producer.run",
+      "elapsed_ns": 14268625,
+      "work": [
+        8,
+        2
+      ],
+      "tags": "ash,cedar"
+    },
+    {
+      "name": "train-0-0",
+      "path": "evidence/12-galaxy-intelligence/train-0-0.run",
+      "operation": "extend",
+      "source": "evidence/01-seed.run",
+      "elapsed_ns": 18874792,
+      "work": [
+        22,
+        5
+      ],
+      "tags": "acorn,ash,cedar"
+    },
+    {
+      "name": "train-0-1",
+      "path": "evidence/12-galaxy-intelligence/train-0-1.run",
+      "operation": "extend",
+      "source": "evidence/01-seed.run",
+      "elapsed_ns": 12976333,
+      "work": [
+        19,
+        5
+      ],
+      "tags": "ash,cedar,maize,ore"
+    },
+    {
+      "name": "train-0-2",
+      "path": "evidence/12-galaxy-intelligence/train-0-2.run",
+      "operation": "extend",
+      "source": "evidence/01-seed.run",
+      "elapsed_ns": 13564292,
+      "work": [
+        21,
+        5
+      ],
+      "tags": "ash,cedar,root"
+    },
+    {
+      "name": "train-1-0",
+      "path": "evidence/12-galaxy-intelligence/train-1-0.run",
+      "operation": "extend",
+      "source": "evidence/12-galaxy-intelligence/ga-producer.run",
+      "elapsed_ns": 12833792,
+      "work": [
+        18,
+        5
+      ],
+      "tags": "acorn,ash,cedar"
+    },
+    {
+      "name": "train-1-1",
+      "path": "evidence/12-galaxy-intelligence/train-1-1.run",
+      "operation": "extend",
+      "source": "evidence/12-galaxy-intelligence/ga-producer.run",
+      "elapsed_ns": 13030458,
+      "work": [
+        16,
+        5
+      ],
+      "tags": "ash,cedar,maize,ore"
+    },
+    {
+      "name": "train-1-2",
+      "path": "evidence/12-galaxy-intelligence/train-1-2.run",
+      "operation": "extend",
+      "source": "evidence/12-galaxy-intelligence/ga-producer.run",
+      "elapsed_ns": 13852541,
+      "work": [
+        16,
+        5
+      ],
+      "tags": "ash,cedar,root"
+    },
+    {
+      "name": "train-2-0",
+      "path": "evidence/12-galaxy-intelligence/train-2-0.run",
+      "operation": "extend",
+      "source": "evidence/12-galaxy-intelligence/learn-producer.run",
+      "elapsed_ns": 13821209,
+      "work": [
+        18,
+        4
+      ],
+      "tags": "acorn,ash,cedar"
+    },
+    {
+      "name": "train-2-1",
+      "path": "evidence/12-galaxy-intelligence/train-2-1.run",
+      "operation": "extend",
+      "source": "evidence/12-galaxy-intelligence/learn-producer.run",
+      "elapsed_ns": 14875875,
+      "work": [
+        16,
+        4
+      ],
+      "tags": "ash,cedar,maize,ore"
+    },
+    {
+      "name": "train-2-2",
+      "path": "evidence/12-galaxy-intelligence/train-2-2.run",
+      "operation": "extend",
+      "source": "evidence/12-galaxy-intelligence/learn-producer.run",
+      "elapsed_ns": 19970375,
+      "work": [
+        16,
+        4
+      ],
+      "tags": "ash,cedar,root"
+    },
+    {
+      "name": "held-old-0",
+      "path": "evidence/12-galaxy-intelligence/held-old-0.run",
+      "operation": "extend",
+      "source": "evidence/01-seed.run",
+      "elapsed_ns": 13371875,
+      "work": [
+        19,
+        5
+      ],
+      "tags": "ash,cedar,seed"
+    },
+    {
+      "name": "held-learned-0",
+      "path": "evidence/12-galaxy-intelligence/held-learned-0.run",
+      "operation": "extend",
+      "source": "evidence/12-galaxy-intelligence/learn-producer.run",
+      "elapsed_ns": 12892875,
+      "work": [
+        16,
+        4
+      ],
+      "tags": "ash,cedar,seed"
+    },
+    {
+      "name": "fresh-1-0",
+      "path": "evidence/12-galaxy-intelligence/fresh-1-0.run",
+      "operation": "evolve",
+      "source": "evidence/01-seed.run",
+      "elapsed_ns": 13807750,
+      "work": [
+        8,
+        2
+      ],
+      "tags": "ash,cedar"
+    },
+    {
+      "name": "fresh-2-0",
+      "path": "evidence/12-galaxy-intelligence/fresh-2-0.run",
+      "operation": "evolve",
+      "source": "evidence/12-galaxy-intelligence/fresh-1-0.run",
+      "elapsed_ns": 12932334,
+      "work": [
+        8,
+        2
+      ],
+      "tags": "ash,cedar"
+    },
+    {
+      "name": "fresh-use-0",
+      "path": "evidence/12-galaxy-intelligence/fresh-use-0.run",
+      "operation": "extend",
+      "source": "evidence/12-galaxy-intelligence/fresh-2-0.run",
+      "elapsed_ns": 12996292,
+      "work": [
+        16,
+        4
+      ],
+      "tags": "ash,cedar,seed"
+    },
+    {
+      "name": "held-old-1",
+      "path": "evidence/12-galaxy-intelligence/held-old-1.run",
+      "operation": "extend",
+      "source": "evidence/01-seed.run",
+      "elapsed_ns": 12753917,
+      "work": [
+        24,
+        5
+      ],
+      "tags": "ash,cedar,pear,quince"
+    },
+    {
+      "name": "held-learned-1",
+      "path": "evidence/12-galaxy-intelligence/held-learned-1.run",
+      "operation": "extend",
+      "source": "evidence/12-galaxy-intelligence/learn-producer.run",
+      "elapsed_ns": 13046750,
+      "work": [
+        18,
+        4
+      ],
+      "tags": "ash,cedar,pear,quince"
+    },
+    {
+      "name": "fresh-1-1",
+      "path": "evidence/12-galaxy-intelligence/fresh-1-1.run",
+      "operation": "evolve",
+      "source": "evidence/01-seed.run",
+      "elapsed_ns": 12913750,
+      "work": [
+        8,
+        2
+      ],
+      "tags": "ash,cedar"
+    },
+    {
+      "name": "fresh-2-1",
+      "path": "evidence/12-galaxy-intelligence/fresh-2-1.run",
+      "operation": "evolve",
+      "source": "evidence/12-galaxy-intelligence/fresh-1-1.run",
+      "elapsed_ns": 13766625,
+      "work": [
+        8,
+        2
+      ],
+      "tags": "ash,cedar"
+    },
+    {
+      "name": "fresh-use-1",
+      "path": "evidence/12-galaxy-intelligence/fresh-use-1.run",
+      "operation": "extend",
+      "source": "evidence/12-galaxy-intelligence/fresh-2-1.run",
+      "elapsed_ns": 12962667,
+      "work": [
+        18,
+        4
+      ],
+      "tags": "ash,cedar,pear,quince"
+    },
+    {
+      "name": "held-old-2",
+      "path": "evidence/12-galaxy-intelligence/held-old-2.run",
+      "operation": "extend",
+      "source": "evidence/01-seed.run",
+      "elapsed_ns": 13389958,
+      "work": [
+        23,
+        5
+      ],
+      "tags": "ash,cedar,d-19,lime"
+    },
+    {
+      "name": "held-learned-2",
+      "path": "evidence/12-galaxy-intelligence/held-learned-2.run",
+      "operation": "extend",
+      "source": "evidence/12-galaxy-intelligence/learn-producer.run",
+      "elapsed_ns": 13426000,
+      "work": [
+        20,
+        5
+      ],
+      "tags": "ash,cedar,d-19,lime"
+    },
+    {
+      "name": "fresh-1-2",
+      "path": "evidence/12-galaxy-intelligence/fresh-1-2.run",
+      "operation": "evolve",
+      "source": "evidence/01-seed.run",
+      "elapsed_ns": 13942125,
+      "work": [
+        8,
+        2
+      ],
+      "tags": "ash,cedar"
+    },
+    {
+      "name": "fresh-2-2",
+      "path": "evidence/12-galaxy-intelligence/fresh-2-2.run",
+      "operation": "evolve",
+      "source": "evidence/12-galaxy-intelligence/fresh-1-2.run",
+      "elapsed_ns": 15831500,
+      "work": [
+        8,
+        2
+      ],
+      "tags": "ash,cedar"
+    },
+    {
+      "name": "fresh-use-2",
+      "path": "evidence/12-galaxy-intelligence/fresh-use-2.run",
+      "operation": "extend",
+      "source": "evidence/12-galaxy-intelligence/fresh-2-2.run",
+      "elapsed_ns": 13909000,
+      "work": [
+        20,
+        5
+      ],
+      "tags": "ash,cedar,d-19,lime"
+    },
+    {
+      "name": "held-old-3",
+      "path": "evidence/12-galaxy-intelligence/held-old-3.run",
+      "operation": "extend",
+      "source": "evidence/01-seed.run",
+      "elapsed_ns": 14909166,
+      "work": [
+        23,
+        5
+      ],
+      "tags": "ash,birch-7,cedar,rock"
+    },
+    {
+      "name": "held-learned-3",
+      "path": "evidence/12-galaxy-intelligence/held-learned-3.run",
+      "operation": "extend",
+      "source": "evidence/12-galaxy-intelligence/learn-producer.run",
+      "elapsed_ns": 13843167,
+      "work": [
+        23,
+        5
+      ],
+      "tags": "ash,birch-7,cedar,rock"
+    },
+    {
+      "name": "fresh-1-3",
+      "path": "evidence/12-galaxy-intelligence/fresh-1-3.run",
+      "operation": "evolve",
+      "source": "evidence/01-seed.run",
+      "elapsed_ns": 13035500,
+      "work": [
+        8,
+        2
+      ],
+      "tags": "ash,cedar"
+    },
+    {
+      "name": "fresh-2-3",
+      "path": "evidence/12-galaxy-intelligence/fresh-2-3.run",
+      "operation": "evolve",
+      "source": "evidence/12-galaxy-intelligence/fresh-1-3.run",
+      "elapsed_ns": 17806083,
+      "work": [
+        8,
+        2
+      ],
+      "tags": "ash,cedar"
+    },
+    {
+      "name": "fresh-use-3",
+      "path": "evidence/12-galaxy-intelligence/fresh-use-3.run",
+      "operation": "extend",
+      "source": "evidence/12-galaxy-intelligence/fresh-2-3.run",
+      "elapsed_ns": 13878292,
+      "work": [
+        23,
+        5
+      ],
+      "tags": "ash,birch-7,cedar,rock"
+    },
+    {
+      "name": "held-old-4",
+      "path": "evidence/12-galaxy-intelligence/held-old-4.run",
+      "operation": "extend",
+      "source": "evidence/01-seed.run",
+      "elapsed_ns": 13922542,
+      "work": [
+        18,
+        5
+      ],
+      "tags": "ash,bark,cedar,tea"
+    },
+    {
+      "name": "held-learned-4",
+      "path": "evidence/12-galaxy-intelligence/held-learned-4.run",
+      "operation": "extend",
+      "source": "evidence/12-galaxy-intelligence/learn-producer.run",
+      "elapsed_ns": 13857625,
+      "work": [
+        18,
+        5
+      ],
+      "tags": "ash,bark,cedar,tea"
+    },
+    {
+      "name": "fresh-1-4",
+      "path": "evidence/12-galaxy-intelligence/fresh-1-4.run",
+      "operation": "evolve",
+      "source": "evidence/01-seed.run",
+      "elapsed_ns": 13986917,
+      "work": [
+        8,
+        2
+      ],
+      "tags": "ash,cedar"
+    },
+    {
+      "name": "fresh-2-4",
+      "path": "evidence/12-galaxy-intelligence/fresh-2-4.run",
+      "operation": "evolve",
+      "source": "evidence/12-galaxy-intelligence/fresh-1-4.run",
+      "elapsed_ns": 13788584,
+      "work": [
+        8,
+        2
+      ],
+      "tags": "ash,cedar"
+    },
+    {
+      "name": "fresh-use-4",
+      "path": "evidence/12-galaxy-intelligence/fresh-use-4.run",
+      "operation": "extend",
+      "source": "evidence/12-galaxy-intelligence/fresh-2-4.run",
+      "elapsed_ns": 13844917,
+      "work": [
+        18,
+        5
+      ],
+      "tags": "ash,bark,cedar,tea"
+    },
+    {
+      "name": "held-old-5",
+      "path": "evidence/12-galaxy-intelligence/held-old-5.run",
+      "operation": "extend",
+      "source": "evidence/01-seed.run",
+      "elapsed_ns": 13042417,
+      "work": [
+        12,
+        5
+      ],
+      "tags": "ash,cedar"
+    },
+    {
+      "name": "held-learned-5",
+      "path": "evidence/12-galaxy-intelligence/held-learned-5.run",
+      "operation": "extend",
+      "source": "evidence/12-galaxy-intelligence/learn-producer.run",
+      "elapsed_ns": 13737333,
+      "work": [
+        8,
+        2
+      ],
+      "tags": "ash,cedar"
+    },
+    {
+      "name": "fresh-1-5",
+      "path": "evidence/12-galaxy-intelligence/fresh-1-5.run",
+      "operation": "evolve",
+      "source": "evidence/01-seed.run",
+      "elapsed_ns": 12904666,
+      "work": [
+        8,
+        2
+      ],
+      "tags": "ash,cedar"
+    },
+    {
+      "name": "fresh-2-5",
+      "path": "evidence/12-galaxy-intelligence/fresh-2-5.run",
+      "operation": "evolve",
+      "source": "evidence/12-galaxy-intelligence/fresh-1-5.run",
+      "elapsed_ns": 12866250,
+      "work": [
+        8,
+        2
+      ],
+      "tags": "ash,cedar"
+    },
+    {
+      "name": "fresh-use-5",
+      "path": "evidence/12-galaxy-intelligence/fresh-use-5.run",
+      "operation": "extend",
+      "source": "evidence/12-galaxy-intelligence/fresh-2-5.run",
+      "elapsed_ns": 11841125,
+      "work": [
+        8,
+        2
+      ],
+      "tags": "ash,cedar"
+    }
+  ]
+}

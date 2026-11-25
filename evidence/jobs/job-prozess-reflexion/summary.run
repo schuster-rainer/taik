@@ -1,0 +1,19 @@
+decision=observed
+identity=prozess-reflexion-01
+intent=Die Spec auf den eigenen Arbeitsprozess anwenden: Ist der Betrieb über launchd richtig, und arbeitet die Factory so, wie die Spec es verlangt?
+scope=Reflection on the process as run on 2026-11-25. Measurements where a claim needed one. No change to the process in this record.
+s07_no_tick=Holds. The service blocks on kernel events while idle. launchd supervises it and restarts it.
+s08_need_for_unattended_work=Shown. ../job-worker-verfuegbarkeit/round-01.run was rejected without a worker, ../job-worker-verfuegbarkeit-2/round-01.run was accepted with one.
+persistent_or_on_demand=Open. A cold drain over a copy of the 22 live jobs took 4.3 to 4.7 ms in five runs. At this archive size a persistent process buys no speed. The cache from round 9 pays at 500 jobs and more. Section 5 of the spec prefers a command invocation where it suffices.
+launchd_environment=The Codex login answered in 65 ms in a shell and timed out after 5 s inside the service. The recorded failure was the environment of the service, not a missing quota. The cause is not known.
+slow_interval=Three of four unattended rounds spent about 3 s between evaluate and checks, one 59 ms. Not reproduced in a shell (77 to 97 ms) or in six launchd runs with default or Interactive process type (52 to 224 ms). Round 12 now records gate_ms separately.
+s04_s09_backend_promotion=Violated in spirit. Viewer and software jobs are decided by a pinned gate that the Factory runs. The twelve rounds of job-rust-entrypoint were not: the author of each change ran the checks, wrote decision=accepted by hand and installed the binary. The Factory has never judged its own successor.
+s10_permissions=The LaunchAgent grants the service the right to spend Claude usage through TAIK_LEAD_WORKER. The user granted it in this session. The grant lives outside the project folder. Rollback copies are in job-rust-entrypoint. Nothing bounds the total cost of queued rounds.
+s11_records=Each round left a record. Two records named an interval wrongly and were corrected in round 12, not rewritten.
+attribution=Fixed today in rounds 8 and 12. Before that, attached work was recorded as Codex.
+visibility=The viewer listed the twelve newest job folders by creation date. Today's backend rounds dropped out of view. It now orders by latest activity.
+nautilus=Results did become instruments: the WebKit design check from job-factory-gestaltung judged the new viewer, the viewer shows its own rounds, the queue cache reuses a retained observation. No lesson from a rejected round is carried into a later job, and every gate is written by hand for its job.
+galaxy_intelligence=See ../job-galaxy-quellcode/summary.run. G-01 shown, G-03 and I-03 not supported for the tested task, I-01 not shown.
+not_a_loop=Seven of today's rounds changed the Factory itself. The only artifacts for use outside it were four small readers built as experiment arms. Capability growth in the sense of section 2.5 is not shown.
+continuation=Two decisions belong to the user: whether the installed Factory should judge and install its own successor through a pinned gate, and whether the service should stay a persistent process. Until then keep the current operation and record who decided each backend round.
+end

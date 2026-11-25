@@ -1,0 +1,18 @@
+     Running unittests src/main.rs (target/debug/deps/taik_seed-c3a5d7c891872f43)
+test procedure::tests::reference_rejects_a_changed_search_decision ... ok
+test procedure::tests::every_admitted_order_agrees_with_the_independent_reference ... ok
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+     Running tests/factory.rs (target/debug/deps/factory-005f187fc64c1821)
+test accepted_records_reject_a_fifo_without_blocking ... ok
+test concurrent_publication_has_one_winner ... ok
+test invalid_proposal_and_staging_cannot_replace_or_seed_accepted_work ... ok
+test service_resumes_from_an_accepted_round_and_wakes_for_new_work ... ok
+test queued_source_repairs_an_assertion_and_resumes_from_saved_feedback ... ok
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.69s
+     Running tests/source_worker.rs (target/debug/deps/source_worker-a39472baf3c16ded)
+test a_configured_second_worker_takes_over_and_is_named_in_the_record ... ok
+test worker_failure_records_distinguish_phases_without_persisting_stderr ... ok
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.96s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.05s
+observation before the change: worker=codex-subscription worker_stage=login worker_failure=timeout worker_elapsed_ms=5078 
+PASS: after reloading the LaunchAgent with TAIK_SECOND_WORKER, the live service accepted ../job-worker-verfuegbarkeit-2/round-01.run: worker=claude-cli worker_fallback=Codex login timeout after 5154 ms worker_model=claude-opus-5-5 worker_cost_usd=0.009724 worker_duration_ms=23680 

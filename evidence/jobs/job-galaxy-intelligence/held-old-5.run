@@ -1,0 +1,24 @@
+decision=accepted
+procedure=lower,trim,sort,dedup,drop-blank
+tags=ash,cedar
+identity="held-old-5.run"
+intent=Add tags using the retained procedure
+baseline=Some("evidence/01-seed.run")
+baseline_procedure=Some("lower,trim,sort,dedup,drop-blank")
+operations=Reuse the retained tags and executable procedure, add tags, sort, reduce and check output
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=["  ", "\t", " "]
+expected_tags=["ash", "cedar"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:12, sort_items:5
+probe_work=lowercase_bytes:14, sort_items:4
+evaluation_elapsed_us=17
+limitations=This invocation checked canonical ASCII output and both independent probes.
+continuation=Stop at the one-candidate limit. Verified 2 canonical tags from 5 input tags. The retained procedure passed both probes.
+advance=false
+end

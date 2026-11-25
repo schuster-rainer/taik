@@ -1,0 +1,4 @@
+0	start	Kandidat zur Zusammenführung von Rust und Python wird geprüft
+5000000	checks	Rust-Tests, Clippy, Release-Build und Typprüfung des Factory Viewers bestanden
+6000000	checks	Veröffentlichter Floorplanner und Versuch 12 vom finalen Rust-Binary erneut geprüft
+91000000	accepted	Rust-Einstieg veröffentlicht und Dienst damit gestartet

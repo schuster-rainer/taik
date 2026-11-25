@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+const html = readFileSync(process.argv[2], 'utf8');
+assert.match(html, /^<!doctype html>/i, 'standalone document');
+assert.doesNotMatch(html, /<(?:script|iframe|link|object|embed)\b/i, 'evidence panels are inert');
+const ref = html.match(/<img[^>]+src="data:image\/jpeg;base64,([a-z\d+/=]+)"/i)?.[1];
+const expected = html.match(/data-sha256="([a-f0-9]{64})"/)?.[1];
+assert(ref && expected, 'embedded local image and digest');
+const bytes = Buffer.from(ref, 'base64');
+assert(bytes.length > 4096 && bytes[0] === 255 && bytes[1] === 216 && bytes.at(-2) === 255 && bytes.at(-1) === 217, 'complete JPEG evidence');
+assert.equal(createHash('sha256').update(bytes).digest('hex'), expected, 'image content digest');
+console.log('PASS: local evidence panel with intact embedded JPEG');

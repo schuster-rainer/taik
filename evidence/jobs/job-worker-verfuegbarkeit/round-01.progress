@@ -1,0 +1,4 @@
+72908	start	Factory hat den Auftrag übernommen
+154228	worker	Codex erhält Auftrag und akzeptierten Ausgangsstand
+5237940	error	Codex login timeout after 5078 ms
+5680790	rejected	Execution ended before a repairable gate judgement. Inspect the recorded error.

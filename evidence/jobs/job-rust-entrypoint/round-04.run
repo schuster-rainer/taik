@@ -1,0 +1,19 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-04
+intent=Apply evidence-driven first-use verification and a live offline split preview.
+baseline=round-03-taik-seed
+rollback=round-04.baseline.tar.gz
+worker=codex
+operations=Measure startup verification, retain the timeout, derive and verify deferred activation, expose drafts through filesystem events and render accepted output in an offline frame.
+checks=PASS: Rust tests, Clippy, release build, automatic two-round live research, attached filewatch end-to-end, Swift and WebKit Canvas, syntax highlighting and network policy.
+evidence=round-04.checks.log
+research=../job-suchtabelle-bei-bedarf/round-02.run
+artifact=round-04-taik-seed
+artifact_sha256=31894710c18b5f977ea1eda95ac595ab197b7147a2249eea67678c78f70e1f1e
+limitations=Research is scoped to search activation. The preview reads the text chunks made available by the original worker. No model calls are made for presentation.
+continuation=Reuse the original table gate at first use. Replay the retained Floorplanner to verify viewer changes.
+advance=false
+end

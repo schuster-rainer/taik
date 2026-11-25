@@ -1,0 +1,480 @@
+<style>
+  html { color-scheme: light dark; }
+  html[data-appearance="light"] { color-scheme: light; }
+  html[data-appearance="dark"] { color-scheme: dark; }
+  body { margin: 0; padding: clamp(14px, 2vw, 28px); background: light-dark(#f8fafc, #101923);
+    color: light-dark(#1b293b, #edf3ff); font-family: system-ui, sans-serif; }
+  #taik-live {
+    --ink: var(--foreground, currentColor);
+    --rule: var(--border, #8494a44d);
+    --quiet: var(--muted-foreground, light-dark(#607185, #9cacc0));
+    --active: var(--chart-1, light-dark(#187361, #65d9bc));
+    --surface: light-dark(#fff, #111b25);
+    --good: var(--success, light-dark(#268057, #71c695));
+    --bad: var(--destructive, light-dark(#bd4456, #ef8797));
+    --mono: var(--font-mono, ui-monospace, SFMono-Regular, monospace);
+    max-width: 1600px;
+    margin-inline: auto;
+    font-family: var(--font-sans, system-ui, sans-serif);
+    color: var(--ink);
+  }
+  #taik-live *, #taik-live *::before, #taik-live *::after { box-sizing: border-box; }
+  #taik-live header { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; padding-bottom: 12px; border-bottom: 1px solid var(--rule); }
+  #taik-live .split { display: grid; grid-template-columns: minmax(300px, .72fr) minmax(0, 1.28fr); gap: 18px; }
+  #taik-live main { min-width: 0; }
+  #taik-live .preview { min-width: 0; border-left: 1px solid var(--rule); padding-left: 16px; position: sticky; top: 14px;
+    align-self: start; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1.6fr) minmax(0, 1fr); gap: 12px;
+    height: calc(100vh - 2 * clamp(14px, 2vw, 28px)); }
+  #taik-live .preview .preview-pane { min-width: 0; min-height: 0; margin: 0;
+    padding: 10px; display: flex; flex-direction: column; border: 1px solid var(--rule); border-radius: 6px; background: var(--surface); }
+  #taik-live .preview-pane taik-artifact-preview { flex: 1; min-height: 0; margin-top: 8px; }
+  #taik-live .work-panels { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  #taik-live .work-panels:has(#taik-job-observation:not([hidden])) { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); }
+  #taik-live .work-output { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  #taik-live #taik-job-content { overflow: auto; min-width: 0; }
+  #taik-live #taik-job-observation { min-width: 0; margin-top: 8px; display: flex; flex-direction: column;
+    border-inline-start: 1px solid var(--rule); padding-inline-start: 10px; }
+  #taik-live #taik-job-observation[hidden] { display: none; }
+  #taik-live #taik-job-observation .events { min-height: 0; overflow: auto; margin-bottom: 0; }
+  #taik-live .round details > .events, #taik-live .round details > pre { max-height: 11rem; overflow: auto; }
+  #taik-live .preview p { margin-top: 8px; line-height: 1.5; overflow-wrap: anywhere; }
+  #taik-live .source-code { padding: 8px 0; white-space: pre; }
+  #taik-live .source-code code { font: inherit; }
+  #taik-live .syntax-tag { color: var(--active); }
+  #taik-live .syntax-string { color: var(--good); }
+  #taik-live .syntax-comment { color: var(--quiet); font-style: italic; }
+  #taik-live .syntax-keyword { color: var(--bad); }
+  #taik-live h1, #taik-live h2, #taik-live h3, #taik-live p { margin: 0; }
+  #taik-live h1 { font-size: clamp(1.45rem, 3vw, 1.9rem); font-weight: 650; letter-spacing: -.04em; line-height: 1.12; }
+  #taik-live h2 { font-size: 1.08rem; font-weight: 630; }
+  #taik-live h3 { font-size: .9rem; font-weight: 580; }
+  #taik-live section { margin-top: 17px; }
+  #taik-live .goal p { margin-top: 5px; line-height: 1.5; overflow-wrap: anywhere; }
+  #taik-live .sub { color: var(--quiet); font-size: .84rem; }
+  #taik-live .status { display: flex; align-items: center; gap: 8px; font-size: .86rem; white-space: nowrap; }
+  #taik-live .header-controls, #taik-live .appearance { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+  #taik-live .appearance { gap: 6px; font-size: .84rem; }
+  #taik-live .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--quiet); }
+  #taik-live .dot.active { width: 13px; height: 13px; border: 2px solid var(--active); border-right-color: transparent; background: transparent; animation: taik-working .9s linear infinite; }
+  @keyframes taik-working { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { #taik-live .dot.active { animation: none; } }
+  #taik-live .running { color: var(--quiet); margin-top: 5px; font-size: .83rem; font-variant-numeric: tabular-nums; }
+  #taik-live .dot.offline { background: var(--bad); }
+  #taik-live .steps { padding: 0; margin: 11px 0 0; list-style: none; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+  #taik-live .steps li { border: 1px solid var(--rule); padding: 4px 8px; border-radius: 5px; font-size: .83rem; }
+  #taik-live .steps li.changed { border-color: var(--active); }
+  #taik-live .tags { margin-top: 10px; display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap; }
+  #taik-live code { font-family: var(--mono); font-size: .83em; overflow-wrap: anywhere; }
+  #taik-live .tags code { padding: 1px 5px; background: color-mix(in srgb, var(--rule) 37%, transparent); border-radius: 3px; }
+  #taik-live .measures { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 18px; margin-top: 11px; }
+  #taik-live .measure p { margin-top: 6px; }
+  #taik-live .metric-bars { display: grid; gap: 3px; margin-top: 6px; }
+  #taik-live .metric-track { height: 5px; background: color-mix(in srgb, var(--rule) 35%, transparent); }
+  #taik-live .metric-bar { display: block; height: 100%; background: var(--active); }
+  #taik-live .metric-bar.before { opacity: .32; }
+  #taik-live .section-heading { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; }
+  #taik-live .rounds { list-style: none; margin: 11px 0 0; padding: 0; }
+  #taik-live .round { border-top: 1px solid var(--rule); padding: 8px 0; display: grid; grid-template-columns: 65px minmax(0, 1fr); align-items: baseline; gap: 8px; }
+  #taik-live .index { color: var(--quiet); font-size: .79rem; white-space: nowrap; }
+  #taik-live .result { color: var(--good); font-size: .8rem; }
+  #taik-live .result.rejected { color: var(--bad); }
+  #taik-live details { margin-top: 4px; font-size: .83rem; }
+  #taik-live summary { color: var(--quiet); min-height: 22px; }
+  #taik-live pre { margin: 6px 0; white-space: pre-wrap; overflow-wrap: anywhere; font: .76rem/1.45 var(--mono); }
+  #taik-live .job-control { margin-top: 11px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; font-size: .84rem; }
+  #taik-live .events { list-style: none; padding: 0 0 0 12px; margin: 8px 0; border-left: 2px solid var(--active); }
+  #taik-live .events li { display: grid; grid-template-columns: 55px minmax(0, 1fr); gap: 8px; margin: 6px 0; align-items: baseline; }
+  #taik-live .events time { color: var(--quiet); font-size: .75rem; text-align: right; font-variant-numeric: tabular-nums; }
+  #taik-live .events .event-name { font-size: .83rem; font-weight: 570; }
+  #taik-live .events code { display: block; color: var(--quiet); }
+  #taik-live select { font: inherit; max-width: 100%; }
+  @media (max-width: 450px) {
+    #taik-live .measures { grid-template-columns: 1fr; }
+    #taik-live .work-panels:has(#taik-job-observation:not([hidden])) { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 2fr) minmax(0, 1fr); }
+    #taik-live #taik-job-observation { border-inline-start: 0; border-top: 1px solid var(--rule); padding-inline-start: 0; padding-top: 8px; margin-top: 0; }
+  }
+  @media (max-width: 800px) {
+    #taik-live .split { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+    #taik-live .preview { position: static; padding: 16px 0 0; border-left: 0; border-top: 1px solid var(--rule);
+      height: auto; grid-template-rows: minmax(360px, 55vh) minmax(260px, 40vh); }
+  }
+  @media (pointer: coarse) { #taik-live summary, #taik-live select { min-height: 38px; } }
+</style>
+<div id="taik-live" lang="de">
+  <div class="split">
+    <main id="taik-activity"></main>
+    <aside id="taik-preview" class="preview" aria-label="Vorschau">
+      <section class="preview-pane" aria-labelledby="taik-result-heading">
+        <div class="section-heading"><h2 id="taik-result-heading">Ergebnis</h2><span id="taik-result-label" class="sub"></span></div>
+        <taik-artifact-preview id="taik-result-viewport" hidden></taik-artifact-preview>
+      </section>
+      <section class="preview-pane" aria-labelledby="taik-job-heading">
+        <h2 id="taik-job-heading">Zum Auftrag</h2>
+        <div class="work-panels">
+          <div class="work-output">
+            <div id="taik-job-content"></div>
+            <taik-artifact-preview id="taik-job-viewport" hidden></taik-artifact-preview>
+          </div>
+          <div id="taik-job-observation" aria-label="Arbeitsfortschritt" hidden></div>
+        </div>
+      </section>
+    </aside>
+  </div>
+</div>
+<script>
+  (() => {
+    class ArtifactPreview extends HTMLElement {
+      constructor() {
+        super();
+        const shadow = this.attachShadow({ mode: 'open' });
+        shadow.innerHTML = `<style>
+          :host { display: block; }
+          :host([hidden]) { display: none; }
+          iframe { box-sizing: border-box; display: block; width: 100%; height: 100%;
+            border: 1px solid var(--rule); border-radius: 8px;
+            color-scheme: inherit; background: light-dark(white, #192625); }
+        </style><iframe title="Freigegebenes Ergebnis" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe>`;
+        this.frame = shadow.querySelector('iframe');
+        this.frame.addEventListener('load', () => this.setAppearance(this.appearance));
+      }
+
+      setAppearance(appearance) {
+        if (!appearance) return;
+        this.appearance = appearance;
+        this.frame.contentWindow?.postMessage({ type: 'taik-appearance', appearance }, '*');
+      }
+
+      show(revision, html) {
+        this.hidden = false;
+        if (this.revision === revision) return;
+        this.revision = revision;
+        const policy = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; form-action 'none'; base-uri 'none'">`;
+        const source = html.replace(/^\s*<!doctype html\s*>/i, '');
+        this.frame.srcdoc = `<!doctype html>${policy}${source}`;
+      }
+    }
+    customElements.define('taik-artifact-preview', ArtifactPreview);
+
+    const root = document.getElementById('taik-live');
+    const activity = document.getElementById('taik-activity');
+    const resultLabel = document.getElementById('taik-result-label');
+    const resultViewport = document.getElementById('taik-result-viewport');
+    const jobContent = document.getElementById('taik-job-content');
+    const jobViewport = document.getElementById('taik-job-viewport');
+    const observation = document.getElementById('taik-job-observation');
+    const labels = { lower: 'Kleinschreiben', trim: 'Ränder trimmen', sort: 'Sortieren', dedup: 'Duplikate entfernen', 'drop-blank': 'Leere Tags entfernen' };
+    const aliases = { 'lower-then-trim': 'lower,trim,sort,dedup,drop-blank', 'trim-then-lower': 'trim,lower,sort,dedup,drop-blank' };
+    const openRounds = new Map();
+    const eventLabels = {
+      start: 'Runde gestartet', baseline: 'Prozedur geladen', probe: 'Ausgangsaufwand gemessen',
+      skip: 'Reihenfolge verletzt Abhängigkeiten', trial: 'Kandidat ohne Verbesserung', found: 'Verbesserung gefunden',
+      evaluate: 'Ausgabe und Prüfdaten vergleichen', checks: 'Unabhängige Prüfungen ausgewertet', compare: 'Aufwand verglichen',
+      accepted: 'Änderung veröffentlicht', retained: 'Bisherige Prozedur bestätigt', rejected: 'Kandidat abgelehnt', error: 'Runde unterbrochen',
+      worker: 'Codex-Worker', lookup: 'Geprüfte Suchentscheidung übernommen',
+    };
+    let snapshot = null;
+    let selected = 'latest';
+    let lastHTML = '';
+    let jobPreviewKey = '';
+    let observationKey = '';
+    const appearances = { system: 'System', light: 'Hell', dark: 'Dunkel' };
+    const systemAppearance = matchMedia('(prefers-color-scheme: dark)');
+    let appearance = document.documentElement.dataset.appearance ?? 'system';
+
+    function syncAppearance() {
+      const resolved = appearance === 'system' ? (systemAppearance.matches ? 'dark' : 'light') : appearance;
+      resultViewport.setAppearance(resolved);
+      jobViewport.setAppearance(resolved);
+    }
+    systemAppearance.addEventListener('change', syncAppearance);
+    syncAppearance();
+
+    function highlight(code) {
+      const pattern = /<!--[\s\S]*?(?:-->|$)|<\/?[\w:-]+|"[^"\n]*"|'[^'\n]*'|`[^`\n]*`|\b(?:const|let|function|return|if|else|for|class|true|false|null)\b/g;
+      let cursor = 0;
+      let markup = '';
+      for (const token of code.matchAll(pattern)) {
+        const value = token[0];
+        const color = value.startsWith('<!--') ? 'comment' : value.startsWith('<') ? 'tag'
+          : /^['"\x60]/.test(value) ? 'string' : 'keyword';
+        markup += escape(code.slice(cursor, token.index)) + `<span class="syntax-${color}">${escape(value)}</span>`;
+        cursor = token.index + value.length;
+      }
+      return markup + escape(code.slice(cursor));
+    }
+
+    function renderPreview(selectedJob) {
+      const resultJob = snapshot.jobs.find(job => job.id === 'job-floorplanner' && job.preview)
+        ?? snapshot.jobs.find(job => job.preview);
+      if (resultJob) {
+        const result = latestAccepted(resultJob);
+        resultLabel.textContent = `Freigegeben · ${result.fields.artifact}`;
+        resultViewport.show(`${resultJob.id}/${result.name}`, resultJob.preview);
+      } else {
+        resultLabel.textContent = 'Der erste geprüfte Stand steht aus.';
+        resultViewport.hidden = true;
+      }
+      renderJobPreview(selectedJob, resultJob);
+      renderJobObservation(selectedJob);
+    }
+
+    function renderJobObservation(job) {
+      const round = Object.keys(job?.progress ?? {}).sort().at(-1);
+      const events = job?.progress?.[round] ?? [];
+      const key = JSON.stringify([job?.id, round, events]);
+      if (key === observationKey) return;
+      const previous = observation.querySelector('.events');
+      const offset = previous?.scrollTop ?? 0;
+      const follow = !previous || job?.id !== observation.dataset.job
+        || previous.scrollHeight - offset - previous.clientHeight < 36;
+      observationKey = key;
+      observation.dataset.job = job?.id ?? '';
+      observation.hidden = !events.length;
+      const heading = round ? `Arbeitsfortschritt · Runde ${Number(round.slice('round-'.length))}` : 'Arbeitsfortschritt';
+      observation.innerHTML = events.length ? `<h3>${heading}</h3>${eventList(events)}` : '';
+      const list = observation.querySelector('.events');
+      if (list) list.scrollTop = follow ? list.scrollHeight : offset;
+    }
+
+    function renderJobPreview(job, resultJob) {
+      const accepted = job && latestAccepted(job);
+      const last = job?.rounds.at(-1);
+      const result = last?.fields.checks || accepted?.fields.tags;
+      const code = job?.draft ?? (job?.id === resultJob?.id ? job?.preview : null);
+      const showArtifact = job?.preview && !code && job.id !== resultJob?.id;
+      const key = JSON.stringify([job?.id, accepted?.name, code, !!job?.draft, result, job?.sourceActive]);
+      if (key === jobPreviewKey) return;
+      jobPreviewKey = key;
+      jobViewport.hidden = !showArtifact;
+
+      if (code) {
+        const offset = jobContent.scrollTop;
+        const follow = jobContent.scrollHeight - offset - jobContent.clientHeight < 36;
+        const status = job.draft ? 'Entwurf · live' : 'Freigegebener Quellcode';
+        jobContent.innerHTML = `<p class="sub">${status}</p><pre class="source-code"><code>${highlight(code)}</code></pre>`;
+        jobContent.scrollTop = job.draft && follow ? jobContent.scrollHeight : offset;
+      } else if (showArtifact) {
+        jobContent.innerHTML = `<p class="sub">Freigegeben · ${escape(accepted.fields.artifact)}</p>`;
+        jobViewport.show(`${job.id}/${accepted.name}`, job.preview);
+      } else {
+        const status = job?.sourceActive ? 'Der Worker liefert noch keinen Quellcode.' : 'Der erste geprüfte Stand steht aus.';
+        jobContent.innerHTML = result ? `<p>${escape(result)}</p>` : `<p class="sub">${status}</p>`;
+      }
+    }
+
+    function escape(text) {
+      return String(text ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
+    }
+
+    function order(text) {
+      if (!text) return [];
+      const name = text.replace(/^Some\("(.*)"\)$/, '$1');
+      return (Object.hasOwn(aliases, name) ? aliases[name] : name).split(',').map(value => value.trim()).filter(Boolean);
+    }
+
+    function latestAccepted(job) {
+      return [...job.rounds].reverse().find(round => round.fields.decision === 'accepted') ?? job.baseline;
+    }
+
+    function isPending(job) {
+      if (job.baseline.fields.kind === 'software') return job.sourceActive || job.sourceQueued;
+      return !job.rounds.length || (job.rounds.length < 20 && job.rounds.at(-1).fields.advance === 'true');
+    }
+
+    function jobStatus(job) {
+      if (job.baseline.fields.kind === 'software' && job.sourceActive) return 'Code-Worker aktiv';
+      if (job.sourceQueued && job.rounds.length) return 'Überarbeitung vorgesehen';
+      if (job.rounds.at(-1)?.fields.decision === 'rejected') return 'Kandidat abgelehnt';
+      if (isPending(job)) return job.rounds.length ? 'Nächste Runde ausstehend' : 'Eingereiht';
+      return job.rounds.at(-1)?.fields.advance === 'true' ? 'Rundenlimit erreicht' : 'Abgeschlossen';
+    }
+
+    function readiness(data) {
+      if (data.service === 'offline') return ['offline', 'Factory angehalten'];
+      if (data.service === 'unmanaged') return ['', 'Aufträge verfolgen'];
+      if (data.pending) return ['active', data.pending === 1 ? 'Auftrag in Arbeit' : `${data.pending} offene Aufträge`];
+      return ['', 'Wartet auf Auftrag'];
+    }
+
+    function operationChange(oldOrder, newOrder) {
+      if (!oldOrder.length || !newOrder.length || oldOrder.join() === newOrder.join()) return '';
+      const firstMismatch = newOrder.findIndex((step, index) => step !== oldOrder[index]);
+      const nextStep = newOrder[firstMismatch];
+      const movedFrom = oldOrder.indexOf(nextStep);
+      if (movedFrom > firstMismatch) return `${labels[nextStep] ?? nextStep} vor ${labels[oldOrder[firstMismatch]] ?? oldOrder[firstMismatch]}`;
+      return 'Reihenfolge geändert';
+    }
+
+    function measure(text, key) {
+      return Number((text ?? '').match(new RegExp(`(?:^|, )${key}:(\\d+)(?:,|$)`))?.[1] ?? NaN);
+    }
+
+    function comparison(job, accepted) {
+      const first = job.rounds.find(round => round.fields.baseline_work)?.fields.baseline_work;
+      const current = accepted.fields.probe_work;
+      if (!first || !current) return '';
+      const measures = [['lowercase_bytes', 'Bytes vor Kleinschreibung'], ['sort_items', 'Elemente beim Sortieren']];
+      const groups = measures.map(([key, label]) => {
+        const before = measure(first, key);
+        const after = measure(current, key);
+        if (!Number.isFinite(before) || !Number.isFinite(after)) return '';
+        const max = Math.max(before, after, 1);
+        return `<div class="measure" role="img" aria-label="${label}: vorher ${before}, jetzt ${after}">
+          <h3>${label}</h3><p class="sub">Vorher ${before} · Jetzt ${after}</p>
+          <div class="metric-bars" aria-hidden="true">
+            <div class="metric-track"><span class="metric-bar before" style="width:${before / max * 100}%"></span></div>
+            <div class="metric-track"><span class="metric-bar" style="width:${after / max * 100}%"></span></div>
+          </div></div>`;
+      }).join('');
+      return groups ? `<section aria-label="Gemessene Änderung"><h2>Aufwand im Prüflauf</h2><div class="measures">${groups}</div></section>` : '';
+    }
+
+    function renderRound(round, index, job) {
+      const fields = round.fields;
+      const rejected = fields.decision === 'rejected';
+      const name = `${job.id}/${round.name}`;
+      const events = job.progress?.[round.name.replace(/\.run$/, '')] ?? [];
+      const latest = index === job.rounds.length - 1;
+      const eventKey = `${name}/events`;
+      const eventsOpen = openRounds.get(eventKey) ?? latest;
+      const checksOpen = openRounds.get(name) ?? (latest && !events.length);
+      const changed = operationChange(order(fields.baseline_procedure), order(fields.procedure));
+      const software = fields.kind === 'software';
+      const search = fields.kind === 'search';
+      const changedPolicy = search && fields.policy !== fields.baseline_policy;
+      const applied = changedPolicy || fields.advance === 'true';
+      const decision = rejected ? 'Kandidat abgelehnt' : software ? 'Quellcode angenommen' : applied ? 'Änderung übernommen' : 'Prozedur beibehalten';
+      const description = search ? searchPolicies[fields.policy] ?? fields.intent : software ? fields.intent : changed || (rejected ? 'Der letzte akzeptierte Stand bleibt gültig.' : 'Keine weitere einzelne Umstellung verbessert den geprüften Aufwand.');
+      return `<li class="round"><span class="index">Runde ${index + 1}</span><div>
+        <h3>${escape(description)}</h3><span class="result${rejected ? ' rejected' : ''}">${decision}</span>
+        ${events.length ? `<details data-round="${escape(eventKey)}" data-initial-open="${eventsOpen}"${eventsOpen ? ' open' : ''}>
+          <summary>Arbeitsschritte (${events.length})</summary>${eventList(events)}</details>` : ''}
+        <details data-round="${escape(name)}" data-initial-open="${checksOpen}"${checksOpen ? ' open' : ''}>
+          <summary>Prüfprotokoll</summary><pre><code>${escape(round.detail)}</code></pre>
+        </details>
+      </div></li>`;
+    }
+
+    function eventList(events) {
+      return `<ol class="events">${events.map(event => {
+        const elapsed = event.elapsed >= 1000 ? `${(event.elapsed / 1000).toFixed(1)} ms` : `${event.elapsed} µs`;
+        const name = Object.hasOwn(eventLabels, event.kind) ? eventLabels[event.kind] : event.kind;
+        return `<li><time>${elapsed}</time><div><span class="event-name">${escape(name)}</span><code>${escape(event.detail)}</code></div></li>`;
+      }).join('')}</ol>`;
+    }
+
+    function progressPanel(job) {
+      const index = job.rounds.length + (isPending(job) ? 1 : 0);
+      if (index < 1) return '';
+      const key = `round-${String(index).padStart(2, '0')}`;
+      const events = job.progress?.[key] ?? [];
+      if (!events.length && !isPending(job)) return '';
+      const title = job.sourceQueued ? 'Auftrag eingereiht' : isPending(job) ? `Runde ${index} · Live` : `Letzte Runde · ${index}`;
+      const recent = events.length ? eventList(events.slice(-4)) : '<p class="sub">Die Runde wartet auf ihren Start.</p>';
+      const last = events.at(-1)?.kind;
+      const phase = last === 'evaluate' || last === 'checks' ? 'Factory prüft den Code' : 'Code-Worker arbeitet';
+      const running = job.sourceActive ? `<p class="running">${phase} <span data-started="${Number(job.sourceStartedAt) || 0}"></span></p>` : '';
+      return `<section aria-label="Arbeitsschritte"><h2>${title}</h2>${running}${recent}</section>`;
+    }
+
+    const searchPolicies = {
+      all: 'Alle Umstellungen',
+      unique: 'Jede Umstellung einmal',
+      'valid-unique': 'Nur gültige Umstellungen, jeweils einmal',
+      precomputed: 'Vorausberechnete Suchentscheidungen'
+    };
+
+    function render() {
+      if (!snapshot) return;
+      const [tone, status] = readiness(snapshot);
+      const appearanceOptions = Object.entries(appearances).map(([value, label]) =>
+        `<option value="${value}"${appearance === value ? ' selected' : ''}>${label}</option>`).join('');
+      const header = `<header><h1>TAIK Factory</h1><div class="header-controls">
+        <div class="status" role="status"><span class="dot ${tone}" aria-hidden="true"></span>${status}</div>
+        <label class="appearance">Darstellung <select id="taik-appearance">${appearanceOptions}</select></label>
+      </div></header>`;
+      const job = snapshot.jobs.find(job => job.id === selected)
+        ?? snapshot.jobs.find(job => job.sourceActive) ?? snapshot.jobs[0];
+      if (!job) {
+        renderPreview();
+        setContent(`${header}<section><h2>Aufträge</h2><p class="sub">Hier erscheinen die Aufträge, sobald die Factory sie annimmt.</p></section>`);
+        return;
+      }
+      const goal = job.goal ? `<section class="goal" aria-labelledby="taik-goal"><h2 id="taik-goal">Auftragsziel</h2><p>${escape(job.goal)}</p></section>` : '';
+      const accepted = latestAccepted(job);
+      renderPreview(job);
+      const initialOrder = order(job.baseline.fields.procedure);
+      const currentOrder = order(accepted.fields.procedure);
+      const steps = currentOrder.map((operation, index) => `<li${initialOrder[index] !== operation ? ' class="changed"' : ''}>${escape(labels[operation] ?? operation)}</li>`).join('');
+      const tags = (accepted.fields.tags || '').split(',').filter(Boolean).map(tag => `<code>${escape(tag)}</code>`).join('');
+      const artifact = accepted.fields.artifact;
+      const software = job.baseline.fields.kind === 'software';
+      const search = job.baseline.fields.kind === 'search';
+      const policy = escape(searchPolicies[accepted.fields.policy ?? accepted.fields.procedure]);
+      const results = software ? `<section><h2>Software-Auftrag</h2>${artifact
+        ? `<button type="button" data-artifact="${escape(artifact)}" data-job="${escape(job.id)}">${job.id === 'job-floorplanner' ? 'Floorplanner öffnen' : artifact.endsWith('-taik-seed') ? 'taik-seed im Finder zeigen' : 'Ergebnis öffnen'}</button>`
+        : '<p class="sub">Der erste geprüfte Stand steht aus.</p>'}</section>` : search ? `<section><h2>Akzeptierte Suchprozedur</h2><p>${policy}</p></section>` : `<section><h2>Akzeptierte Prozedur</h2><ol class="steps">${steps}</ol>
+        <div class="tags"><span class="sub">Ergebnis</span>${tags || '<span class="sub">Leere Tag-Liste</span>'}</div></section>`;
+      const rounds = job.rounds.length ? `<ol class="rounds">${job.rounds.map((round, index) => renderRound(round, index, job)).join('')}</ol>`
+        : '<p class="sub">Die Factory hat den Auftrag erhalten. Die erste Runde steht noch aus.</p>';
+      const options = snapshot.jobs.map(entry => `<option value="${escape(entry.id)}"${selected === entry.id ? ' selected' : ''}>${escape(entry.id)} · ${jobStatus(entry)}</option>`).join('');
+      setContent(`${header}${goal}<section aria-label="Auftragsverlauf">
+        <div class="section-heading"><h2>Auftragsverlauf</h2><span class="sub">${escape(job.id)} · ${jobStatus(job)}</span></div>
+        <div class="job-control"><label for="taik-live-job">Auftrag wählen</label>
+        <select id="taik-live-job"><option value="latest"${selected === 'latest' ? ' selected' : ''}>Neuester Auftrag</option>${options}</select></div>
+        ${rounds}</section>${isPending(job) ? progressPanel(job) : ''}${results}${comparison(job, accepted)}`);
+    }
+
+    function setContent(html) {
+      if (html === lastHTML) return;
+      lastHTML = html;
+      const focusId = document.activeElement?.id;
+      activity.innerHTML = html;
+      updateElapsed();
+      if (focusId === 'taik-live-job' || focusId === 'taik-appearance') {
+        document.getElementById(focusId)?.focus({ preventScroll: true });
+      }
+    }
+
+    function updateElapsed() {
+      const label = root.querySelector('[data-started]');
+      const start = Number(label?.dataset.started);
+      if (!start) return;
+      const seconds = Math.max(0, Math.floor(Date.now() / 1000 - start));
+      label.textContent = `· ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+    }
+
+    window.setInterval(updateElapsed, 1000);
+
+    root.addEventListener('change', event => {
+      if (event.target.id === 'taik-appearance' && Object.hasOwn(appearances, event.target.value)) {
+        appearance = event.target.value;
+        document.documentElement.dataset.appearance = appearance;
+        syncAppearance();
+        window.webkit?.messageHandlers?.setAppearance?.postMessage(appearance);
+        return;
+      }
+      if (event.target.id !== 'taik-live-job') return;
+      selected = event.target.value;
+      render();
+    });
+    root.addEventListener('click', event => {
+      const button = event.target.closest('button[data-artifact]');
+      if (button) window.webkit?.messageHandlers?.openArtifact?.postMessage({job:button.dataset.job,name:button.dataset.artifact});
+    });
+    root.addEventListener('toggle', event => {
+      const id = event.target.dataset?.round;
+      if (!id || !event.target.isConnected || event.target.dataset.initialOpen === String(event.target.open)) return;
+      openRounds.set(id, event.target.open);
+      event.target.dataset.initialOpen = String(event.target.open);
+      lastHTML = activity.innerHTML;
+    }, true);
+    window.updateFactory = data => {
+      if (!data) return;
+      snapshot = data;
+      if (selected !== 'latest' && !snapshot.jobs.some(job => job.id === selected)) selected = 'latest';
+      render();
+    };
+    window.updateFactory(/*FACTORY_DATA*/null);
+  })();
+</script>

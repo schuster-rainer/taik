@@ -1,0 +1,19 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-11
+intent=Den vom Nutzer bestimmten Worker zuerst einsetzen.
+baseline=round-10-taik-seed
+rollback=round-10-taik-seed and round-11.rollback.plist
+worker=claude-fable
+operations=With TAIK_LEAD_WORKER set, run the Claude CLI first and do not call Codex. Keep the takeover path for a service without a leading worker.
+checks=PASS: Rust tests including a leading worker round without a Codex event, Clippy, release build. The live service accepted a queued job with worker=claude-cli and no fallback field.
+evidence=round-11.checks.log
+experiment=../job-protokoll-leser-ohne-1/round-01.run
+artifact=round-11-taik-seed
+artifact_sha256=ed0eaab813040ad44ad766e85b03bc9ae4cb82196e124a3f314dd0e2e7c81e01
+limitations=The leading worker shows no live draft until it has finished. Its gate run on the first job took about 3.3 s, far above the 75 ms of the probe job. The cause is not measured.
+continuation=Measure where the 3.3 s of the gate run went before changing the gate or the sandbox.
+advance=false
+end

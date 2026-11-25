@@ -1,0 +1,18 @@
+decision=rejected
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=Die bestehende Factory-Ansicht als Bildbeobachtung sichern.
+baseline=(empty)
+worker=codex-attached
+limits=4 rounds; worker 150s; verifier 15s; 96KiB source
+gate_sha256=d4feb1f67cf6a0db364dbde521301794bc734be22fab94f6eae09519703760ef
+checks=worker output exceeded byte limit
+artifact=
+rejected_candidate=
+feedback=
+follow_up=
+continuation=Execution ended before a repairable gate judgement. Inspect the recorded error.
+advance=false
+end

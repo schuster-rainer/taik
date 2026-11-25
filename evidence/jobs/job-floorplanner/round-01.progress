@@ -1,0 +1,10 @@
+559	start	Factory hat den Auftrag übernommen
+1705	worker	Codex erhält Auftrag und akzeptierten Ausgangsstand
+682724	worker	thread.started
+1311516	worker	item.completed/error
+1311712	worker	turn.started
+109941855	worker	item.completed/agent_message
+109948874	worker	turn.completed
+110163410	evaluate	Die Factory führt die unveränderte unabhängige Prüfung aus
+110238485	checks	' +     '    const occupied = new Set(), ids = new Set();\n' +     '    const key = (x,y)=>y*width+x;\n' +     '    for (const fixture of fixtures) {\n' +     '      if (!fixture) return invalid;\n' +     '      const {id,x,y,w,d} = fixture;\n' +     '      if (![x,y,w,d].every(Number.isInteger) || x<0 || y<0 || w<1 || d<1 ||\n' +     '          x+w>width || y+d>depth || ids.has(id)) return invalid;\n' +     '      ids.add(id);\n' +     '      for (let row=y;row<y+d;row++) {\n' +     '        for (let col=x;col<x+w;col++) {\n' +     '          const cell = key(col,row);\n' +     '          if (occupied.has(cell)) return invalid;\n' +     '          occupied.add(cell);\n' +     '        }\n' +     '      }\n' +     '    }\n' +     '    const free = (x,y)=>Number.isInteger(x) && Number.isInteger(y) &&\n' +     '      x>=0 && y>=0 && x+1<width && y+1<depth &&\n' +     '      ![key(x,y),key(x+1,y),key(x,y+1),key(x+1,y+1)].some(cell=>occupied.has(cell));\n' +     '    if (![entrance,exit].e
+110253388	rejected	Retain the previous accepted source and inspect the failed evidence.

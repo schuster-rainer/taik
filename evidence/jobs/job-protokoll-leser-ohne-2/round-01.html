@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Protokoll-Leser</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --base: light-dark(#ffffff, #121212);
+  --ink: light-dark(#1a1a1a, #ececec);
+  --line: light-dark(#8a8a8a, #6a6a6a);
+  --c-key: light-dark(#0b4f8a, #8cc8ff);
+  --c-good: light-dark(#0a6b2a, #7ee29a);
+  --c-bad: light-dark(#a3121b, #ff9a9a);
+  --c-end: light-dark(#6a1b9a, #d6a8ff);
+  --c-hash: light-dark(#6b4e00, #f0cf6a);
+  --c-path: light-dark(#00606b, #74e0ea);
+  --c-number: light-dark(#8a3b00, #ffb27a);
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 1rem;
+  background: var(--base);
+  color: var(--ink);
+  font: 16px/1.5 system-ui, sans-serif;
+}
+h1 { font-size: 1.5rem; margin: 0 0 .75rem; }
+label { display: block; font-weight: 600; margin: .5rem 0 .25rem; }
+textarea, pre {
+  display: block;
+  width: 100%;
+  margin: 0 0 1rem;
+  padding: .5rem;
+  background: var(--base);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font: 14px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  tab-size: 4;
+}
+textarea { min-height: 12rem; resize: vertical; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; min-height: 3rem; }
+.run-key { color: var(--c-key); font-weight: 600; }
+.run-good { color: var(--c-good); font-weight: 600; }
+.run-bad { color: var(--c-bad); font-weight: 600; }
+.run-end { color: var(--c-end); font-weight: 700; }
+.run-hash { color: var(--c-hash); }
+.run-path { color: var(--c-path); text-decoration: underline; text-decoration-style: dotted; }
+.run-number { color: var(--c-number); }
+</style>
+</head>
+<body>
+<h1>Protokoll-Leser</h1>
+<label for="record">Protokolltext</label>
+<textarea id="record" spellcheck="false">job=../job-x/round-01.run
+verdict=accepted
+checks=PASS
+retained=true
+size=23.5KiB
+duration=412ms
+latency=87 µs
+seed=round-08-taik-seed
+baseline=round-09.baseline.tar.gz
+digest=3f786850e387550fdab836ed7e6dc881de23001b
+note=round-02 rejected: error in view.html, ratio=0.97
+end</textarea>
+<label for="view">Ansicht</label>
+<pre id="view" aria-live="polite"></pre>
+<script>
+/*RUN_HIGHLIGHT_BEGIN*/
+function highlightRun(text) {
+  var esc = function (s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  };
+  var span = function (cls, s) {
+    return '<span class="run-' + cls + '">' + esc(s) + "</span>";
+  };
+  var EXT = "(?:run|html|mjs|md|log|json|txt|png|jpg|gz)";
+  var DIR = "(?:[\\w.-]*\\/)*";
+  var tokenRe = new RegExp(
+    "(?<![\\w./-])(" + DIR + "[\\w.-]*\\w\\." + EXT + "(?![\\w-]|\\.\\w)" +
+      "|" + DIR + "[\\w.-]*-taik-seed(?![\\w-]))" +
+    "|(?<![\\w.-])([0-9a-f]{40,64})(?![\\w-])" +
+    "|(?<![\\w-])(accepted|PASS|true|retained)(?![\\w-])" +
+    "|(?<![\\w-])(rejected|FAIL|false|error)(?![\\w-])" +
+    "|(?<![\\w.]|[\\w.]-)(\\d+(?:\\.\\d+)?(?:KiB|MiB|ms|s|%)?)(?![\\w-]|\\.\\d)",
+    "g"
+  );
+  var classes = [null, "path", "hash", "good", "bad", "number"];
+  var markValue = function (s) {
+    var out = "";
+    var last = 0;
+    var m;
+    tokenRe.lastIndex = 0;
+    while ((m = tokenRe.exec(s)) !== null) {
+      if (m[0] === "") { tokenRe.lastIndex++; continue; }
+      var cls = null;
+      for (var i = 1; i < classes.length; i++) {
+        if (m[i] !== undefined) { cls = classes[i]; break; }
+      }
+      out += esc(s.slice(last, m.index)) + span(cls, m[0]);
+      last = m.index + m[0].length;
+    }
+    return out + esc(s.slice(last));
+  };
+  var lines = String(text).split("\n");
+  var result = [];
+  for (var j = 0; j < lines.length; j++) {
+    var line = lines[j];
+    var cr = "";
+    if (line.charAt(line.length - 1) === "\r") {
+      cr = "\r";
+      line = line.slice(0, -1);
+    }
+    var html;
+    if (line === "end") {
+      html = span("end", line);
+    } else {
+      var km = /^([a-z_][a-z0-9_]*)=/.exec(line);
+      if (km) {
+        html = span("key", km[1]) + "=" + markValue(line.slice(km[0].length));
+      } else {
+        html = markValue(line);
+      }
+    }
+    result.push(html + cr);
+  }
+  return result.join("\n");
+}
+/*RUN_HIGHLIGHT_END*/
+
+(function () {
+  var record = document.getElementById("record");
+  var view = document.getElementById("view");
+  var render = function () {
+    view.innerHTML = highlightRun(record.value);
+  };
+  record.addEventListener("input", render);
+  render();
+})();
+</script>
+</body>
+</html>

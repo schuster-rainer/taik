@@ -1,0 +1,1921 @@
+decision=observed
+identity=12-galaxy-intelligence
+intent=Execute G-01 through G-03 and I-01 through I-03 with the existing executable seed
+scope=3 training batches and 6 disjoint held-out batches with unchanged Rust acceptance checks
+galaxy=ga-producer.run -> ga-consumer.run -> ga-feedback.run; consumer added and retained fir
+intelligence=External agent wrote the selector and fixed the corpus. The selector learned which runnable procedure to retain from measured training observations. Autonomous discovery of the learning rule was not demonstrated.
+heldout_accepted=6
+heldout_lowercase_bytes_before=119
+heldout_lowercase_bytes_reused=103
+heldout_sort_items_before=30
+heldout_sort_items_reused=25
+measured_total_ns_original=81389875
+measured_total_ns_rederive=247014377
+measured_total_ns_reuse_including_setup=279143167
+observation=Reuse lowered measured recurring work on several held-out batches. Total cost including setup was higher than both comparators at this sample size. Wall time is one local run with subprocess and disk overhead.
+continuation=No additional learning machinery is justified by these results. Apply the gated loop to a real source artifact.
+
+-- retained selector --
+{
+  "execute": "extend",
+  "baseline": "evidence/12-galaxy-intelligence/learn-producer.run",
+  "observed_training_costs": [
+    [
+      62,
+      15
+    ],
+    [
+      50,
+      15
+    ],
+    [
+      50,
+      12
+    ]
+  ]
+}
+-- measurements --
+{
+  "producer": "evidence/12-galaxy-intelligence/ga-producer.run",
+  "consumer": "evidence/12-galaxy-intelligence/ga-consumer.run",
+  "feedback": "evidence/12-galaxy-intelligence/ga-feedback.run",
+  "policy": "evidence/12-galaxy-intelligence/learned-selector.json",
+  "setup_ns": 198339417,
+  "reused_total_ns": 279143167,
+  "rederived_total_ns": 247014377,
+  "original_total_ns": 81389875,
+  "held": [
+    {
+      "original_ns": 13371875,
+      "reuse_ns": 12892875,
+      "rediscover_ns": 39736376,
+      "original_work": [
+        19,
+        5
+      ],
+      "retained_work": [
+        16,
+        4
+      ],
+      "tags": "ash,cedar,seed"
+    },
+    {
+      "original_ns": 12753917,
+      "reuse_ns": 13046750,
+      "rediscover_ns": 39643042,
+      "original_work": [
+        24,
+        5
+      ],
+      "retained_work": [
+        18,
+        4
+      ],
+      "tags": "ash,cedar,pear,quince"
+    },
+    {
+      "original_ns": 13389958,
+      "reuse_ns": 13426000,
+      "rediscover_ns": 43682625,
+      "original_work": [
+        23,
+        5
+      ],
+      "retained_work": [
+        20,
+        5
+      ],
+      "tags": "ash,cedar,d-19,lime"
+    },
+    {
+      "original_ns": 14909166,
+      "reuse_ns": 13843167,
+      "rediscover_ns": 44719875,
+      "original_work": [
+        23,
+        5
+      ],
+      "retained_work": [
+        23,
+        5
+      ],
+      "tags": "ash,birch-7,cedar,rock"
+    },
+    {
+      "original_ns": 13922542,
+      "reuse_ns": 13857625,
+      "rediscover_ns": 41620418,
+      "original_work": [
+        18,
+        5
+      ],
+      "retained_work": [
+        18,
+        5
+      ],
+      "tags": "ash,bark,cedar,tea"
+    },
+    {
+      "original_ns": 13042417,
+      "reuse_ns": 13737333,
+      "rediscover_ns": 37612041,
+      "original_work": [
+        12,
+        5
+      ],
+      "retained_work": [
+        8,
+        2
+      ],
+      "tags": "ash,cedar"
+    }
+  ],
+  "observations": [
+    {
+      "name": "ga-producer",
+      "path": "evidence/12-galaxy-intelligence/ga-producer.run",
+      "operation": "evolve",
+      "source": "evidence/01-seed.run",
+      "elapsed_ns": 17861583,
+      "work": [
+        8,
+        2
+      ],
+      "tags": "ash,cedar"
+    },
+    {
+      "name": "ga-consumer",
+      "path": "evidence/12-galaxy-intelligence/ga-consumer.run",
+      "operation": "extend",
+      "source": "evidence/12-galaxy-intelligence/ga-producer.run",
+      "elapsed_ns": 13780500,
+      "work": [
+        14,
+        5
+      ],
+      "tags": "ash,cedar,fir"
+    },
+    {
+      "name": "ga-feedback",
+      "path": "evidence/12-galaxy-intelligence/ga-feedback.run",
+      "operation": "evolve",
+      "source": "evidence/12-galaxy-intelligence/ga-consumer.run",
+      "elapsed_ns": 18629042,
+      "work": [
+        11,
+        3
+      ],
+      "tags": "ash,cedar,fir"
+    },
+    {
+      "name": "learn-producer",
+      "path": "evidence/12-galaxy-intelligence/learn-producer.run",
+      "operation": "evolve",
+      "source": "evidence/12-galaxy-intelligence/ga-producer.run",
+      "elapsed_ns": 14268625,
+      "work": [
+        8,
+        2
+      ],
+      "tags": "ash,cedar"
+    },
+    {
+      "name": "train-0-0",
+      "path": "evidence/12-galaxy-intelligence/train-0-0.run",
+      "operation": "extend",
+      "source": "evidence/01-seed.run",
+      "elapsed_ns": 18874792,
+      "work": [
+        22,
+        5
+      ],
+      "tags": "acorn,ash,cedar"
+    },
+    {
+      "name": "train-0-1",
+      "path": "evidence/12-galaxy-intelligence/train-0-1.run",
+      "operation": "extend",
+      "source": "evidence/01-seed.run",
+      "elapsed_ns": 12976333,
+      "work": [
+        19,
+        5
+      ],
+      "tags": "ash,cedar,maize,ore"
+    },
+    {
+      "name": "train-0-2",
+      "path": "evidence/12-galaxy-intelligence/train-0-2.run",
+      "operation": "extend",
+      "source": "evidence/01-seed.run",
+      "elapsed_ns": 13564292,
+      "work": [
+        21,
+        5
+      ],
+      "tags": "ash,cedar,root"
+    },
+    {
+      "name": "train-1-0",
+      "path": "evidence/12-galaxy-intelligence/train-1-0.run",
+      "operation": "extend",
+      "source": "evidence/12-galaxy-intelligence/ga-producer.run",
+      "elapsed_ns": 12833792,
+      "work": [
+        18,
+        5
+      ],
+      "tags": "acorn,ash,cedar"
+    },
+    {
+      "name": "train-1-1",
+      "path": "evidence/12-galaxy-intelligence/train-1-1.run",
+      "operation": "extend",
+      "source": "evidence/12-galaxy-intelligence/ga-producer.run",
+      "elapsed_ns": 13030458,
+      "work": [
+        16,
+        5
+      ],
+      "tags": "ash,cedar,maize,ore"
+    },
+    {
+      "name": "train-1-2",
+      "path": "evidence/12-galaxy-intelligence/train-1-2.run",
+      "operation": "extend",
+      "source": "evidence/12-galaxy-intelligence/ga-producer.run",
+      "elapsed_ns": 13852541,
+      "work": [
+        16,
+        5
+      ],
+      "tags": "ash,cedar,root"
+    },
+    {
+      "name": "train-2-0",
+      "path": "evidence/12-galaxy-intelligence/train-2-0.run",
+      "operation": "extend",
+      "source": "evidence/12-galaxy-intelligence/learn-producer.run",
+      "elapsed_ns": 13821209,
+      "work": [
+        18,
+        4
+      ],
+      "tags": "acorn,ash,cedar"
+    },
+    {
+      "name": "train-2-1",
+      "path": "evidence/12-galaxy-intelligence/train-2-1.run",
+      "operation": "extend",
+      "source": "evidence/12-galaxy-intelligence/learn-producer.run",
+      "elapsed_ns": 14875875,
+      "work": [
+        16,
+        4
+      ],
+      "tags": "ash,cedar,maize,ore"
+    },
+    {
+      "name": "train-2-2",
+      "path": "evidence/12-galaxy-intelligence/train-2-2.run",
+      "operation": "extend",
+      "source": "evidence/12-galaxy-intelligence/learn-producer.run",
+      "elapsed_ns": 19970375,
+      "work": [
+        16,
+        4
+      ],
+      "tags": "ash,cedar,root"
+    },
+    {
+      "name": "held-old-0",
+      "path": "evidence/12-galaxy-intelligence/held-old-0.run",
+      "operation": "extend",
+      "source": "evidence/01-seed.run",
+      "elapsed_ns": 13371875,
+      "work": [
+        19,
+        5
+      ],
+      "tags": "ash,cedar,seed"
+    },
+    {
+      "name": "held-learned-0",
+      "path": "evidence/12-galaxy-intelligence/held-learned-0.run",
+      "operation": "extend",
+      "source": "evidence/12-galaxy-intelligence/learn-producer.run",
+      "elapsed_ns": 12892875,
+      "work": [
+        16,
+        4
+      ],
+      "tags": "ash,cedar,seed"
+    },
+    {
+      "name": "fresh-1-0",
+      "path": "evidence/12-galaxy-intelligence/fresh-1-0.run",
+      "operation": "evolve",
+      "source": "evidence/01-seed.run",
+      "elapsed_ns": 13807750,
+      "work": [
+        8,
+        2
+      ],
+      "tags": "ash,cedar"
+    },
+    {
+      "name": "fresh-2-0",
+      "path": "evidence/12-galaxy-intelligence/fresh-2-0.run",
+      "operation": "evolve",
+      "source": "evidence/12-galaxy-intelligence/fresh-1-0.run",
+      "elapsed_ns": 12932334,
+      "work": [
+        8,
+        2
+      ],
+      "tags": "ash,cedar"
+    },
+    {
+      "name": "fresh-use-0",
+      "path": "evidence/12-galaxy-intelligence/fresh-use-0.run",
+      "operation": "extend",
+      "source": "evidence/12-galaxy-intelligence/fresh-2-0.run",
+      "elapsed_ns": 12996292,
+      "work": [
+        16,
+        4
+      ],
+      "tags": "ash,cedar,seed"
+    },
+    {
+      "name": "held-old-1",
+      "path": "evidence/12-galaxy-intelligence/held-old-1.run",
+      "operation": "extend",
+      "source": "evidence/01-seed.run",
+      "elapsed_ns": 12753917,
+      "work": [
+        24,
+        5
+      ],
+      "tags": "ash,cedar,pear,quince"
+    },
+    {
+      "name": "held-learned-1",
+      "path": "evidence/12-galaxy-intelligence/held-learned-1.run",
+      "operation": "extend",
+      "source": "evidence/12-galaxy-intelligence/learn-producer.run",
+      "elapsed_ns": 13046750,
+      "work": [
+        18,
+        4
+      ],
+      "tags": "ash,cedar,pear,quince"
+    },
+    {
+      "name": "fresh-1-1",
+      "path": "evidence/12-galaxy-intelligence/fresh-1-1.run",
+      "operation": "evolve",
+      "source": "evidence/01-seed.run",
+      "elapsed_ns": 12913750,
+      "work": [
+        8,
+        2
+      ],
+      "tags": "ash,cedar"
+    },
+    {
+      "name": "fresh-2-1",
+      "path": "evidence/12-galaxy-intelligence/fresh-2-1.run",
+      "operation": "evolve",
+      "source": "evidence/12-galaxy-intelligence/fresh-1-1.run",
+      "elapsed_ns": 13766625,
+      "work": [
+        8,
+        2
+      ],
+      "tags": "ash,cedar"
+    },
+    {
+      "name": "fresh-use-1",
+      "path": "evidence/12-galaxy-intelligence/fresh-use-1.run",
+      "operation": "extend",
+      "source": "evidence/12-galaxy-intelligence/fresh-2-1.run",
+      "elapsed_ns": 12962667,
+      "work": [
+        18,
+        4
+      ],
+      "tags": "ash,cedar,pear,quince"
+    },
+    {
+      "name": "held-old-2",
+      "path": "evidence/12-galaxy-intelligence/held-old-2.run",
+      "operation": "extend",
+      "source": "evidence/01-seed.run",
+      "elapsed_ns": 13389958,
+      "work": [
+        23,
+        5
+      ],
+      "tags": "ash,cedar,d-19,lime"
+    },
+    {
+      "name": "held-learned-2",
+      "path": "evidence/12-galaxy-intelligence/held-learned-2.run",
+      "operation": "extend",
+      "source": "evidence/12-galaxy-intelligence/learn-producer.run",
+      "elapsed_ns": 13426000,
+      "work": [
+        20,
+        5
+      ],
+      "tags": "ash,cedar,d-19,lime"
+    },
+    {
+      "name": "fresh-1-2",
+      "path": "evidence/12-galaxy-intelligence/fresh-1-2.run",
+      "operation": "evolve",
+      "source": "evidence/01-seed.run",
+      "elapsed_ns": 13942125,
+      "work": [
+        8,
+        2
+      ],
+      "tags": "ash,cedar"
+    },
+    {
+      "name": "fresh-2-2",
+      "path": "evidence/12-galaxy-intelligence/fresh-2-2.run",
+      "operation": "evolve",
+      "source": "evidence/12-galaxy-intelligence/fresh-1-2.run",
+      "elapsed_ns": 15831500,
+      "work": [
+        8,
+        2
+      ],
+      "tags": "ash,cedar"
+    },
+    {
+      "name": "fresh-use-2",
+      "path": "evidence/12-galaxy-intelligence/fresh-use-2.run",
+      "operation": "extend",
+      "source": "evidence/12-galaxy-intelligence/fresh-2-2.run",
+      "elapsed_ns": 13909000,
+      "work": [
+        20,
+        5
+      ],
+      "tags": "ash,cedar,d-19,lime"
+    },
+    {
+      "name": "held-old-3",
+      "path": "evidence/12-galaxy-intelligence/held-old-3.run",
+      "operation": "extend",
+      "source": "evidence/01-seed.run",
+      "elapsed_ns": 14909166,
+      "work": [
+        23,
+        5
+      ],
+      "tags": "ash,birch-7,cedar,rock"
+    },
+    {
+      "name": "held-learned-3",
+      "path": "evidence/12-galaxy-intelligence/held-learned-3.run",
+      "operation": "extend",
+      "source": "evidence/12-galaxy-intelligence/learn-producer.run",
+      "elapsed_ns": 13843167,
+      "work": [
+        23,
+        5
+      ],
+      "tags": "ash,birch-7,cedar,rock"
+    },
+    {
+      "name": "fresh-1-3",
+      "path": "evidence/12-galaxy-intelligence/fresh-1-3.run",
+      "operation": "evolve",
+      "source": "evidence/01-seed.run",
+      "elapsed_ns": 13035500,
+      "work": [
+        8,
+        2
+      ],
+      "tags": "ash,cedar"
+    },
+    {
+      "name": "fresh-2-3",
+      "path": "evidence/12-galaxy-intelligence/fresh-2-3.run",
+      "operation": "evolve",
+      "source": "evidence/12-galaxy-intelligence/fresh-1-3.run",
+      "elapsed_ns": 17806083,
+      "work": [
+        8,
+        2
+      ],
+      "tags": "ash,cedar"
+    },
+    {
+      "name": "fresh-use-3",
+      "path": "evidence/12-galaxy-intelligence/fresh-use-3.run",
+      "operation": "extend",
+      "source": "evidence/12-galaxy-intelligence/fresh-2-3.run",
+      "elapsed_ns": 13878292,
+      "work": [
+        23,
+        5
+      ],
+      "tags": "ash,birch-7,cedar,rock"
+    },
+    {
+      "name": "held-old-4",
+      "path": "evidence/12-galaxy-intelligence/held-old-4.run",
+      "operation": "extend",
+      "source": "evidence/01-seed.run",
+      "elapsed_ns": 13922542,
+      "work": [
+        18,
+        5
+      ],
+      "tags": "ash,bark,cedar,tea"
+    },
+    {
+      "name": "held-learned-4",
+      "path": "evidence/12-galaxy-intelligence/held-learned-4.run",
+      "operation": "extend",
+      "source": "evidence/12-galaxy-intelligence/learn-producer.run",
+      "elapsed_ns": 13857625,
+      "work": [
+        18,
+        5
+      ],
+      "tags": "ash,bark,cedar,tea"
+    },
+    {
+      "name": "fresh-1-4",
+      "path": "evidence/12-galaxy-intelligence/fresh-1-4.run",
+      "operation": "evolve",
+      "source": "evidence/01-seed.run",
+      "elapsed_ns": 13986917,
+      "work": [
+        8,
+        2
+      ],
+      "tags": "ash,cedar"
+    },
+    {
+      "name": "fresh-2-4",
+      "path": "evidence/12-galaxy-intelligence/fresh-2-4.run",
+      "operation": "evolve",
+      "source": "evidence/12-galaxy-intelligence/fresh-1-4.run",
+      "elapsed_ns": 13788584,
+      "work": [
+        8,
+        2
+      ],
+      "tags": "ash,cedar"
+    },
+    {
+      "name": "fresh-use-4",
+      "path": "evidence/12-galaxy-intelligence/fresh-use-4.run",
+      "operation": "extend",
+      "source": "evidence/12-galaxy-intelligence/fresh-2-4.run",
+      "elapsed_ns": 13844917,
+      "work": [
+        18,
+        5
+      ],
+      "tags": "ash,bark,cedar,tea"
+    },
+    {
+      "name": "held-old-5",
+      "path": "evidence/12-galaxy-intelligence/held-old-5.run",
+      "operation": "extend",
+      "source": "evidence/01-seed.run",
+      "elapsed_ns": 13042417,
+      "work": [
+        12,
+        5
+      ],
+      "tags": "ash,cedar"
+    },
+    {
+      "name": "held-learned-5",
+      "path": "evidence/12-galaxy-intelligence/held-learned-5.run",
+      "operation": "extend",
+      "source": "evidence/12-galaxy-intelligence/learn-producer.run",
+      "elapsed_ns": 13737333,
+      "work": [
+        8,
+        2
+      ],
+      "tags": "ash,cedar"
+    },
+    {
+      "name": "fresh-1-5",
+      "path": "evidence/12-galaxy-intelligence/fresh-1-5.run",
+      "operation": "evolve",
+      "source": "evidence/01-seed.run",
+      "elapsed_ns": 12904666,
+      "work": [
+        8,
+        2
+      ],
+      "tags": "ash,cedar"
+    },
+    {
+      "name": "fresh-2-5",
+      "path": "evidence/12-galaxy-intelligence/fresh-2-5.run",
+      "operation": "evolve",
+      "source": "evidence/12-galaxy-intelligence/fresh-1-5.run",
+      "elapsed_ns": 12866250,
+      "work": [
+        8,
+        2
+      ],
+      "tags": "ash,cedar"
+    },
+    {
+      "name": "fresh-use-5",
+      "path": "evidence/12-galaxy-intelligence/fresh-use-5.run",
+      "operation": "extend",
+      "source": "evidence/12-galaxy-intelligence/fresh-2-5.run",
+      "elapsed_ns": 11841125,
+      "work": [
+        8,
+        2
+      ],
+      "tags": "ash,cedar"
+    }
+  ]
+}
+
+-- fresh-1-0.run --
+decision=accepted
+procedure=trim,lower,sort,dedup,drop-blank
+tags=ash,cedar
+identity="fresh-1-0.run"
+intent=Improve the retained procedure from measured work
+baseline=Some("evidence/01-seed.run")
+baseline_procedure=Some("lower,trim,sort,dedup,drop-blank")
+operations=Relocate one step of the retained executable procedure and compare both results
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=[]
+expected_tags=["ash", "cedar"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:8, sort_items:2
+probe_work=lowercase_bytes:9, sort_items:4
+baseline_work=lowercase_bytes:14, sort_items:4
+baseline_probes_match=true
+one_step_relocated=true
+refinement_check=true
+worker=local
+search_limit=20 one-step relocations
+search_elapsed_us=7
+evaluation_elapsed_us=20
+limitations=The work counters describe the probe only. The gate gives no end-to-end speed guarantee.
+continuation=Reuse the accepted procedure in a new bounded iteration to see whether work can fall below lowercase_bytes:9, sort_items:4.
+advance=true
+end
+
+-- fresh-1-1.run --
+decision=accepted
+procedure=trim,lower,sort,dedup,drop-blank
+tags=ash,cedar
+identity="fresh-1-1.run"
+intent=Improve the retained procedure from measured work
+baseline=Some("evidence/01-seed.run")
+baseline_procedure=Some("lower,trim,sort,dedup,drop-blank")
+operations=Relocate one step of the retained executable procedure and compare both results
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=[]
+expected_tags=["ash", "cedar"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:8, sort_items:2
+probe_work=lowercase_bytes:9, sort_items:4
+baseline_work=lowercase_bytes:14, sort_items:4
+baseline_probes_match=true
+one_step_relocated=true
+refinement_check=true
+worker=local
+search_limit=20 one-step relocations
+search_elapsed_us=7
+evaluation_elapsed_us=18
+limitations=The work counters describe the probe only. The gate gives no end-to-end speed guarantee.
+continuation=Reuse the accepted procedure in a new bounded iteration to see whether work can fall below lowercase_bytes:9, sort_items:4.
+advance=true
+end
+
+-- fresh-1-2.run --
+decision=accepted
+procedure=trim,lower,sort,dedup,drop-blank
+tags=ash,cedar
+identity="fresh-1-2.run"
+intent=Improve the retained procedure from measured work
+baseline=Some("evidence/01-seed.run")
+baseline_procedure=Some("lower,trim,sort,dedup,drop-blank")
+operations=Relocate one step of the retained executable procedure and compare both results
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=[]
+expected_tags=["ash", "cedar"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:8, sort_items:2
+probe_work=lowercase_bytes:9, sort_items:4
+baseline_work=lowercase_bytes:14, sort_items:4
+baseline_probes_match=true
+one_step_relocated=true
+refinement_check=true
+worker=local
+search_limit=20 one-step relocations
+search_elapsed_us=7
+evaluation_elapsed_us=20
+limitations=The work counters describe the probe only. The gate gives no end-to-end speed guarantee.
+continuation=Reuse the accepted procedure in a new bounded iteration to see whether work can fall below lowercase_bytes:9, sort_items:4.
+advance=true
+end
+
+-- fresh-1-3.run --
+decision=accepted
+procedure=trim,lower,sort,dedup,drop-blank
+tags=ash,cedar
+identity="fresh-1-3.run"
+intent=Improve the retained procedure from measured work
+baseline=Some("evidence/01-seed.run")
+baseline_procedure=Some("lower,trim,sort,dedup,drop-blank")
+operations=Relocate one step of the retained executable procedure and compare both results
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=[]
+expected_tags=["ash", "cedar"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:8, sort_items:2
+probe_work=lowercase_bytes:9, sort_items:4
+baseline_work=lowercase_bytes:14, sort_items:4
+baseline_probes_match=true
+one_step_relocated=true
+refinement_check=true
+worker=local
+search_limit=20 one-step relocations
+search_elapsed_us=7
+evaluation_elapsed_us=21
+limitations=The work counters describe the probe only. The gate gives no end-to-end speed guarantee.
+continuation=Reuse the accepted procedure in a new bounded iteration to see whether work can fall below lowercase_bytes:9, sort_items:4.
+advance=true
+end
+
+-- fresh-1-4.run --
+decision=accepted
+procedure=trim,lower,sort,dedup,drop-blank
+tags=ash,cedar
+identity="fresh-1-4.run"
+intent=Improve the retained procedure from measured work
+baseline=Some("evidence/01-seed.run")
+baseline_procedure=Some("lower,trim,sort,dedup,drop-blank")
+operations=Relocate one step of the retained executable procedure and compare both results
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=[]
+expected_tags=["ash", "cedar"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:8, sort_items:2
+probe_work=lowercase_bytes:9, sort_items:4
+baseline_work=lowercase_bytes:14, sort_items:4
+baseline_probes_match=true
+one_step_relocated=true
+refinement_check=true
+worker=local
+search_limit=20 one-step relocations
+search_elapsed_us=7
+evaluation_elapsed_us=20
+limitations=The work counters describe the probe only. The gate gives no end-to-end speed guarantee.
+continuation=Reuse the accepted procedure in a new bounded iteration to see whether work can fall below lowercase_bytes:9, sort_items:4.
+advance=true
+end
+
+-- fresh-1-5.run --
+decision=accepted
+procedure=trim,lower,sort,dedup,drop-blank
+tags=ash,cedar
+identity="fresh-1-5.run"
+intent=Improve the retained procedure from measured work
+baseline=Some("evidence/01-seed.run")
+baseline_procedure=Some("lower,trim,sort,dedup,drop-blank")
+operations=Relocate one step of the retained executable procedure and compare both results
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=[]
+expected_tags=["ash", "cedar"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:8, sort_items:2
+probe_work=lowercase_bytes:9, sort_items:4
+baseline_work=lowercase_bytes:14, sort_items:4
+baseline_probes_match=true
+one_step_relocated=true
+refinement_check=true
+worker=local
+search_limit=20 one-step relocations
+search_elapsed_us=7
+evaluation_elapsed_us=20
+limitations=The work counters describe the probe only. The gate gives no end-to-end speed guarantee.
+continuation=Reuse the accepted procedure in a new bounded iteration to see whether work can fall below lowercase_bytes:9, sort_items:4.
+advance=true
+end
+
+-- fresh-2-0.run --
+decision=accepted
+procedure=trim,drop-blank,lower,sort,dedup
+tags=ash,cedar
+identity="fresh-2-0.run"
+intent=Improve the retained procedure from measured work
+baseline=Some("evidence/12-galaxy-intelligence/fresh-1-0.run")
+baseline_procedure=Some("trim,lower,sort,dedup,drop-blank")
+operations=Relocate one step of the retained executable procedure and compare both results
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=[]
+expected_tags=["ash", "cedar"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:8, sort_items:2
+probe_work=lowercase_bytes:9, sort_items:3
+baseline_work=lowercase_bytes:9, sort_items:4
+baseline_probes_match=true
+one_step_relocated=true
+refinement_check=true
+worker=local
+search_limit=20 one-step relocations
+search_elapsed_us=20
+evaluation_elapsed_us=22
+limitations=The work counters describe the probe only. The gate gives no end-to-end speed guarantee.
+continuation=Reuse the accepted procedure in a new bounded iteration to see whether work can fall below lowercase_bytes:9, sort_items:3.
+advance=true
+end
+
+-- fresh-2-1.run --
+decision=accepted
+procedure=trim,drop-blank,lower,sort,dedup
+tags=ash,cedar
+identity="fresh-2-1.run"
+intent=Improve the retained procedure from measured work
+baseline=Some("evidence/12-galaxy-intelligence/fresh-1-1.run")
+baseline_procedure=Some("trim,lower,sort,dedup,drop-blank")
+operations=Relocate one step of the retained executable procedure and compare both results
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=[]
+expected_tags=["ash", "cedar"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:8, sort_items:2
+probe_work=lowercase_bytes:9, sort_items:3
+baseline_work=lowercase_bytes:9, sort_items:4
+baseline_probes_match=true
+one_step_relocated=true
+refinement_check=true
+worker=local
+search_limit=20 one-step relocations
+search_elapsed_us=20
+evaluation_elapsed_us=23
+limitations=The work counters describe the probe only. The gate gives no end-to-end speed guarantee.
+continuation=Reuse the accepted procedure in a new bounded iteration to see whether work can fall below lowercase_bytes:9, sort_items:3.
+advance=true
+end
+
+-- fresh-2-2.run --
+decision=accepted
+procedure=trim,drop-blank,lower,sort,dedup
+tags=ash,cedar
+identity="fresh-2-2.run"
+intent=Improve the retained procedure from measured work
+baseline=Some("evidence/12-galaxy-intelligence/fresh-1-2.run")
+baseline_procedure=Some("trim,lower,sort,dedup,drop-blank")
+operations=Relocate one step of the retained executable procedure and compare both results
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=[]
+expected_tags=["ash", "cedar"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:8, sort_items:2
+probe_work=lowercase_bytes:9, sort_items:3
+baseline_work=lowercase_bytes:9, sort_items:4
+baseline_probes_match=true
+one_step_relocated=true
+refinement_check=true
+worker=local
+search_limit=20 one-step relocations
+search_elapsed_us=22
+evaluation_elapsed_us=24
+limitations=The work counters describe the probe only. The gate gives no end-to-end speed guarantee.
+continuation=Reuse the accepted procedure in a new bounded iteration to see whether work can fall below lowercase_bytes:9, sort_items:3.
+advance=true
+end
+
+-- fresh-2-3.run --
+decision=accepted
+procedure=trim,drop-blank,lower,sort,dedup
+tags=ash,cedar
+identity="fresh-2-3.run"
+intent=Improve the retained procedure from measured work
+baseline=Some("evidence/12-galaxy-intelligence/fresh-1-3.run")
+baseline_procedure=Some("trim,lower,sort,dedup,drop-blank")
+operations=Relocate one step of the retained executable procedure and compare both results
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=[]
+expected_tags=["ash", "cedar"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:8, sort_items:2
+probe_work=lowercase_bytes:9, sort_items:3
+baseline_work=lowercase_bytes:9, sort_items:4
+baseline_probes_match=true
+one_step_relocated=true
+refinement_check=true
+worker=local
+search_limit=20 one-step relocations
+search_elapsed_us=22
+evaluation_elapsed_us=25
+limitations=The work counters describe the probe only. The gate gives no end-to-end speed guarantee.
+continuation=Reuse the accepted procedure in a new bounded iteration to see whether work can fall below lowercase_bytes:9, sort_items:3.
+advance=true
+end
+
+-- fresh-2-4.run --
+decision=accepted
+procedure=trim,drop-blank,lower,sort,dedup
+tags=ash,cedar
+identity="fresh-2-4.run"
+intent=Improve the retained procedure from measured work
+baseline=Some("evidence/12-galaxy-intelligence/fresh-1-4.run")
+baseline_procedure=Some("trim,lower,sort,dedup,drop-blank")
+operations=Relocate one step of the retained executable procedure and compare both results
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=[]
+expected_tags=["ash", "cedar"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:8, sort_items:2
+probe_work=lowercase_bytes:9, sort_items:3
+baseline_work=lowercase_bytes:9, sort_items:4
+baseline_probes_match=true
+one_step_relocated=true
+refinement_check=true
+worker=local
+search_limit=20 one-step relocations
+search_elapsed_us=23
+evaluation_elapsed_us=25
+limitations=The work counters describe the probe only. The gate gives no end-to-end speed guarantee.
+continuation=Reuse the accepted procedure in a new bounded iteration to see whether work can fall below lowercase_bytes:9, sort_items:3.
+advance=true
+end
+
+-- fresh-2-5.run --
+decision=accepted
+procedure=trim,drop-blank,lower,sort,dedup
+tags=ash,cedar
+identity="fresh-2-5.run"
+intent=Improve the retained procedure from measured work
+baseline=Some("evidence/12-galaxy-intelligence/fresh-1-5.run")
+baseline_procedure=Some("trim,lower,sort,dedup,drop-blank")
+operations=Relocate one step of the retained executable procedure and compare both results
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=[]
+expected_tags=["ash", "cedar"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:8, sort_items:2
+probe_work=lowercase_bytes:9, sort_items:3
+baseline_work=lowercase_bytes:9, sort_items:4
+baseline_probes_match=true
+one_step_relocated=true
+refinement_check=true
+worker=local
+search_limit=20 one-step relocations
+search_elapsed_us=22
+evaluation_elapsed_us=24
+limitations=The work counters describe the probe only. The gate gives no end-to-end speed guarantee.
+continuation=Reuse the accepted procedure in a new bounded iteration to see whether work can fall below lowercase_bytes:9, sort_items:3.
+advance=true
+end
+
+-- fresh-use-0.run --
+decision=accepted
+procedure=trim,drop-blank,lower,sort,dedup
+tags=ash,cedar,seed
+identity="fresh-use-0.run"
+intent=Add tags using the retained procedure
+baseline=Some("evidence/12-galaxy-intelligence/fresh-2-0.run")
+baseline_procedure=Some("trim,drop-blank,lower,sort,dedup")
+operations=Reuse the retained tags and executable procedure, add tags, sort, reduce and check output
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=[" SEED ", "seed", " "]
+expected_tags=["ash", "cedar", "seed"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:16, sort_items:4
+probe_work=lowercase_bytes:9, sort_items:3
+evaluation_elapsed_us=15
+limitations=This invocation checked canonical ASCII output and both independent probes.
+continuation=Stop at the one-candidate limit. Verified 3 canonical tags from 5 input tags. The retained procedure passed both probes.
+advance=false
+end
+
+-- fresh-use-1.run --
+decision=accepted
+procedure=trim,drop-blank,lower,sort,dedup
+tags=ash,cedar,pear,quince
+identity="fresh-use-1.run"
+intent=Add tags using the retained procedure
+baseline=Some("evidence/12-galaxy-intelligence/fresh-2-1.run")
+baseline_procedure=Some("trim,drop-blank,lower,sort,dedup")
+operations=Reuse the retained tags and executable procedure, add tags, sort, reduce and check output
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=["   PEAR  ", "QUINCE", "\t"]
+expected_tags=["ash", "cedar", "pear", "quince"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:18, sort_items:4
+probe_work=lowercase_bytes:9, sort_items:3
+evaluation_elapsed_us=16
+limitations=This invocation checked canonical ASCII output and both independent probes.
+continuation=Stop at the one-candidate limit. Verified 4 canonical tags from 5 input tags. The retained procedure passed both probes.
+advance=false
+end
+
+-- fresh-use-2.run --
+decision=accepted
+procedure=trim,drop-blank,lower,sort,dedup
+tags=ash,cedar,d-19,lime
+identity="fresh-use-2.run"
+intent=Add tags using the retained procedure
+baseline=Some("evidence/12-galaxy-intelligence/fresh-2-2.run")
+baseline_procedure=Some("trim,drop-blank,lower,sort,dedup")
+operations=Reuse the retained tags and executable procedure, add tags, sort, reduce and check output
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=["\tD-19", "d-19", " LIME "]
+expected_tags=["ash", "cedar", "d-19", "lime"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:20, sort_items:5
+probe_work=lowercase_bytes:9, sort_items:3
+evaluation_elapsed_us=18
+limitations=This invocation checked canonical ASCII output and both independent probes.
+continuation=Stop at the one-candidate limit. Verified 4 canonical tags from 5 input tags. The retained procedure passed both probes.
+advance=false
+end
+
+-- fresh-use-3.run --
+decision=accepted
+procedure=trim,drop-blank,lower,sort,dedup
+tags=ash,birch-7,cedar,rock
+identity="fresh-use-3.run"
+intent=Add tags using the retained procedure
+baseline=Some("evidence/12-galaxy-intelligence/fresh-2-3.run")
+baseline_procedure=Some("trim,drop-blank,lower,sort,dedup")
+operations=Reuse the retained tags and executable procedure, add tags, sort, reduce and check output
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=["rock", "birch-7", "rock"]
+expected_tags=["ash", "birch-7", "cedar", "rock"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:23, sort_items:5
+probe_work=lowercase_bytes:9, sort_items:3
+evaluation_elapsed_us=17
+limitations=This invocation checked canonical ASCII output and both independent probes.
+continuation=Stop at the one-candidate limit. Verified 4 canonical tags from 5 input tags. The retained procedure passed both probes.
+advance=false
+end
+
+-- fresh-use-4.run --
+decision=accepted
+procedure=trim,drop-blank,lower,sort,dedup
+tags=ash,bark,cedar,tea
+identity="fresh-use-4.run"
+intent=Add tags using the retained procedure
+baseline=Some("evidence/12-galaxy-intelligence/fresh-2-4.run")
+baseline_procedure=Some("trim,drop-blank,lower,sort,dedup")
+operations=Reuse the retained tags and executable procedure, add tags, sort, reduce and check output
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=["TEA", "BARK", "tea"]
+expected_tags=["ash", "bark", "cedar", "tea"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:18, sort_items:5
+probe_work=lowercase_bytes:9, sort_items:3
+evaluation_elapsed_us=18
+limitations=This invocation checked canonical ASCII output and both independent probes.
+continuation=Stop at the one-candidate limit. Verified 4 canonical tags from 5 input tags. The retained procedure passed both probes.
+advance=false
+end
+
+-- fresh-use-5.run --
+decision=accepted
+procedure=trim,drop-blank,lower,sort,dedup
+tags=ash,cedar
+identity="fresh-use-5.run"
+intent=Add tags using the retained procedure
+baseline=Some("evidence/12-galaxy-intelligence/fresh-2-5.run")
+baseline_procedure=Some("trim,drop-blank,lower,sort,dedup")
+operations=Reuse the retained tags and executable procedure, add tags, sort, reduce and check output
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=["  ", "\t", " "]
+expected_tags=["ash", "cedar"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:8, sort_items:2
+probe_work=lowercase_bytes:9, sort_items:3
+evaluation_elapsed_us=16
+limitations=This invocation checked canonical ASCII output and both independent probes.
+continuation=Stop at the one-candidate limit. Verified 2 canonical tags from 5 input tags. The retained procedure passed both probes.
+advance=false
+end
+
+-- ga-consumer.run --
+decision=accepted
+procedure=trim,lower,sort,dedup,drop-blank
+tags=ash,cedar,fir
+identity="ga-consumer.run"
+intent=Add tags using the retained procedure
+baseline=Some("evidence/12-galaxy-intelligence/ga-producer.run")
+baseline_procedure=Some("trim,lower,sort,dedup,drop-blank")
+operations=Reuse the retained tags and executable procedure, add tags, sort, reduce and check output
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=["  FIR ", " ASH ", "  "]
+expected_tags=["ash", "cedar", "fir"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:14, sort_items:5
+probe_work=lowercase_bytes:9, sort_items:4
+evaluation_elapsed_us=14
+limitations=This invocation checked canonical ASCII output and both independent probes.
+continuation=Stop at the one-candidate limit. Verified 3 canonical tags from 5 input tags. The retained procedure passed both probes.
+advance=false
+end
+
+-- ga-feedback.run --
+decision=accepted
+procedure=trim,drop-blank,lower,sort,dedup
+tags=ash,cedar,fir
+identity="ga-feedback.run"
+intent=Improve the retained procedure from measured work
+baseline=Some("evidence/12-galaxy-intelligence/ga-consumer.run")
+baseline_procedure=Some("trim,lower,sort,dedup,drop-blank")
+operations=Relocate one step of the retained executable procedure and compare both results
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=[]
+expected_tags=["ash", "cedar", "fir"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:11, sort_items:3
+probe_work=lowercase_bytes:9, sort_items:3
+baseline_work=lowercase_bytes:9, sort_items:4
+baseline_probes_match=true
+one_step_relocated=true
+refinement_check=true
+worker=local
+search_limit=20 one-step relocations
+search_elapsed_us=19
+evaluation_elapsed_us=21
+limitations=The work counters describe the probe only. The gate gives no end-to-end speed guarantee.
+continuation=Reuse the accepted procedure in a new bounded iteration to see whether work can fall below lowercase_bytes:9, sort_items:3.
+advance=true
+end
+
+-- ga-producer.run --
+decision=accepted
+procedure=trim,lower,sort,dedup,drop-blank
+tags=ash,cedar
+identity="ga-producer.run"
+intent=Improve the retained procedure from measured work
+baseline=Some("evidence/01-seed.run")
+baseline_procedure=Some("lower,trim,sort,dedup,drop-blank")
+operations=Relocate one step of the retained executable procedure and compare both results
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=[]
+expected_tags=["ash", "cedar"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:8, sort_items:2
+probe_work=lowercase_bytes:9, sort_items:4
+baseline_work=lowercase_bytes:14, sort_items:4
+baseline_probes_match=true
+one_step_relocated=true
+refinement_check=true
+worker=local
+search_limit=20 one-step relocations
+search_elapsed_us=6
+evaluation_elapsed_us=18
+limitations=The work counters describe the probe only. The gate gives no end-to-end speed guarantee.
+continuation=Reuse the accepted procedure in a new bounded iteration to see whether work can fall below lowercase_bytes:9, sort_items:4.
+advance=true
+end
+
+-- held-learned-0.run --
+decision=accepted
+procedure=trim,drop-blank,lower,sort,dedup
+tags=ash,cedar,seed
+identity="held-learned-0.run"
+intent=Add tags using the retained procedure
+baseline=Some("evidence/12-galaxy-intelligence/learn-producer.run")
+baseline_procedure=Some("trim,drop-blank,lower,sort,dedup")
+operations=Reuse the retained tags and executable procedure, add tags, sort, reduce and check output
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=[" SEED ", "seed", " "]
+expected_tags=["ash", "cedar", "seed"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:16, sort_items:4
+probe_work=lowercase_bytes:9, sort_items:3
+evaluation_elapsed_us=15
+limitations=This invocation checked canonical ASCII output and both independent probes.
+continuation=Stop at the one-candidate limit. Verified 3 canonical tags from 5 input tags. The retained procedure passed both probes.
+advance=false
+end
+
+-- held-learned-1.run --
+decision=accepted
+procedure=trim,drop-blank,lower,sort,dedup
+tags=ash,cedar,pear,quince
+identity="held-learned-1.run"
+intent=Add tags using the retained procedure
+baseline=Some("evidence/12-galaxy-intelligence/learn-producer.run")
+baseline_procedure=Some("trim,drop-blank,lower,sort,dedup")
+operations=Reuse the retained tags and executable procedure, add tags, sort, reduce and check output
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=["   PEAR  ", "QUINCE", "\t"]
+expected_tags=["ash", "cedar", "pear", "quince"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:18, sort_items:4
+probe_work=lowercase_bytes:9, sort_items:3
+evaluation_elapsed_us=16
+limitations=This invocation checked canonical ASCII output and both independent probes.
+continuation=Stop at the one-candidate limit. Verified 4 canonical tags from 5 input tags. The retained procedure passed both probes.
+advance=false
+end
+
+-- held-learned-2.run --
+decision=accepted
+procedure=trim,drop-blank,lower,sort,dedup
+tags=ash,cedar,d-19,lime
+identity="held-learned-2.run"
+intent=Add tags using the retained procedure
+baseline=Some("evidence/12-galaxy-intelligence/learn-producer.run")
+baseline_procedure=Some("trim,drop-blank,lower,sort,dedup")
+operations=Reuse the retained tags and executable procedure, add tags, sort, reduce and check output
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=["\tD-19", "d-19", " LIME "]
+expected_tags=["ash", "cedar", "d-19", "lime"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:20, sort_items:5
+probe_work=lowercase_bytes:9, sort_items:3
+evaluation_elapsed_us=18
+limitations=This invocation checked canonical ASCII output and both independent probes.
+continuation=Stop at the one-candidate limit. Verified 4 canonical tags from 5 input tags. The retained procedure passed both probes.
+advance=false
+end
+
+-- held-learned-3.run --
+decision=accepted
+procedure=trim,drop-blank,lower,sort,dedup
+tags=ash,birch-7,cedar,rock
+identity="held-learned-3.run"
+intent=Add tags using the retained procedure
+baseline=Some("evidence/12-galaxy-intelligence/learn-producer.run")
+baseline_procedure=Some("trim,drop-blank,lower,sort,dedup")
+operations=Reuse the retained tags and executable procedure, add tags, sort, reduce and check output
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=["rock", "birch-7", "rock"]
+expected_tags=["ash", "birch-7", "cedar", "rock"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:23, sort_items:5
+probe_work=lowercase_bytes:9, sort_items:3
+evaluation_elapsed_us=17
+limitations=This invocation checked canonical ASCII output and both independent probes.
+continuation=Stop at the one-candidate limit. Verified 4 canonical tags from 5 input tags. The retained procedure passed both probes.
+advance=false
+end
+
+-- held-learned-4.run --
+decision=accepted
+procedure=trim,drop-blank,lower,sort,dedup
+tags=ash,bark,cedar,tea
+identity="held-learned-4.run"
+intent=Add tags using the retained procedure
+baseline=Some("evidence/12-galaxy-intelligence/learn-producer.run")
+baseline_procedure=Some("trim,drop-blank,lower,sort,dedup")
+operations=Reuse the retained tags and executable procedure, add tags, sort, reduce and check output
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=["TEA", "BARK", "tea"]
+expected_tags=["ash", "bark", "cedar", "tea"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:18, sort_items:5
+probe_work=lowercase_bytes:9, sort_items:3
+evaluation_elapsed_us=20
+limitations=This invocation checked canonical ASCII output and both independent probes.
+continuation=Stop at the one-candidate limit. Verified 4 canonical tags from 5 input tags. The retained procedure passed both probes.
+advance=false
+end
+
+-- held-learned-5.run --
+decision=accepted
+procedure=trim,drop-blank,lower,sort,dedup
+tags=ash,cedar
+identity="held-learned-5.run"
+intent=Add tags using the retained procedure
+baseline=Some("evidence/12-galaxy-intelligence/learn-producer.run")
+baseline_procedure=Some("trim,drop-blank,lower,sort,dedup")
+operations=Reuse the retained tags and executable procedure, add tags, sort, reduce and check output
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=["  ", "\t", " "]
+expected_tags=["ash", "cedar"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:8, sort_items:2
+probe_work=lowercase_bytes:9, sort_items:3
+evaluation_elapsed_us=16
+limitations=This invocation checked canonical ASCII output and both independent probes.
+continuation=Stop at the one-candidate limit. Verified 2 canonical tags from 5 input tags. The retained procedure passed both probes.
+advance=false
+end
+
+-- held-old-0.run --
+decision=accepted
+procedure=lower,trim,sort,dedup,drop-blank
+tags=ash,cedar,seed
+identity="held-old-0.run"
+intent=Add tags using the retained procedure
+baseline=Some("evidence/01-seed.run")
+baseline_procedure=Some("lower,trim,sort,dedup,drop-blank")
+operations=Reuse the retained tags and executable procedure, add tags, sort, reduce and check output
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=[" SEED ", "seed", " "]
+expected_tags=["ash", "cedar", "seed"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:19, sort_items:5
+probe_work=lowercase_bytes:14, sort_items:4
+evaluation_elapsed_us=15
+limitations=This invocation checked canonical ASCII output and both independent probes.
+continuation=Stop at the one-candidate limit. Verified 3 canonical tags from 5 input tags. The retained procedure passed both probes.
+advance=false
+end
+
+-- held-old-1.run --
+decision=accepted
+procedure=lower,trim,sort,dedup,drop-blank
+tags=ash,cedar,pear,quince
+identity="held-old-1.run"
+intent=Add tags using the retained procedure
+baseline=Some("evidence/01-seed.run")
+baseline_procedure=Some("lower,trim,sort,dedup,drop-blank")
+operations=Reuse the retained tags and executable procedure, add tags, sort, reduce and check output
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=["   PEAR  ", "QUINCE", "\t"]
+expected_tags=["ash", "cedar", "pear", "quince"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:24, sort_items:5
+probe_work=lowercase_bytes:14, sort_items:4
+evaluation_elapsed_us=16
+limitations=This invocation checked canonical ASCII output and both independent probes.
+continuation=Stop at the one-candidate limit. Verified 4 canonical tags from 5 input tags. The retained procedure passed both probes.
+advance=false
+end
+
+-- held-old-2.run --
+decision=accepted
+procedure=lower,trim,sort,dedup,drop-blank
+tags=ash,cedar,d-19,lime
+identity="held-old-2.run"
+intent=Add tags using the retained procedure
+baseline=Some("evidence/01-seed.run")
+baseline_procedure=Some("lower,trim,sort,dedup,drop-blank")
+operations=Reuse the retained tags and executable procedure, add tags, sort, reduce and check output
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=["\tD-19", "d-19", " LIME "]
+expected_tags=["ash", "cedar", "d-19", "lime"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:23, sort_items:5
+probe_work=lowercase_bytes:14, sort_items:4
+evaluation_elapsed_us=16
+limitations=This invocation checked canonical ASCII output and both independent probes.
+continuation=Stop at the one-candidate limit. Verified 4 canonical tags from 5 input tags. The retained procedure passed both probes.
+advance=false
+end
+
+-- held-old-3.run --
+decision=accepted
+procedure=lower,trim,sort,dedup,drop-blank
+tags=ash,birch-7,cedar,rock
+identity="held-old-3.run"
+intent=Add tags using the retained procedure
+baseline=Some("evidence/01-seed.run")
+baseline_procedure=Some("lower,trim,sort,dedup,drop-blank")
+operations=Reuse the retained tags and executable procedure, add tags, sort, reduce and check output
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=["rock", "birch-7", "rock"]
+expected_tags=["ash", "birch-7", "cedar", "rock"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:23, sort_items:5
+probe_work=lowercase_bytes:14, sort_items:4
+evaluation_elapsed_us=18
+limitations=This invocation checked canonical ASCII output and both independent probes.
+continuation=Stop at the one-candidate limit. Verified 4 canonical tags from 5 input tags. The retained procedure passed both probes.
+advance=false
+end
+
+-- held-old-4.run --
+decision=accepted
+procedure=lower,trim,sort,dedup,drop-blank
+tags=ash,bark,cedar,tea
+identity="held-old-4.run"
+intent=Add tags using the retained procedure
+baseline=Some("evidence/01-seed.run")
+baseline_procedure=Some("lower,trim,sort,dedup,drop-blank")
+operations=Reuse the retained tags and executable procedure, add tags, sort, reduce and check output
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=["TEA", "BARK", "tea"]
+expected_tags=["ash", "bark", "cedar", "tea"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:18, sort_items:5
+probe_work=lowercase_bytes:14, sort_items:4
+evaluation_elapsed_us=18
+limitations=This invocation checked canonical ASCII output and both independent probes.
+continuation=Stop at the one-candidate limit. Verified 4 canonical tags from 5 input tags. The retained procedure passed both probes.
+advance=false
+end
+
+-- held-old-5.run --
+decision=accepted
+procedure=lower,trim,sort,dedup,drop-blank
+tags=ash,cedar
+identity="held-old-5.run"
+intent=Add tags using the retained procedure
+baseline=Some("evidence/01-seed.run")
+baseline_procedure=Some("lower,trim,sort,dedup,drop-blank")
+operations=Reuse the retained tags and executable procedure, add tags, sort, reduce and check output
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=["  ", "\t", " "]
+expected_tags=["ash", "cedar"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:12, sort_items:5
+probe_work=lowercase_bytes:14, sort_items:4
+evaluation_elapsed_us=17
+limitations=This invocation checked canonical ASCII output and both independent probes.
+continuation=Stop at the one-candidate limit. Verified 2 canonical tags from 5 input tags. The retained procedure passed both probes.
+advance=false
+end
+
+-- learn-producer.run --
+decision=accepted
+procedure=trim,drop-blank,lower,sort,dedup
+tags=ash,cedar
+identity="learn-producer.run"
+intent=Improve the retained procedure from measured work
+baseline=Some("evidence/12-galaxy-intelligence/ga-producer.run")
+baseline_procedure=Some("trim,lower,sort,dedup,drop-blank")
+operations=Relocate one step of the retained executable procedure and compare both results
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=[]
+expected_tags=["ash", "cedar"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:8, sort_items:2
+probe_work=lowercase_bytes:9, sort_items:3
+baseline_work=lowercase_bytes:9, sort_items:4
+baseline_probes_match=true
+one_step_relocated=true
+refinement_check=true
+worker=local
+search_limit=20 one-step relocations
+search_elapsed_us=20
+evaluation_elapsed_us=22
+limitations=The work counters describe the probe only. The gate gives no end-to-end speed guarantee.
+continuation=Reuse the accepted procedure in a new bounded iteration to see whether work can fall below lowercase_bytes:9, sort_items:3.
+advance=true
+end
+
+-- train-0-0.run --
+decision=accepted
+procedure=lower,trim,sort,dedup,drop-blank
+tags=acorn,ash,cedar
+identity="train-0-0.run"
+intent=Add tags using the retained procedure
+baseline=Some("evidence/01-seed.run")
+baseline_procedure=Some("lower,trim,sort,dedup,drop-blank")
+operations=Reuse the retained tags and executable procedure, add tags, sort, reduce and check output
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=["  ACORN ", "acorn", " "]
+expected_tags=["acorn", "ash", "cedar"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:22, sort_items:5
+probe_work=lowercase_bytes:14, sort_items:4
+evaluation_elapsed_us=15
+limitations=This invocation checked canonical ASCII output and both independent probes.
+continuation=Stop at the one-candidate limit. Verified 3 canonical tags from 5 input tags. The retained procedure passed both probes.
+advance=false
+end
+
+-- train-0-1.run --
+decision=accepted
+procedure=lower,trim,sort,dedup,drop-blank
+tags=ash,cedar,maize,ore
+identity="train-0-1.run"
+intent=Add tags using the retained procedure
+baseline=Some("evidence/01-seed.run")
+baseline_procedure=Some("lower,trim,sort,dedup,drop-blank")
+operations=Reuse the retained tags and executable procedure, add tags, sort, reduce and check output
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=["\tMAIZE", "ORE", "  "]
+expected_tags=["ash", "cedar", "maize", "ore"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:19, sort_items:5
+probe_work=lowercase_bytes:14, sort_items:4
+evaluation_elapsed_us=14
+limitations=This invocation checked canonical ASCII output and both independent probes.
+continuation=Stop at the one-candidate limit. Verified 4 canonical tags from 5 input tags. The retained procedure passed both probes.
+advance=false
+end
+
+-- train-0-2.run --
+decision=accepted
+procedure=lower,trim,sort,dedup,drop-blank
+tags=ash,cedar,root
+identity="train-0-2.run"
+intent=Add tags using the retained procedure
+baseline=Some("evidence/01-seed.run")
+baseline_procedure=Some("lower,trim,sort,dedup,drop-blank")
+operations=Reuse the retained tags and executable procedure, add tags, sort, reduce and check output
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=["  ROOT ", "ROOT", "\t "]
+expected_tags=["ash", "cedar", "root"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:21, sort_items:5
+probe_work=lowercase_bytes:14, sort_items:4
+evaluation_elapsed_us=17
+limitations=This invocation checked canonical ASCII output and both independent probes.
+continuation=Stop at the one-candidate limit. Verified 3 canonical tags from 5 input tags. The retained procedure passed both probes.
+advance=false
+end
+
+-- train-1-0.run --
+decision=accepted
+procedure=trim,lower,sort,dedup,drop-blank
+tags=acorn,ash,cedar
+identity="train-1-0.run"
+intent=Add tags using the retained procedure
+baseline=Some("evidence/12-galaxy-intelligence/ga-producer.run")
+baseline_procedure=Some("trim,lower,sort,dedup,drop-blank")
+operations=Reuse the retained tags and executable procedure, add tags, sort, reduce and check output
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=["  ACORN ", "acorn", " "]
+expected_tags=["acorn", "ash", "cedar"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:18, sort_items:5
+probe_work=lowercase_bytes:9, sort_items:4
+evaluation_elapsed_us=14
+limitations=This invocation checked canonical ASCII output and both independent probes.
+continuation=Stop at the one-candidate limit. Verified 3 canonical tags from 5 input tags. The retained procedure passed both probes.
+advance=false
+end
+
+-- train-1-1.run --
+decision=accepted
+procedure=trim,lower,sort,dedup,drop-blank
+tags=ash,cedar,maize,ore
+identity="train-1-1.run"
+intent=Add tags using the retained procedure
+baseline=Some("evidence/12-galaxy-intelligence/ga-producer.run")
+baseline_procedure=Some("trim,lower,sort,dedup,drop-blank")
+operations=Reuse the retained tags and executable procedure, add tags, sort, reduce and check output
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=["\tMAIZE", "ORE", "  "]
+expected_tags=["ash", "cedar", "maize", "ore"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:16, sort_items:5
+probe_work=lowercase_bytes:9, sort_items:4
+evaluation_elapsed_us=14
+limitations=This invocation checked canonical ASCII output and both independent probes.
+continuation=Stop at the one-candidate limit. Verified 4 canonical tags from 5 input tags. The retained procedure passed both probes.
+advance=false
+end
+
+-- train-1-2.run --
+decision=accepted
+procedure=trim,lower,sort,dedup,drop-blank
+tags=ash,cedar,root
+identity="train-1-2.run"
+intent=Add tags using the retained procedure
+baseline=Some("evidence/12-galaxy-intelligence/ga-producer.run")
+baseline_procedure=Some("trim,lower,sort,dedup,drop-blank")
+operations=Reuse the retained tags and executable procedure, add tags, sort, reduce and check output
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=["  ROOT ", "ROOT", "\t "]
+expected_tags=["ash", "cedar", "root"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:16, sort_items:5
+probe_work=lowercase_bytes:9, sort_items:4
+evaluation_elapsed_us=15
+limitations=This invocation checked canonical ASCII output and both independent probes.
+continuation=Stop at the one-candidate limit. Verified 3 canonical tags from 5 input tags. The retained procedure passed both probes.
+advance=false
+end
+
+-- train-2-0.run --
+decision=accepted
+procedure=trim,drop-blank,lower,sort,dedup
+tags=acorn,ash,cedar
+identity="train-2-0.run"
+intent=Add tags using the retained procedure
+baseline=Some("evidence/12-galaxy-intelligence/learn-producer.run")
+baseline_procedure=Some("trim,drop-blank,lower,sort,dedup")
+operations=Reuse the retained tags and executable procedure, add tags, sort, reduce and check output
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=["  ACORN ", "acorn", " "]
+expected_tags=["acorn", "ash", "cedar"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:18, sort_items:4
+probe_work=lowercase_bytes:9, sort_items:3
+evaluation_elapsed_us=14
+limitations=This invocation checked canonical ASCII output and both independent probes.
+continuation=Stop at the one-candidate limit. Verified 3 canonical tags from 5 input tags. The retained procedure passed both probes.
+advance=false
+end
+
+-- train-2-1.run --
+decision=accepted
+procedure=trim,drop-blank,lower,sort,dedup
+tags=ash,cedar,maize,ore
+identity="train-2-1.run"
+intent=Add tags using the retained procedure
+baseline=Some("evidence/12-galaxy-intelligence/learn-producer.run")
+baseline_procedure=Some("trim,drop-blank,lower,sort,dedup")
+operations=Reuse the retained tags and executable procedure, add tags, sort, reduce and check output
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=["\tMAIZE", "ORE", "  "]
+expected_tags=["ash", "cedar", "maize", "ore"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:16, sort_items:4
+probe_work=lowercase_bytes:9, sort_items:3
+evaluation_elapsed_us=13
+limitations=This invocation checked canonical ASCII output and both independent probes.
+continuation=Stop at the one-candidate limit. Verified 4 canonical tags from 5 input tags. The retained procedure passed both probes.
+advance=false
+end
+
+-- train-2-2.run --
+decision=accepted
+procedure=trim,drop-blank,lower,sort,dedup
+tags=ash,cedar,root
+identity="train-2-2.run"
+intent=Add tags using the retained procedure
+baseline=Some("evidence/12-galaxy-intelligence/learn-producer.run")
+baseline_procedure=Some("trim,drop-blank,lower,sort,dedup")
+operations=Reuse the retained tags and executable procedure, add tags, sort, reduce and check output
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=["  ROOT ", "ROOT", "\t "]
+expected_tags=["ash", "cedar", "root"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:16, sort_items:4
+probe_work=lowercase_bytes:9, sort_items:3
+evaluation_elapsed_us=14
+limitations=This invocation checked canonical ASCII output and both independent probes.
+continuation=Stop at the one-candidate limit. Verified 3 canonical tags from 5 input tags. The retained procedure passed both probes.
+advance=false
+end
+
+-- execution log --
+ga-producer accepted (8, 2) 17861583
+ga-consumer accepted (14, 5) 13780500
+ga-feedback accepted (11, 3) 18629042
+learn-producer accepted (8, 2) 14268625
+train-0-0 accepted (22, 5) 18874792
+train-0-1 accepted (19, 5) 12976333
+train-0-2 accepted (21, 5) 13564292
+train-1-0 accepted (18, 5) 12833792
+train-1-1 accepted (16, 5) 13030458
+train-1-2 accepted (16, 5) 13852541
+train-2-0 accepted (18, 4) 13821209
+train-2-1 accepted (16, 4) 14875875
+train-2-2 accepted (16, 4) 19970375
+held-old-0 accepted (19, 5) 13371875
+held-learned-0 accepted (16, 4) 12892875
+fresh-1-0 accepted (8, 2) 13807750
+fresh-2-0 accepted (8, 2) 12932334
+fresh-use-0 accepted (16, 4) 12996292
+held-old-1 accepted (24, 5) 12753917
+held-learned-1 accepted (18, 4) 13046750
+fresh-1-1 accepted (8, 2) 12913750
+fresh-2-1 accepted (8, 2) 13766625
+fresh-use-1 accepted (18, 4) 12962667
+held-old-2 accepted (23, 5) 13389958
+held-learned-2 accepted (20, 5) 13426000
+fresh-1-2 accepted (8, 2) 13942125
+fresh-2-2 accepted (8, 2) 15831500
+fresh-use-2 accepted (20, 5) 13909000
+held-old-3 accepted (23, 5) 14909166
+held-learned-3 accepted (23, 5) 13843167
+fresh-1-3 accepted (8, 2) 13035500
+fresh-2-3 accepted (8, 2) 17806083
+fresh-use-3 accepted (23, 5) 13878292
+held-old-4 accepted (18, 5) 13922542
+held-learned-4 accepted (18, 5) 13857625
+fresh-1-4 accepted (8, 2) 13986917
+fresh-2-4 accepted (8, 2) 13788584
+fresh-use-4 accepted (18, 5) 13844917
+held-old-5 accepted (12, 5) 13042417
+held-learned-5 accepted (8, 2) 13737333
+fresh-1-5 accepted (8, 2) 12904666
+fresh-2-5 accepted (8, 2) 12866250
+fresh-use-5 accepted (8, 2) 11841125
+Done {'setup_ns': 198339417, 'reused_total_ns': 279143167, 'rederived_total_ns': 247014377, 'original_total_ns': 81389875}
+end

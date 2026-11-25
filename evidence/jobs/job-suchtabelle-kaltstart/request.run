@@ -1,0 +1,8 @@
+decision=accepted
+kind=search
+procedure=valid-unique
+tags=
+intent=Wiederanlauf mit einer fehlerhaften Suchtabelle am echten Factory-Prozess prüfen
+evidence=../job-suchtabelle-bei-bedarf/round-02.run
+observation=The existing decision was based on simulated restarts.
+end

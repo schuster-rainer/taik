@@ -1,0 +1,25 @@
+162	start	Single-step relocation search
+400	baseline	trim,lower,sort,dedup,drop-blank
+424	probe	lowercase_bytes:9, sort_items:4
+446	trial	lower,trim,sort,dedup,drop-blank · lowercase_bytes:14, sort_items:4
+466	skip	lower,sort,trim,dedup,drop-blank
+485	skip	lower,sort,dedup,trim,drop-blank
+502	skip	lower,sort,dedup,drop-blank,trim
+521	trial	lower,trim,sort,dedup,drop-blank · lowercase_bytes:14, sort_items:4
+540	skip	trim,sort,lower,dedup,drop-blank
+3799	skip	trim,sort,dedup,lower,drop-blank
+7420	skip	trim,sort,dedup,drop-blank,lower
+7675	skip	sort,trim,lower,dedup,drop-blank
+7693	skip	trim,sort,lower,dedup,drop-blank
+7703	skip	trim,lower,dedup,sort,drop-blank
+7712	skip	trim,lower,dedup,drop-blank,sort
+7721	skip	dedup,trim,lower,sort,drop-blank
+7729	skip	trim,dedup,lower,sort,drop-blank
+7738	skip	trim,lower,dedup,sort,drop-blank
+7749	trial	trim,lower,sort,drop-blank,dedup · lowercase_bytes:9, sort_items:4
+7761	skip	drop-blank,trim,lower,sort,dedup
+7772	found	trim,drop-blank,lower,sort,dedup · lowercase_bytes:9, sort_items:3
+7783	evaluate	trim,drop-blank,lower,sort,dedup
+7807	checks	artifact:true, probes:true, limit:true, order:true
+7825	compare	lowercase_bytes:9, sort_items:4 → lowercase_bytes:9, sort_items:3
+17812	accepted	Reuse the accepted procedure in a new bounded iteration to see whether work can fall below lowercase_bytes:9, sort_items:3.

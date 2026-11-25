@@ -1,0 +1,19 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-09
+intent=Abgeschlossene Aufträge im laufenden Dienst nicht bei jedem Aufwachen erneut lesen und Ausfälle des Workers benennen.
+baseline=round-08-taik-seed
+rollback=round-09.baseline.tar.gz
+worker=codex wrote the candidate; claude-fable merged it with round 8, repeated the measurement and installed it
+operations=Reuse the retained observation that a job history is complete, keyed by file identity, size and timestamps. Record stage, kind and duration when the source worker fails, without its raw output.
+checks=PASS: Rust tests including the worker failure records, Clippy, release build. Median time to the first result with 2000 archived jobs 239.8 ms -> 50.2 ms, with 500 jobs 81.8 ms -> 33.9 ms, with an empty archive 29.7 ms -> 27.3 ms.
+evidence=round-09.checks.log
+measurement=round-09.queue-latency.json
+artifact=round-09-taik-seed
+artifact_sha256=d8ad0efbe976cf85735ffa4df236dbbb6bf3bb6b43d7cb230ea3d621647c7099
+limitations=One three-round tag workload on a warm local filesystem, 8 samples per case. The cache lives in memory and is rebuilt after a restart. Software jobs and submission fsync are outside the measurement. The live archive holds 15 jobs, so today's gain in use is below the measurement noise.
+continuation=The remaining 27 ms with an empty archive is the next cost to attribute. Measure where it goes before changing anything.
+advance=false
+end

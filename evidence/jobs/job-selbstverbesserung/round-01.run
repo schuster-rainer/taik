@@ -1,0 +1,16 @@
+decision=accepted
+kind=search
+procedure=unique
+tags=
+identity=round-01
+intent=Reduce unnecessary work in the Factory's own procedure search
+baseline_policy=all
+policy=unique
+limits=three rounds; all seven legal orders; fixed probes and promotion criteria
+operations=Compare bounded search candidates against the unrestricted reference search
+checks=policies agreed with the reference and reduced work: true; legal orders tested: 7; candidates constructed: 72 -> 59; probe executions: 22 -> 16
+artifact=round-01.policy
+limitations=counts cover constructed candidates and probes; elapsed speed was not established
+continuation=Use the accepted policy in the next round and subsequent tag jobs.
+advance=true
+end

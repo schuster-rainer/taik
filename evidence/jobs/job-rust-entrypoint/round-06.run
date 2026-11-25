@@ -1,0 +1,19 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-06
+intent=Publish a separate bounded HTML follow-up from an accepted gate finding.
+baseline=round-05-taik-seed
+rollback=round-06.baseline.tar.gz
+worker=codex
+operations=Observe a concrete finding in the pinned gate, preserve the published parent and transfer its approved artifact and original scope to a separately evaluated job.
+checks=PASS: Rust tests, Clippy, real gate and fixture worker, opt-in, identical gate and baseline, restart recovery, no duplicates or grandchildren, launchd replacement.
+evidence=round-06.checks.log
+artifact=round-06-taik-seed
+artifact_sha256=3fedf23c739550d065ea1e31a41b1eb4d197642489a3045d2798789e1a10e874
+limits=At most one one-round follow-up within the original four-round budget.
+limitations=Follow-ups require an opted-in gate. Verification used a local fixture worker.
+continuation=Run a separate follow-up whenever an authorized queued artifact passes with a concrete gate finding.
+advance=false
+end

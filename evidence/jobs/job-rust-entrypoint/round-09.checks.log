@@ -1,0 +1,20 @@
+     Running unittests src/main.rs (target/debug/deps/taik_seed-c3a5d7c891872f43)
+test procedure::tests::reference_rejects_a_changed_search_decision ... ok
+test procedure::tests::every_admitted_order_agrees_with_the_independent_reference ... ok
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+     Running tests/factory.rs (target/debug/deps/factory-005f187fc64c1821)
+test accepted_records_reject_a_fifo_without_blocking ... ok
+test concurrent_publication_has_one_winner ... ok
+test invalid_proposal_and_staging_cannot_replace_or_seed_accepted_work ... ok
+test service_resumes_from_an_accepted_round_and_wakes_for_new_work ... ok
+test queued_source_repairs_an_assertion_and_resumes_from_saved_feedback ... ok
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.13s
+     Running tests/source_worker.rs (target/debug/deps/source_worker-a39472baf3c16ded)
+test worker_failure_records_distinguish_phases_without_persisting_stderr ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.71s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.05s
+queue latency, median ms over 8 balanced samples, round-08 -> candidate:
+  0 archived jobs: 29.7 -> 27.3 (p95 50.0 -> 34.4)
+  500 archived jobs: 81.8 -> 33.9 (p95 111.5 -> 39.4)
+  2000 archived jobs: 239.8 -> 50.2 (p95 261.2 -> 63.5)
+PASS: launchd restarted the service from PID 82576 to 88959. watching for jobs in /Users/rainer/projects/ideas/talk/evidence/jobs

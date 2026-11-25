@@ -1,0 +1,13 @@
+decision=accepted
+kind=search
+procedure=precomputed
+tags=
+intent=Prüfe die bedarfsgesteuerte Tabellenprüfung auf neuen Dienstabläufen
+baseline=round-01.run
+policy=first-use
+proposal=local: move verified work to the first actual consumer after measuring its cost without a consumer
+checks=Same decisions against ordinary search over all admitted orders; candidate probe calls over four service replays: 88 -> 66.
+limitations=Simulated restart workloads exercising real probe calls. No elapsed-speed claim.
+continuation=Use the accepted timing on future starts. Keep the original gate before first use.
+advance=false
+end

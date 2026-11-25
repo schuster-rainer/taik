@@ -1,0 +1,24 @@
+decision=accepted
+procedure=trim,drop-blank,lower,sort,dedup
+tags=ash,cedar,pine
+identity="wake-verification.run"
+intent=Add tags using the retained procedure
+baseline=Some("/Users/rainer/.local/state/taik-factory/jobs/job-g1eogG/round-03.run")
+baseline_procedure=Some("trim,drop-blank,lower,sort,dedup")
+operations=Reuse the retained tags and executable procedure, add tags, sort, reduce and check output
+scope=canonical ASCII tags and a local, create-only record
+limits=8 additions, 64 bytes/tag, 32 retained tags, 8192 bytes/record; one evaluated candidate
+additions=["  PINE ", "cedar"]
+expected_tags=["ash", "cedar", "pine"]
+probe_input=["  OAK ", "oak", "\tELM", " "]
+probe_tags=["elm", "oak"]
+probe_expected=["elm", "oak"]
+checks=artifact_matches:true, probe_matches:true, size_within_limit:true
+order_preserves_contract=true
+artifact_work=lowercase_bytes:17, sort_items:4
+probe_work=lowercase_bytes:9, sort_items:3
+evaluation_elapsed_us=6
+limitations=This invocation checked canonical ASCII output and both independent probes.
+continuation=Stop at the one-candidate limit. Verified 3 canonical tags from 4 input tags. The retained procedure passed both probes.
+advance=false
+end

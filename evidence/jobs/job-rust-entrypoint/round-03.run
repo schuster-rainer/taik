@@ -1,0 +1,19 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-03
+intent=Generate a research job from measured search work.
+baseline=round-02-taik-seed
+rollback=round-03.baseline.tar.gz
+worker=codex
+operations=Measure repeated probes; derive and verify a finite table of decisions; retain it and feed it into the running search; adapt origin paths.
+checks=PASS: Rust tests and release build, negative search decision control, LaunchAgent creates the job without a separate submission, restart and reuse tested with the original output gate, viewer snapshot, byte-identical origin targets.
+evidence=round-03.checks.log
+research=../job-suchentscheidungen-wiederverwenden/round-01.run
+artifact=round-03-taik-seed
+artifact_sha256=a4ebf4cca1533e0a92a95db31f75609d76954ba8bf0dab4c47a5c74ffa2231a1
+limitations=This experiment covers the existing tag search. No open-ended hypothesis generation or elapsed-speed result.
+continuation=Reuse the accepted decisions when later tag jobs arrive.
+advance=false
+end

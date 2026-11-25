@@ -1,0 +1,7 @@
+decision=accepted
+kind=search
+procedure=precomputed
+tags=
+intent=Prüfung der Suchtabelle erst bei tatsächlicher Nutzung untersuchen
+baseline=../job-suchentscheidungen-wiederverwenden/round-01.run
+end

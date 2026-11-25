@@ -1,0 +1,4 @@
+318	start	Wiederanlauf mit einer fehlerhaften Suchtabelle am echten Factory-Prozess prüfen
+251656	probe	Kaltstart mit beschädigter Kopie und leerer Warteschlange abgeschlossen
+449433	checks	Cold startup skipped an unused table; valid table used; varied decision rejected before lookup; fallback and control ended with tags=ash,cedar and procedure=trim,drop-blank,lower,sort,dedup
+461752	accepted	Keep the deferred verification and the original search as a fallback. Stop this experiment after both controls passed.

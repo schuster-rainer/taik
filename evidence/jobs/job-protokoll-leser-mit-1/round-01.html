@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Protokoll-Leser</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --base: light-dark(#ffffff, #121212);
+  --ink: light-dark(#111111, #eeeeee);
+  --muted: light-dark(#4a4a4a, #b8b8b8);
+  --line: light-dark(#c8c8c8, #3a3a3a);
+  --c-key: light-dark(#1a3f8f, #9cc0ff);
+  --c-good: light-dark(#0b5a1f, #7fe39a);
+  --c-bad: light-dark(#8f1010, #ff9a9a);
+  --c-end: light-dark(#5a1f80, #e0b0ff);
+  --c-hash: light-dark(#5c4300, #f0d37a);
+  --c-path: light-dark(#00505a, #7fdde8);
+  --c-number: light-dark(#7a2e00, #ffbe8a);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--base); color: var(--ink); }
+body {
+  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+h1 { font-size: 1.6rem; margin: 0 0 1rem; }
+label { display: block; font-weight: 600; margin: 1rem 0 .4rem; }
+p.hint { color: var(--muted); margin: .2rem 0 0; font-size: .9rem; }
+textarea, pre {
+  width: 100%;
+  font: 14px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: var(--base);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: .75rem;
+}
+textarea { min-height: 14rem; resize: vertical; }
+textarea:focus-visible { outline: 2px solid var(--c-key); outline-offset: 2px; }
+pre { white-space: pre-wrap; word-break: break-word; min-height: 4rem; margin: 0; overflow: auto; }
+.run-key { color: var(--c-key); font-weight: 600; }
+.run-good { color: var(--c-good); font-weight: 600; }
+.run-bad { color: var(--c-bad); font-weight: 600; }
+.run-end { color: var(--c-end); font-weight: 700; }
+.run-hash { color: var(--c-hash); }
+.run-path { color: var(--c-path); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+.run-number { color: var(--c-number); }
+</style>
+</head>
+<body>
+<main>
+<h1>Protokoll-Leser</h1>
+<label for="record">Protokolltext (.run)</label>
+<textarea id="record" spellcheck="false" autocomplete="off">job=job-x
+round=round-02
+source=../job-x/round-01.run
+baseline=round-09.baseline.tar.gz
+seed=round-08-taik-seed
+digest=3f786850e387550fdab836ed7e6dc881de23001b
+size=18.4KiB
+duration=412ms
+latency=37 µs
+coverage=98.5%
+verdict=accepted
+gate=PASS
+retained=true
+note=a=b remains value, error count 0
+end</textarea>
+<p class="hint">Die Ansicht wird bei jeder Eingabe neu ausgezeichnet.</p>
+<label for="view">Ansicht</label>
+<pre id="view" aria-live="polite"></pre>
+</main>
+<script>
+/*RUN_HIGHLIGHT_BEGIN*/
+function highlightRun(text) {
+  const esc = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const span = (kind, value) => '<span class="run-' + kind + '">' + esc(value) + '</span>';
+  const tokens = new RegExp(
+    '(?<path>(?:\\.\\.?\\/)*[\\w.\\/-]*\\.(?:run|html|mjs|md|log|json|txt|png|jpg|gz)(?![\\w-])' +
+    '|(?:\\.\\.?\\/)*[\\w.\\/-]*-taik-seed(?![\\w-]))' +
+    '|(?<hash>\\b[a-f0-9]{40,64}\\b)' +
+    '|(?<good>\\b(?:accepted|PASS|true|retained)\\b)' +
+    '|(?<bad>\\b(?:rejected|FAIL|false|error)\\b)' +
+    '|(?<number>(?<![\\w.])(?<![\\w.]-)\\d+(?:\\.\\d+)?(?:KiB|MiB|ms|s|%)?(?![\\w-]|\\.\\d))',
+    'g'
+  );
+  const kindOf = groups => {
+    for (const name of ['path', 'hash', 'good', 'bad', 'number']) {
+      if (groups[name] !== undefined) return name;
+    }
+    return null;
+  };
+  const value = line => {
+    let cursor = 0;
+    let markup = '';
+    for (const token of line.matchAll(tokens)) {
+      if (!token[0]) continue;
+      const kind = kindOf(token.groups);
+      if (!kind) continue;
+      markup += esc(line.slice(cursor, token.index)) + span(kind, token[0]);
+      cursor = token.index + token[0].length;
+    }
+    return markup + esc(line.slice(cursor));
+  };
+  return String(text ?? '').split('\n').map(raw => {
+    const cr = raw.endsWith('\r') ? '\r' : '';
+    const line = cr ? raw.slice(0, -1) : raw;
+    let out;
+    if (line === 'end') {
+      out = span('end', line);
+    } else {
+      const at = line.indexOf('=');
+      const key = at > 0 ? line.slice(0, at) : '';
+      if (key && /^[a-z_][a-z0-9_]*$/.test(key)) {
+        out = span('key', key) + '=' + value(line.slice(at + 1));
+      } else {
+        out = value(line);
+      }
+    }
+    return out + cr;
+  }).join('\n');
+}
+/*RUN_HIGHLIGHT_END*/
+
+(function () {
+  const record = document.getElementById('record');
+  const view = document.getElementById('view');
+  const render = () => { view.innerHTML = highlightRun(record.value); };
+  record.addEventListener('input', render);
+  render();
+})();
+</script>
+</body>
+</html>

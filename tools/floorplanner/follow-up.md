@@ -1,0 +1,5 @@
+Extend the accepted isometric supermarket planner with real undo.
+
+Build on the supplied accepted HTML source. Preserve its Canvas, German responsive UI, independent route validation, local execution and existing behaviour. Make only these changes: define a pure floorPlan.undo(current, previous) that returns the entire previous layout unchanged when supplied, and returns current when previous is null. Expose it alongside the existing functions. Wire a visible button "Rückgängig" into the sidebar. Save the plan before a successful move, keep undo enabled across an undoable edit, restore the previous model, selected fixture and route when clicked, and clear history on reset. Failed edits must not consume history. If you add Cmd/Ctrl+Z, keep form controls usable.
+
+The stable gate checks all functionality again and additionally verifies undo of a real reversible move. No remote URLs, including SVG namespaces. Keep the document completely offline and output the complete standalone HTML document with a doctype.

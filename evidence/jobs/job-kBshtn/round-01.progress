@@ -1,0 +1,8 @@
+8843	start	Single-step relocation search
+9141	baseline	lower,trim,sort,dedup,drop-blank
+13744	probe	lowercase_bytes:14, sort_items:4
+16467	found	trim,lower,sort,dedup,drop-blank · lowercase_bytes:9, sort_items:4
+16558	evaluate	trim,lower,sort,dedup,drop-blank
+16581	checks	artifact:true, probes:true, limit:true, order:true
+16697	compare	lowercase_bytes:14, sort_items:4 → lowercase_bytes:9, sort_items:4
+28687	accepted	Reuse the accepted procedure in a new bounded iteration to see whether work can fall below lowercase_bytes:9, sort_items:4.
