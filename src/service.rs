@@ -131,6 +131,7 @@ pub fn run(state: &Path, continuous: bool, reflection: bool) -> Result<bool> {
     if events.is_some() {
         eprintln!("watching for jobs in {}", jobs.display());
     }
+    let started_as = installed_identity();
     let mut table = None;
     let mut completed = HashMap::new();
     #[cfg(target_os = "macos")]
@@ -152,7 +153,17 @@ pub fn run(state: &Path, continuous: bool, reflection: bool) -> Result<bool> {
             return Ok(succeeded);
         };
         events.wait()?;
+        // After a promotion the next job belongs to the accepted binary. The supervisor starts it.
+        if installed_identity() != started_as {
+            eprintln!("the installed binary changed; leaving the work to its successor");
+            return Ok(true);
+        }
     }
+}
+
+fn installed_identity() -> Option<(u64, u64)> {
+    let metadata = std::env::current_exe().ok()?.metadata().ok()?;
+    Some((metadata.dev(), metadata.ino()))
 }
 
 fn drain(

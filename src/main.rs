@@ -15,6 +15,8 @@ mod self_improve;
 #[cfg(unix)]
 mod service;
 #[cfg(target_os = "macos")]
+mod promote;
+#[cfg(target_os = "macos")]
 mod source;
 
 use std::env;
@@ -38,6 +40,7 @@ const USAGE: &str = "usage: taik-seed seed OUTPUT.run
        taik-seed evolve BASELINE.run OUTPUT.run
        taik-seed evaluate BASELINE.run OUTPUT.run ORDER
        taik-seed source JOB BRIEF GATE [--attached[=WORKER]]
+       taik-seed promote JOB BRIEF GATE INSTALLED_BINARY WORKER
        taik-seed experiment BASELINE.run OUTPUT_DIRECTORY
        taik-seed queue STATE BASELINE.run
        taik-seed queue-source STATE NAME BRIEF GATE
@@ -49,11 +52,14 @@ type Result<T> = std::result::Result<T, Box<dyn Error>>;
 // The record names whoever supplied the source. An unnamed attachment stays "attached".
 fn attached_worker(flag: &std::ffi::OsStr) -> Option<&str> {
     let flag = flag.to_str()?.strip_prefix("--attached")?;
-    let name = if flag.is_empty() {
-        "attached"
+    if flag.is_empty() {
+        Some("attached")
     } else {
-        flag.strip_prefix('=')?
-    };
+        worker_name(flag.strip_prefix('=')?)
+    }
+}
+
+fn worker_name(name: &str) -> Option<&str> {
     let valid = !name.is_empty()
         && name.len() <= 32
         && name
@@ -338,6 +344,17 @@ fn run() -> Result<bool> {
                 rest.get(2).and_then(|flag| attached_worker(flag)),
             )
         }
+        #[cfg(target_os = "macos")]
+        "promote" if rest.len() == 4 => promote::run(
+            first,
+            Path::new(&rest[0]),
+            Path::new(&rest[1]),
+            Path::new(&rest[2]),
+            rest[3]
+                .to_str()
+                .and_then(worker_name)
+                .ok_or("invalid worker name")?,
+        ),
         "evaluate" if rest.len() == 2 => {
             let output = Path::new(&rest[0]);
             record::check_output(output)?;

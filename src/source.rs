@@ -486,7 +486,7 @@ fn show_draft(file: Option<&mut File>, contents: &[u8]) {
     }
 }
 
-fn lock_job(job: &Path) -> Result<File> {
+pub(crate) fn lock_job(job: &Path) -> Result<File> {
     let lock = File::options()
         .read(true)
         .write(true)
@@ -503,7 +503,7 @@ fn lock_job(job: &Path) -> Result<File> {
     Ok(lock)
 }
 
-fn pin(path: &Path, contents: &str) -> Result<()> {
+pub(crate) fn pin(path: &Path, contents: &str) -> Result<()> {
     if path.try_exists()? {
         if record::read_regular(path, record::MAX_RECORD_BYTES)? != contents {
             return Err(format!("changed pinned input: {}", path.display()).into());

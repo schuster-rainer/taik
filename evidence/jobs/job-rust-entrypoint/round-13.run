@@ -1,0 +1,19 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-13
+intent=Die installierte Factory über ihren Nachfolger urteilen und ihn installieren lassen.
+baseline=round-12-taik-seed
+rollback=round-12-taik-seed
+worker=claude-fable
+decided_by=claude-fable, the author of the change, with the user's authorization of 2026-11-25 to change the acceptance boundary. This is the last backend round decided by its author.
+operations=Add promote: only the installed binary may judge. It pins the gate, runs it in the checkout, exercises the candidate with seed, reject and extend checks of its own, keeps candidate and predecessor in the job folder, replaces itself and writes the record. A running service that finds its binary replaced exits before the next job so that the supervisor starts the successor.
+checks=PASS: Rust tests including promotion by the installed binary, a refused foreign judge, a pinned gate, a failing gate, a hollow candidate and the service handover. Clippy, release build, service restart.
+evidence=round-13.checks.log
+artifact=round-13-taik-seed
+artifact_sha256=13078a1ba207e228e16de21481776371730877f5f9581acddd837c63cacfe578
+limitations=The gate is a shell script with the rights of the user, not sandboxed, because it builds in the checkout. The author of a change still writes its gate and its brief. The judge trusts the checkout the gate builds from.
+continuation=Backend changes go through promote in ../job-backend from now on.
+advance=false
+end
