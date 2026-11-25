@@ -51,6 +51,38 @@ pub fn queue(state: &Path, baseline: &Path) -> Result<PathBuf> {
     publish_job(job, published)
 }
 
+/// A reply of the user to a job. It is written into the job folder, and the service is woken the way
+/// a new job wakes it: by a change in the job directory.
+#[cfg(target_os = "macos")]
+pub fn reply(state: &Path, name: &str, text: &str) -> Result<PathBuf> {
+    let plain = name.strip_prefix("job-").is_some_and(|rest| {
+        !rest.is_empty()
+            && rest.len() <= 60
+            && rest
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
+    });
+    if !plain {
+        return Err("a reply names a job".into());
+    }
+    let jobs = jobs_in(state)?;
+    let job = jobs.join(name);
+    if !job.join("submission.brief.md").is_file() {
+        return Err("replies go to queued software jobs".into());
+    }
+    let message = crate::talk::write(
+        &job,
+        crate::talk::Author::User,
+        crate::talk::rounds_done(&job),
+        text,
+    )?;
+    let wake = tempfile::Builder::new()
+        .prefix(".wake-")
+        .tempdir_in(&jobs)?;
+    drop(wake);
+    Ok(message)
+}
+
 pub fn queue_self(state: &Path) -> Result<PathBuf> {
     let jobs = jobs_in(state)?;
     let job = stage(&jobs)?;

@@ -1,0 +1,20 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-17
+intent=Die Unterhaltung eines Auftrags in den Auftrag legen und Aufrufe ohne Kostenangabe aus einer Preisliste berechnen.
+baseline=taik-seed ffd5f49ed5cb0637c19106fe89313d4ecf3ea899447c3926cbd0c1ef2af50d4c
+worker=claude-fable
+decided_by=the installed taik-seed ffd5f49ed5cb0637c19106fe89313d4ecf3ea899447c3926cbd0c1ef2af50d4c at /Users/rainer/.local/state/taik-factory/taik-seed
+limits=99 rounds; gate 900s; candidate checks 10s each
+gate_sha256=76b41170f51fa7e1a5424ba01f903bcf2276b8f8f19e4d87f952e88d18b6b0ce
+gate_ms=22588
+checks=PASS: Rust tests, Clippy with warnings denied, release build; candidate seeded, rejected an invalid procedure without touching the accepted record, and extended it
+evidence=round-17.checks.log
+artifact=round-17-taik-seed
+artifact_sha256=222afc82535c08d7121e479234f044af8d95bcf6cf4246523fc3d954e33d6a61
+rollback=round-17.rollback-taik-seed
+continuation=Restart the service so that it runs the accepted binary.
+advance=false
+end

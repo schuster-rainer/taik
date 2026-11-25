@@ -22,6 +22,8 @@ mod self_improve;
 mod service;
 #[cfg(target_os = "macos")]
 mod source;
+#[cfg(target_os = "macos")]
+mod talk;
 
 use std::env;
 use std::error::Error;
@@ -46,6 +48,7 @@ const USAGE: &str = "usage: taik-seed seed OUTPUT.run
        taik-seed source JOB BRIEF GATE [--attached[=WORKER]]
        taik-seed promote JOB BRIEF GATE INSTALLED_BINARY WORKER
        taik-seed crew STATE
+       taik-seed reply STATE JOB < MESSAGE
        taik-seed propose STATE NAME RECORD.run
        taik-seed approve STATE NAME
        taik-seed experiment BASELINE.run OUTPUT_DIRECTORY
@@ -351,6 +354,17 @@ fn run() -> Result<bool> {
                 Path::new(&rest[1]),
                 rest.get(2).and_then(|flag| attached_worker(flag)),
             )
+        }
+        #[cfg(target_os = "macos")]
+        "reply" if rest.len() == 1 => {
+            use std::io::Read;
+            let name = rest[0].to_str().ok_or("job name must be ASCII")?;
+            let mut text = String::new();
+            std::io::stdin()
+                .take(talk::MAX_MESSAGE_BYTES as u64 + 1)
+                .read_to_string(&mut text)?;
+            println!("{}", service::reply(first, name, &text)?.display());
+            Ok(true)
         }
         #[cfg(target_os = "macos")]
         "crew" if rest.is_empty() => {

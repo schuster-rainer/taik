@@ -1,0 +1,26 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-02
+intent=Prüfen, ob der unbeaufsichtigte Code-Worker des Dienstes einen kleinen Auftrag liefern kann.
+baseline=/Users/rainer/projects/ideas/talk/evidence/jobs/job-probe-pi-grok/round-01.html
+worker=pi-cli
+agent=pi-grok
+worker_model=xai/grok-4.7
+worker_input_tokens=953
+worker_output_tokens=139
+worker_cost_usd=0.003316
+worker_duration_ms=2406
+limits=5 rounds; worker lease 60s up to 900s; verifier 15s; 96KiB source
+gate_sha256=c1d47eff4ddd4e3cd943623d2c4ee0ba469838f5fdd150bc5d744375e16684f6
+gate_ms=58
+patch_blocks=1
+checks=PASS: inert probe document with heading and paragraph
+artifact=round-02.html
+rejected_candidate=
+feedback=
+follow_up=
+continuation=Retain the accepted artifact. No further work was authorized by this round.
+advance=false
+end

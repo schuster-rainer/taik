@@ -950,3 +950,126 @@ printf '%s\n' '{"type":"message_update","assistantMessageEvent":{"type":"text_de
     );
     assert!(state.join("crew/overview.json").is_file());
 }
+
+#[test]
+fn a_job_holds_its_conversation_and_a_reply_reopens_it() {
+    let root = tempfile::Builder::new()
+        .prefix("taik-talk-")
+        .tempdir_in("/tmp")
+        .unwrap();
+    let brief = root.path().join("brief.md");
+    fs::write(&brief, "Deliver a coloured paragraph\n").unwrap();
+    let gate = root.path().join("verify.mjs");
+    fs::write(&gate, "console.log('PASS: any');\n").unwrap();
+    // The stand-in worker asks first, delivers once the user has answered, and follows a later reply.
+    let worker = root.path().join("lead");
+    let result = |text: &str| {
+        format!(
+            r#"printf '%s\n' '{{"type":"result","is_error":false,"result":"{text}","usage":{{"output_tokens":1}},"total_cost_usd":0.125,"modelUsage":{{"m":{{}}}}}}'"#
+        )
+    };
+    fs::write(
+        &worker,
+        format!(
+            "#!/bin/sh\ncase \"$*\" in\n  *'[user] Jetzt rot.'*'Follow the last message'*) {} ;;\n  *'[you] Welche Farbe?'*'[user] Blau.'*) {} ;;\n  *'=== FRAGE ==='*) {} ;;\n  *) exit 9 ;;\nesac\n",
+            result("<!doctype html><p>rot</p>"),
+            result("<!doctype html><p>blau</p>"),
+            result(r"=== FRAGE ===\nWelche Farbe?"),
+        ),
+    )
+    .unwrap();
+    fs::set_permissions(&worker, fs::Permissions::from_mode(0o700)).unwrap();
+    let state = root.path().join("state");
+    let queued = factory()
+        .arg("queue-source")
+        .arg(&state)
+        .arg("farbe")
+        .arg(&brief)
+        .arg(&gate)
+        .output()
+        .unwrap();
+    assert!(queued.status.success(), "{queued:?}");
+    let job = state.join("jobs/job-farbe");
+    let drain = || {
+        factory()
+            .arg("drain")
+            .arg(&state)
+            .env("TAIK_LEAD_WORKER", &worker)
+            .env_remove("TAIK_SECOND_WORKER")
+            .env_remove("TAIK_AUTO_PROPOSE")
+            .output()
+            .unwrap()
+    };
+    let reply = |text: &str| {
+        use std::io::Write;
+        let mut child = factory()
+            .arg("reply")
+            .arg(&state)
+            .arg("job-farbe")
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::null())
+            .spawn()
+            .unwrap();
+        child
+            .stdin
+            .take()
+            .unwrap()
+            .write_all(text.as_bytes())
+            .unwrap();
+        assert!(child.wait().unwrap().success());
+    };
+
+    // The worker asks. Nothing is decided, the question and its cost are in the job folder.
+    assert!(drain().status.success());
+    assert!(!job.join("round-01.run").exists());
+    assert_eq!(
+        fs::read_to_string(job.join("message-001.agent.md")).unwrap(),
+        "round=0\n\nWelche Farbe?\n"
+    );
+    let ledger = fs::read_to_string(job.join("message-001.run")).unwrap();
+    assert!(
+        ledger.contains("\nworker_cost_usd=0.125\n") && ledger.contains("kind=message"),
+        "{ledger}"
+    );
+    // Without an answer the job waits. The worker is not asked again.
+    assert!(drain().status.success());
+    assert!(!job.join("round-01.run").exists() && !job.join("message-002.agent.md").exists());
+
+    // The answer goes into the job. The next round reads the conversation.
+    reply("Blau.\n");
+    assert_eq!(
+        fs::read_to_string(job.join("message-002.user.md")).unwrap(),
+        "round=0\n\nBlau.\n"
+    );
+    assert!(drain().status.success());
+    let record = fs::read_to_string(job.join("round-01.run")).unwrap();
+    assert!(record.starts_with("decision=accepted\n"), "{record}");
+    assert_eq!(
+        fs::read_to_string(job.join("round-01.html")).unwrap(),
+        "<!doctype html><p>blau</p>\n"
+    );
+
+    // The job is finished. Another pass does nothing, a reply grants exactly one further round.
+    assert!(drain().status.success());
+    assert!(!job.join("round-02.run").exists());
+    reply("Jetzt rot.");
+    assert!(drain().status.success());
+    assert_eq!(
+        fs::read_to_string(job.join("round-02.html")).unwrap(),
+        "<!doctype html><p>rot</p>\n"
+    );
+    assert!(drain().status.success());
+    assert!(!job.join("round-03.run").exists());
+
+    // A reply names a queued job and nothing else.
+    for name in ["job-unbekannt", "../job-farbe", "farbe"] {
+        let refused = factory()
+            .arg("reply")
+            .arg(&state)
+            .arg(name)
+            .stdin(std::process::Stdio::null())
+            .output()
+            .unwrap();
+        assert_eq!(refused.status.code(), Some(2), "{name}");
+    }
+}

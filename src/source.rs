@@ -15,6 +15,8 @@ use crate::{Outcome, Progress, Result, record};
 
 pub const LIMIT: usize = 96 * 1024;
 const ROUNDS: usize = 4;
+// Replies of the user can grant further rounds, up to this many records in one job.
+const MAX_ROUNDS: usize = ROUNDS + 8;
 // A worker holds a lease that every piece of output renews. Silence beyond the lease ends the call
 // as stalled, and no call runs past the ceiling. The job lock keeps a second worker off the job.
 const WORKER_LEASE: Duration = Duration::from_secs(60);
@@ -80,7 +82,7 @@ pub(crate) fn intent(brief: &str) -> Result<&str> {
 
 pub fn run(job: &Path, brief: &Path, gate: &Path, attached: Option<&str>) -> Result<bool> {
     let job = SourceJob::open(job, brief, gate)?;
-    Ok(run_round(&job, job.history()?, attached, false, None, None)?.accepted)
+    Ok(run_round(&job, job.history()?, attached, false, None, None, &[])?.accepted)
 }
 
 pub fn run_queued(
@@ -94,14 +96,24 @@ pub fn run_queued(
     )?;
     loop {
         let history = job.history()?;
+        let talk = crate::talk::read(&job.path);
+        // A worker asked a question. The job waits for the user.
+        if crate::talk::waits_for_user(&talk) {
+            return Ok((None, None));
+        }
+        let reply = crate::talk::open_reply(&talk, history.number - 1);
         let feedback = match history.previous.as_deref() {
             Some(previous) if previous.lines().any(|line| line == "advance=true") => {
                 Some(Feedback::read(&job.path, history.number - 1, previous)?)
             }
-            Some(_) => return Ok((None, job.follow_up(history)?)),
-            None => None,
+            // A finished job runs again only when the user has replied since its last round.
+            Some(_) if !reply => return Ok((None, job.follow_up(history)?)),
+            _ => None,
         };
-        let outcome = run_round(&job, history, None, true, feedback.as_ref(), agent)?;
+        let outcome = match run_round(&job, history, None, true, feedback.as_ref(), agent, &talk) {
+            Err(error) if error.is::<Asked>() => return Ok((None, None)),
+            other => other?,
+        };
         if !outcome.advance {
             let follow_up = if outcome.accepted {
                 job.follow_up(job.history()?)?
@@ -280,6 +292,7 @@ fn run_round(
     queued: bool,
     feedback: Option<&Feedback>,
     agent: Option<&crate::crew::Agent>,
+    talk: &[crate::talk::Message],
 ) -> Result<Outcome> {
     let SourceJob {
         path,
@@ -291,7 +304,12 @@ fn run_round(
     let History {
         number, baseline, ..
     } = history;
-    let budget = job.rounds();
+    let budget = job.rounds()
+        + if job.follow_up {
+            0
+        } else {
+            crate::talk::granted_rounds(talk)
+        };
     if number > budget {
         return Err("source job round budget exhausted".into());
     }
@@ -324,6 +342,7 @@ fn run_round(
     let mut draft = open_draft(&draft_path).ok();
 
     let mut second_worker = String::new();
+    let mut asked: Option<String> = None;
     let mut claude_called = false;
     let mut agent_label: Option<&'static str> = None;
     let mut gate_ms = None;
@@ -369,6 +388,10 @@ fn run_round(
             );
             if previous.is_some() {
                 prompt.push_str(PATCH_OFFER);
+            }
+            if queued {
+                prompt.push_str(ASK_OFFER);
+                prompt.push_str(&crate::talk::prompt(talk));
             }
             if let Some(feedback) = feedback {
                 use std::fmt::Write as _;
@@ -464,6 +487,14 @@ fn run_round(
                 (first, _) => first?,
             }
         };
+        // A question instead of a candidate: nothing is judged, the job waits for the user.
+        if queued
+            && attached.is_none()
+            && let Some(question) = html.trim_start().strip_prefix("=== FRAGE ===")
+        {
+            asked = Some(question.trim().to_owned());
+            return Err(Asked.into());
+        }
         if let Some(last) = heartbeats.last() {
             progress.event(
                 "worker",
@@ -531,6 +562,25 @@ fn run_round(
         progress.event("checks", format_args!("{diagnosis}"));
         Ok((valid, advance, diagnosis, stop, further))
     })();
+    if let Some(question) = asked {
+        let message = crate::talk::write(path, crate::talk::Author::Agent, number - 1, &question)?;
+        // The call cost something although no round was decided. The amount stays in the ledger.
+        let ledger = message.with_extension("").with_extension("run");
+        let worker = agent_label.unwrap_or_else(second_label);
+        crate::record::publish_text(
+            &ledger,
+            &format!("decision=observed\nkind=message\nworker={worker}\n{second_worker}end\n"),
+            crate::record::MAX_RECORD_BYTES,
+        )?;
+        progress.event(
+            "worker",
+            format_args!("Rückfrage an den Nutzer: {}", single_line(&question)),
+        );
+        if draft.is_some() {
+            let _ = fs::remove_file(&draft_path);
+        }
+        return Err(Asked.into());
+    }
     let worker_observation = execution
         .as_ref()
         .err()
@@ -644,7 +694,7 @@ struct History {
 
 fn history(job: &Path, mut baseline: Option<PathBuf>) -> Result<History> {
     let mut previous = None;
-    for number in 1..=ROUNDS {
+    for number in 1..=MAX_ROUNDS {
         let stem = format!("round-{number:02}");
         let result = job.join(format!("{stem}.run"));
         if !result.try_exists()? {
@@ -675,7 +725,7 @@ fn history(job: &Path, mut baseline: Option<PathBuf>) -> Result<History> {
         previous = Some(text);
     }
     Ok(History {
-        number: ROUNDS + 1,
+        number: MAX_ROUNDS + 1,
         baseline,
         previous,
     })
@@ -737,7 +787,19 @@ pub(crate) fn codex(
     job: &Path,
     prompt: &str,
     progress: &mut Progress,
+    show_code: impl FnMut(&str),
+) -> Result<String> {
+    codex_metered(scratch, job, prompt, progress, show_code, &mut None)
+}
+
+// Codex reports tokens and no amount. The caller prices them: (input, cached input, output).
+fn codex_metered(
+    scratch: &Path,
+    job: &Path,
+    prompt: &str,
+    progress: &mut Progress,
     mut show_code: impl FnMut(&str),
+    usage: &mut Option<(u64, u64, u64)>,
 ) -> Result<String> {
     let setup_started = Instant::now();
     let isolated = codex_home(scratch)
@@ -812,6 +874,15 @@ pub(crate) fn codex(
                 {
                     let kind = event["type"].as_str().unwrap_or("event");
                     let item = event["item"]["type"].as_str().unwrap_or("");
+                    if kind == "turn.completed"
+                        && let Some(input) = event["usage"]["input_tokens"].as_u64()
+                    {
+                        *usage = Some((
+                            input,
+                            event["usage"]["cached_input_tokens"].as_u64().unwrap_or(0),
+                            event["usage"]["output_tokens"].as_u64().unwrap_or(0),
+                        ));
+                    }
                     if item == "agent_message"
                         && matches!(kind, "item.updated" | "item.completed")
                         && let Some(code) = event["item"]["text"].as_str()
@@ -875,6 +946,20 @@ pub(crate) fn ask(
         ),
     }
 }
+
+const ASK_OFFER: &str = "\n\nIf the work order cannot be done without an answer from the user, return only the line '=== FRAGE ===' followed by one question in German. Ask only when a wrong guess would waste the round.";
+
+/// A worker asked the user instead of delivering. No round was decided.
+#[derive(Debug)]
+pub(crate) struct Asked;
+
+impl Display for Asked {
+    fn fmt(&self, output: &mut fmt::Formatter<'_>) -> fmt::Result {
+        output.write_str("the worker asked the user a question")
+    }
+}
+
+impl std::error::Error for Asked {}
 
 const PATCH_OFFER: &str = "\n\nYou may return a patch instead of the complete document when most of the accepted source stays unchanged. A patch starts with the line '=== PATCH ===' followed by one or more blocks of this form:\n<<<<<<< SEARCH\n<exact lines from the accepted source>\n=======\n<replacement lines>\n>>>>>>> REPLACE\nEach SEARCH text must occur exactly once in the accepted source at the time its block is applied. Blocks are applied in order. Return either a patch or a complete document, never both.";
 
@@ -1453,11 +1538,24 @@ fn call_agent(
             if !budget_left(job) {
                 return Err(WorkerFailure::new("setup", "budget", started).into());
             }
-            let html = codex(scratch, job, prompt, progress, show_code)?;
+            let mut usage = None;
+            let html = codex_metered(scratch, job, prompt, progress, show_code, &mut usage)?;
+            // With tokens and a listed price the amount is computed. Otherwise a fixed amount counts.
+            let tokens = usage.map_or_else(String::new, |(input, _, output)| {
+                format!("worker_input_tokens={input}\nworker_output_tokens={output}\n")
+            });
+            let cost = usage
+                .and_then(|(input, cached, output)| {
+                    crate::crew::cost(&agent.model, input, cached, output)
+                })
+                .map_or_else(
+                    || format!("worker_cost_assumed_usd={UNREPORTED_COST_USD}"),
+                    |cost| format!("worker_cost_usd={cost:.6}\nworker_cost_basis=price list"),
+                );
             Ok((
                 html,
                 format!(
-                    "worker_cost_assumed_usd={UNREPORTED_COST_USD}\nworker_duration_ms={}\n",
+                    "{tokens}{cost}\nworker_duration_ms={}\n",
                     started.elapsed().as_millis()
                 ),
             ))

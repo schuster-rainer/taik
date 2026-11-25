@@ -385,7 +385,78 @@ pub fn overview(state: &Path) -> Result<serde_json::Value> {
     let checked = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_or(0, |elapsed| elapsed.as_secs());
-    Ok(json!({ "checked_at": checked, "harnesses": harnesses, "agents": agents }))
+    let (prices, prices_from) = prices();
+    Ok(
+        json!({ "checked_at": checked, "harnesses": harnesses, "agents": agents,
+        "prices": prices, "prices_from": prices_from }),
+    )
+}
+
+/// List prices in USD per million tokens, keyed by "provider/model". They come from the model
+/// catalog that Pi keeps on this machine, plus the documented prices of Savant.
+pub fn prices() -> (serde_json::Map<String, serde_json::Value>, String) {
+    use serde_json::json;
+    let mut map = serde_json::Map::new();
+    map.insert(
+        format!("subq/{}", crate::source::SAVANT_MODEL),
+        json!({ "input": 0.10, "output": 0.50, "cache_read": 0.10 }),
+    );
+    let mut source = String::from("SubQ documentation of 2026-11-25");
+    let catalog = std::env::var_os("HOME")
+        .map(|home| PathBuf::from(home).join(".pi/agent/models-store.json"));
+    let read = catalog.as_ref().and_then(|path| {
+        let size = path.metadata().ok()?.len();
+        (size <= 4 * 1024 * 1024).then(|| fs::read_to_string(path).ok())?
+    });
+    if let Some(store) = read.and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
+    {
+        for provider in ["anthropic", "openai", "xai"] {
+            let models = store[provider]["models"]
+                .as_array()
+                .or_else(|| store[provider].as_array());
+            for model in models.into_iter().flatten() {
+                let (Some(id), Some(input), Some(output)) = (
+                    model["id"].as_str(),
+                    model["cost"]["input"].as_f64(),
+                    model["cost"]["output"].as_f64(),
+                ) else {
+                    continue;
+                };
+                map.insert(
+                    format!("{provider}/{id}"),
+                    json!({ "input": input, "output": output,
+                        "cache_read": model["cost"]["cacheRead"].as_f64().unwrap_or(input) }),
+                );
+            }
+        }
+        let changed = catalog
+            .and_then(|path| path.metadata().ok()?.modified().ok())
+            .and_then(|time| time.duration_since(UNIX_EPOCH).ok())
+            .map_or(0, |elapsed| elapsed.as_secs());
+        source = format!("Pi model catalog, changed at {changed}; {source}");
+    }
+    (map, source)
+}
+
+/// The amount for a call from its tokens, when the model has a list price. The model may be given
+/// with or without its provider.
+pub fn cost(model: &str, input: u64, cached: u64, output: u64) -> Option<f64> {
+    if model.is_empty() {
+        return None;
+    }
+    let (map, _) = prices();
+    let price = map.get(model).or_else(|| {
+        map.iter()
+            .find(|(key, _)| key.split_once('/').is_some_and(|(_, id)| id == model))
+            .map(|(_, price)| price)
+    })?;
+    let fresh = input.saturating_sub(cached) as f64;
+    Some(
+        (fresh * price["input"].as_f64()?
+            + cached as f64 * price["cache_read"].as_f64()?
+            + output as f64 * price["output"].as_f64()?)
+            / 1e6,
+    )
 }
 
 /// Writes the overview where the viewer reads it and returns its text.
