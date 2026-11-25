@@ -1,0 +1,25 @@
+decision=rejected
+kind=software
+procedure=
+tags=
+identity=round-02
+intent=Prüfbefund aus round-01.run bearbeiten
+baseline=(empty)
+worker=savant
+worker_model=subq-savant-1.4
+worker_input_tokens=5828
+worker_output_tokens=29652
+worker_cost_usd=0.015409
+worker_duration_ms=97568
+limits=4 rounds; worker lease 60s up to 900s; verifier 15s; 96KiB source
+gate_sha256=a9ad9a8de73aeb8827ab720262a2dea227dc34f4691731375baae155dd2f6f8f
+gate_ms=84
+patch_blocks=
+checks=AssertionError [ERR_ASSERTION]: one board element
+artifact=
+rejected_candidate=round-02.rejected.txt
+feedback=round-01.run
+follow_up=
+continuation=Revise the retained source using the gate diagnosis, then run the same gate.
+advance=true
+end

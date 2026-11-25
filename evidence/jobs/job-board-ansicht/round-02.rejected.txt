@@ -1,0 +1,578 @@
+<style>
+#taik-live #taik-ticket-board {
+  background: var(--taik-surface-raised, var(--surface-raised, #ffffff));
+  border-radius: var(--taik-radius, var(--radius, 12px));
+  box-shadow: var(--taik-shadow, var(--shadow, 0 2px 10px rgba(0, 0, 0, 0.08)));
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: 100%;
+  overflow: hidden;
+  padding: 12px;
+  gap: 10px;
+}
+#taik-live #taik-ticket-board .taik-board-lead {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  min-height: 28px;
+}
+#taik-live #taik-ticket-board .taik-board-lead-text {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+#taik-live #taik-ticket-board .taik-board-jump {
+  background: transparent;
+  border: 1px solid var(--taik-border, rgba(0, 0, 0, 0.16));
+  border-radius: 999px;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  padding: 4px 9px;
+}
+#taik-live #taik-ticket-board .taik-board-jump:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+#taik-live #taik-ticket-board .taik-board-columns {
+  display: grid;
+  flex: 1;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  min-height: 0;
+  overflow: hidden;
+}
+#taik-live #taik-ticket-board .taik-board-column {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+#taik-live #taik-ticket-board .taik-board-column-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin: 0 0 6px;
+  opacity: 0.72;
+  text-transform: uppercase;
+}
+#taik-live #taik-ticket-board .taik-board-list {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 2px;
+}
+#taik-live #taik-ticket-board .taik-board-empty {
+  border: 1px dashed var(--taik-border, rgba(0, 0, 0, 0.14));
+  border-radius: 8px;
+  font-size: 11px;
+  opacity: 0.55;
+  padding: 8px;
+}
+#taik-live #taik-ticket-board .taik-board-ticket {
+  background: var(--taik-surface, rgba(0, 0, 0, 0.025));
+  border: 1px solid var(--taik-border, rgba(0, 0, 0, 0.1));
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 7px 8px;
+  text-align: left;
+}
+#taik-live #taik-ticket-board .taik-board-ticket:hover {
+  border-color: var(--taik-border-strong, rgba(0, 0, 0, 0.24));
+}
+#taik-live #taik-ticket-board .taik-board-ticket.is-open {
+  border-color: var(--taik-accent, #3a6df0);
+  box-shadow: 0 0 0 1px var(--taik-accent, #3a6df0) inset;
+}
+#taik-live #taik-ticket-board .taik-board-ticket-top {
+  align-items: baseline;
+  display: flex;
+  gap: 6px;
+  justify-content: space-between;
+  min-width: 0;
+}
+#taik-live #taik-ticket-board .taik-board-ticket-id {
+  font-family: monospace;
+  font-size: 10px;
+  opacity: 0.6;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#taik-live #taik-ticket-board .taik-board-ticket-title {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+#taik-live #taik-ticket-board .taik-board-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+#taik-live #taik-ticket-board .taik-board-flag {
+  border: 1px solid var(--taik-border, rgba(0, 0, 0, 0.14));
+  border-radius: 999px;
+  font-size: 9px;
+  letter-spacing: 0.02em;
+  padding: 1px 6px;
+}
+#taik-live #taik-ticket-board .taik-board-flag.is-attention {
+  background: var(--taik-attention, rgba(58, 109, 240, 0.12));
+  border-color: var(--taik-attention-border, rgba(58, 109, 240, 0.45));
+  font-weight: 700;
+}
+#taik-live #taik-ticket-board .taik-board-meta {
+  font-size: 10px;
+  opacity: 0.6;
+  overflow-wrap: anywhere;
+}
+#taik-live #taik-ticket-board .taik-board-ticket-actions {
+  border-top: 1px solid var(--taik-border, rgba(0, 0, 0, 0.1));
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 5px;
+  padding-top: 6px;
+}
+#taik-live #taik-ticket-board .taik-board-comment {
+  background: var(--taik-input-bg, transparent);
+  border: 1px solid var(--taik-border, rgba(0, 0, 0, 0.16));
+  border-radius: 6px;
+  box-sizing: border-box;
+  color: inherit;
+  font: inherit;
+  font-size: 11px;
+  min-height: 44px;
+  padding: 5px 6px;
+  resize: vertical;
+  width: 100%;
+}
+#taik-live #taik-ticket-board .taik-board-action {
+  align-self: flex-start;
+  background: var(--taik-button-bg, rgba(0, 0, 0, 0.06));
+  border: 1px solid var(--taik-border, rgba(0, 0, 0, 0.16));
+  border-radius: 6px;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  padding: 4px 8px;
+}
+#taik-live #taik-ticket-board .taik-board-action:hover {
+  border-color: var(--taik-border-strong, rgba(0, 0, 0, 0.28));
+}
+</style>
+<section id="taik-ticket-board" class="taik-section taik-board" data-board="tickets" aria-label="Ticket board">
+  <div class="taik-board-lead">
+    <span id="taik-board-waiting-count" class="taik-board-lead-text">0 Tickets warten auf Antwort</span>
+    <button type="button" id="taik-board-jump" class="taik-board-jump">Zum ersten Ticket</button>
+  </div>
+  <div class="taik-board-columns">
+    <div class="taik-board-column" data-board-column="waiting">
+      <h3 class="taik-board-column-title">Wartet auf Antwort</h3>
+      <div class="taik-board-list" data-board-list="waiting"></div>
+    </div>
+    <div class="taik-board-column" data-board-column="running">
+      <h3 class="taik-board-column-title">Läuft</h3>
+      <div class="taik-board-list" data-board-list="running"></div>
+    </div>
+    <div class="taik-board-column" data-board-column="decided">
+      <h3 class="taik-board-column-title">Entschieden</h3>
+      <div class="taik-board-list" data-board-list="decided"></div>
+    </div>
+  </div>
+</section>
+<script>
+(function () {
+  'use strict';
+
+  var INITIAL_DATA = /*FACTORY_DATA*/null;
+  var COLUMNS = ['waiting', 'running', 'decided'];
+  var ATTENTION_FLAGS = { 'Antwort': true, 'Frage': true, 'Entscheidung': true };
+  var state = {
+    data: null,
+    tickets: [],
+    selectedJobId: null,
+    openTicketKey: null
+  };
+
+  function asArray(value) {
+    return Array.isArray(value) ? value : [];
+  }
+
+  function idOf(item, fallback) {
+    if (item && item.id !== undefined && item.id !== null) return String(item.id);
+    if (item && item.name !== undefined && item.name !== null) return String(item.name);
+    return fallback || '';
+  }
+
+  function titleOf(item, fallback) {
+    if (item && item.title) return String(item.title);
+    if (item && item.name) return String(item.name);
+    if (item && item.id !== undefined && item.id !== null) return String(item.id);
+    return fallback || 'Ticket';
+  }
+
+  function lastRound(job) {
+    var rounds = asArray(job && job.rounds);
+    if (rounds.length) return rounds[rounds.length - 1];
+    if (job && job.latestRound) return job.latestRound;
+    if (job && job.lastRound) return job.lastRound;
+    return job || null;
+  }
+
+  function roundDecision(round) {
+    if (!round) return '';
+    if (round.decision) return String(round.decision).toLowerCase();
+    if (round.status) return String(round.status).toLowerCase();
+    if (round.accepted === true) return 'accepted';
+    if (round.rejected === true) return 'rejected';
+    return '';
+  }
+
+  function jobIsPending(job) {
+    if (!job) return false;
+    return job.pending === true ||
+      job.waiting === true ||
+      job.status === 'pending' ||
+      job.state === 'pending' ||
+      job.phase === 'pending';
+  }
+
+  function jobIsAdvancing(job) {
+    return !!(job && (job.advancing === true || job.status === 'advancing'));
+  }
+
+  function isSoftwareJob(job) {
+    if (!job) return false;
+    return job.kind === 'software' ||
+      job.type === 'software' ||
+      job.software === true ||
+      job.workpiece === 'software' ||
+      job.category === 'software';
+  }
+
+  function isActive(job) {
+    return !!(job && (job.sourceActive === true || job.active === true || job.status === 'active' || job.state === 'active'));
+  }
+
+  function isQueued(job) {
+    return !!(job && (job.sourceQueued === true || job.queued === true || job.status === 'queued' || job.state === 'queued'));
+  }
+
+  function classifyJob(job, index) {
+    var id = idOf(job, 'J-' + (index + 1));
+    var last = lastRound(job);
+    var decision = roundDecision(last);
+    var pending = jobIsPending(job);
+    var active = isActive(job);
+    var queued = isQueued(job);
+    var ticket = {
+      key: 'job:' + id,
+      kind: 'job',
+      id: id,
+      name: id,
+      title: titleOf(job, id),
+      job: job,
+      jobId: id,
+      flags: [],
+      column: '',
+      meta: ''
+    };
+
+    if (isSoftwareJob(job) && (active || queued)) {
+      ticket.column = 'waiting';
+      ticket.flags = ['Antwort'];
+      ticket.meta = active ? 'Software läuft' : 'Software wartet';
+      return ticket;
+    }
+    if (pending && decision === 'rejected') {
+      ticket.column = 'waiting';
+      ticket.flags = ['Frage'];
+      ticket.meta = 'Runde abgelehnt';
+      return ticket;
+    }
+    if (active) {
+      ticket.column = 'running';
+      ticket.flags = ['In Arbeit'];
+      ticket.meta = 'Läuft';
+      return ticket;
+    }
+    if (pending) {
+      ticket.column = 'running';
+      ticket.flags = ['Warteschlange'];
+      ticket.meta = 'Wartet auf nächste Runde';
+      return ticket;
+    }
+    if (decision === 'accepted' && !jobIsAdvancing(job)) {
+      ticket.column = 'decided';
+      ticket.flags = ['Angenommen'];
+      ticket.meta = 'Angenommen';
+      return ticket;
+    }
+    if (decision === 'rejected') {
+      ticket.column = 'decided';
+      ticket.flags = ['Abgelehnt'];
+      ticket.meta = 'Abgelehnt';
+      return ticket;
+    }
+    return null;
+  }
+
+  function buildTickets(data) {
+    var tickets = [];
+    asArray(data && data.proposals).forEach(function (proposal, index) {
+      if (!proposal || proposal.approved) return;
+      var id = idOf(proposal, 'P-' + (index + 1));
+      tickets.push({
+        key: 'proposal:' + id,
+        kind: 'proposal',
+        id: id,
+        name: proposal.name || id,
+        title: titleOf(proposal, id),
+        flags: ['Entscheidung'],
+        column: 'waiting',
+        jobId: proposal.origin || proposal.jobId || null,
+        proposal: proposal,
+        meta: proposal.origin ? 'Herkunft: ' + proposal.origin : 'Vorschlag'
+      });
+    });
+    asArray(data && data.jobs).forEach(function (job, index) {
+      var ticket = classifyJob(job, index);
+      if (ticket) tickets.push(ticket);
+    });
+    return tickets;
+  }
+
+  function waitingTickets() {
+    return state.tickets.filter(function (ticket) {
+      return ticket.column === 'waiting';
+    });
+  }
+
+  function boardElement() {
+    return document.getElementById('taik-ticket-board');
+  }
+
+  function sendHost(name, payload) {
+    var handlers = window.webkit && window.webkit.messageHandlers;
+    if (handlers && handlers[name] && typeof handlers[name].postMessage === 'function') {
+      handlers[name].postMessage(payload);
+      return;
+    }
+    window.dispatchEvent(new CustomEvent('taik:host-message', {
+      detail: { name: name, payload: payload }
+    }));
+  }
+
+  function findHistoryItem(jobId) {
+    var board = boardElement();
+    var selectors = ['data-job-id', 'data-job', 'data-id'];
+    for (var s = 0; s < selectors.length; s += 1) {
+      var nodes = document.querySelectorAll('[' + selectors[s] + ']');
+      for (var i = 0; i < nodes.length; i += 1) {
+        var node = nodes[i];
+        if (board && board.contains(node)) continue;
+        var value = node.getAttribute(selectors[s]);
+        if (value !== null && String(value) === jobId) return node;
+      }
+    }
+    return null;
+  }
+
+  function selectJob(jobId) {
+    if (jobId === undefined || jobId === null || jobId === '') return;
+    var id = String(jobId);
+    state.selectedJobId = id;
+    if (typeof window.selectJob === 'function') {
+      window.selectJob(id);
+      return;
+    }
+    var historyItem = findHistoryItem(id);
+    if (historyItem) {
+      historyItem.click();
+      return;
+    }
+    window.dispatchEvent(new CustomEvent('taik:select-job', {
+      detail: { jobId: id }
+    }));
+  }
+
+  function makeElement(tag, className, text) {
+    var element = document.createElement(tag);
+    if (className) element.className = className;
+    if (text !== undefined && text !== null) element.textContent = String(text);
+    return element;
+  }
+
+  function openTicket(ticket) {
+    state.openTicketKey = ticket.key;
+    if (ticket.jobId) selectJob(ticket.jobId);
+    render();
+  }
+
+  function renderTicket(ticket) {
+    var article = makeElement('article', 'taik-board-ticket');
+    article.setAttribute('data-ticket-key', ticket.key);
+    article.setAttribute('tabindex', '0');
+    article.setAttribute('role', 'button');
+    if (state.openTicketKey === ticket.key) article.classList.add('is-open');
+
+    var top = makeElement('div', 'taik-board-ticket-top');
+    top.appendChild(makeElement('span', 'taik-board-ticket-id', '#' + ticket.id));
+    article.appendChild(top);
+
+    article.appendChild(makeElement('div', 'taik-board-ticket-title', ticket.title));
+
+    var flags = makeElement('div', 'taik-board-flags');
+    asArray(ticket.flags).forEach(function (flag) {
+      var flagElement = makeElement('span', 'taik-board-flag', flag);
+      if (ATTENTION_FLAGS[flag]) flagElement.classList.add('is-attention');
+      flags.appendChild(flagElement);
+    });
+    article.appendChild(flags);
+
+    if (ticket.meta) article.appendChild(makeElement('div', 'taik-board-meta', ticket.meta));
+
+    if (ticket.kind === 'proposal') {
+      var approve = makeElement('button', 'taik-board-action', 'Freigeben');
+      approve.type = 'button';
+      approve.addEventListener('click', function (event) {
+        event.stopPropagation();
+        sendHost('approveProposal', {
+          name: (ticket.proposal && (ticket.proposal.name || ticket.proposal.id)) || ticket.id
+        });
+      });
+      article.appendChild(approve);
+    }
+
+    article.addEventListener('click', function (event) {
+      if (event.target && event.target.closest && event.target.closest('.taik-board-ticket-actions, .taik-board-action')) return;
+      openTicket(ticket);
+    });
+    article.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        openTicket(ticket);
+      }
+    });
+
+    if (state.openTicketKey === ticket.key) {
+      var actions = makeElement('div', 'taik-board-ticket-actions');
+
+      var comment = document.createElement('textarea');
+      comment.className = 'taik-board-comment';
+      comment.setAttribute('placeholder', 'Kommentar zu diesem Ticket ...');
+      comment.addEventListener('click', function (event) {
+        event.stopPropagation();
+      });
+      actions.appendChild(comment);
+
+      var sendComment = makeElement('button', 'taik-board-action', 'Kommentar senden');
+      sendComment.type = 'button';
+      sendComment.addEventListener('click', function (event) {
+        event.stopPropagation();
+        var text = comment.value.trim();
+        if (!text) return;
+        sendHost('commentTicket', { name: ticket.name || ticket.id, text: text });
+        comment.value = '';
+      });
+      actions.appendChild(sendComment);
+
+      article.appendChild(actions);
+    }
+
+    return article;
+  }
+
+  function renderColumn(columnId) {
+    var board = boardElement();
+    if (!board) return;
+    var list = board.querySelector('[data-board-list="' + columnId + '"]');
+    if (!list) return;
+    list.textContent = '';
+    var tickets = state.tickets.filter(function (ticket) {
+      return ticket.column === columnId;
+    });
+    if (!tickets.length) {
+      list.appendChild(makeElement('div', 'taik-board-empty', 'Keine Tickets'));
+      return;
+    }
+    tickets.forEach(function (ticket) {
+      list.appendChild(renderTicket(ticket));
+    });
+  }
+
+  function renderLead() {
+    var waiting = waitingTickets();
+    var count = document.getElementById('taik-board-waiting-count');
+    var jump = document.getElementById('taik-board-jump');
+    if (count) {
+      count.textContent = waiting.length === 1
+        ? '1 Ticket wartet auf Antwort'
+        : waiting.length + ' Tickets warten auf Antwort';
+    }
+    if (jump) jump.disabled = waiting.length === 0;
+  }
+
+  function render() {
+    state.tickets = buildTickets(state.data || {});
+    var openStillExists = state.tickets.some(function (ticket) {
+      return ticket.key === state.openTicketKey;
+    });
+    if (!openStillExists) state.openTicketKey = null;
+    COLUMNS.forEach(renderColumn);
+    renderLead();
+  }
+
+  function jumpToFirst() {
+    var first = waitingTickets()[0];
+    if (!first) return;
+    state.openTicketKey = first.key;
+    if (first.jobId) selectJob(first.jobId);
+    render();
+    var board = boardElement();
+    if (!board) return;
+    var nodes = board.querySelectorAll('[data-ticket-key]');
+    for (var index = 0; index < nodes.length; index += 1) {
+      if (nodes[index].getAttribute('data-ticket-key') === first.key) {
+        if (typeof nodes[index].scrollIntoView === 'function') {
+          nodes[index].scrollIntoView({ block: 'nearest' });
+        }
+        break;
+      }
+    }
+  }
+
+  document.addEventListener('click', function (event) {
+    var target = event.target;
+    if (!target || !target.closest) return;
+    var jump = target.closest('#taik-board-jump');
+    if (!jump || jump.disabled) return;
+    jumpToFirst();
+  });
+
+  function updateFactory(data) {
+    state.data = data || {};
+    render();
+  }
+
+  window.updateFactory = updateFactory;
+
+  if (INITIAL_DATA) {
+    updateFactory(INITIAL_DATA);
+  } else {
+    render();
+  }
+})();
+</script>

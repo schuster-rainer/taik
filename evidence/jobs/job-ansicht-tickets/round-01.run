@@ -1,0 +1,20 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=Das Ticket-Board der Ansicht ordnen: eine Gruppe zur Zeit, Karten über die volle Breite, Titel als reiner Text.
+baseline=(empty)
+worker=claude-fable-attached
+limits=4 rounds; worker lease 60s up to 900s; verifier 15s; 96KiB source
+gate_sha256=7b2b9e058bb793e158f71f136ee114d2d7f25b35d0498da625ac4554e8728c64
+gate_ms=51
+patch_blocks=
+checks=PASS: host contract, offline isolation, 21 token shadows without glow, contrast 5.12–13.04, lossless .run highlighting, token flow per round, one workpiece pane with live draft, animated flow, ticket board in one group at a time
+artifact=round-01.html
+rejected_candidate=
+feedback=
+follow_up=
+continuation=Retain the accepted artifact. No further work was authorized by this round.
+advance=false
+end

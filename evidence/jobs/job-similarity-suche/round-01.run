@@ -1,0 +1,25 @@
+decision=rejected
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=# Similarity search in the ticket store
+baseline=(empty)
+worker=savant
+worker_model=subq-savant-1.4
+worker_input_tokens=911
+worker_output_tokens=24755
+worker_cost_usd=0.012469
+worker_duration_ms=72491
+limits=4 rounds; worker lease 60s up to 900s; verifier 15s; 96KiB source
+gate_sha256=a139b6f8087b6f086c7e7cea35bec9b487aff2d700330bea95f51a66740fe709
+gate_ms=76
+patch_blocks=
+checks=SyntaxError: Invalid or unexpected token
+artifact=
+rejected_candidate=
+feedback=
+follow_up=
+continuation=The gate produced no actionable assertion. Retain the previous accepted source, if any.
+advance=false
+end

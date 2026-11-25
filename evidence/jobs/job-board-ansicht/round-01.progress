@@ -1,0 +1,7 @@
+5359	start	Factory hat den Auftrag übernommen
+9545	worker	Savant erhält Auftrag und akzeptierten Ausgangsstand
+36556380	worker	worker_model=subq-savant-1.4 worker_input_tokens=983 worker_output_tokens=12176 worker_cost_usd=0.006186 worker_duration_ms=36546 
+36556553	worker	Lease durch laufende Ausgabe gehalten, 1 Herzschläge, zuletzt bei 6 Zeichen
+36556570	evaluate	Unabhängiges, gespeichertes Prüfgate ausführen
+36644368	checks	AssertionError [ERR_ASSERTION]: one board element
+36655457	rejected	Revise the retained source using the gate diagnosis, then run the same gate.

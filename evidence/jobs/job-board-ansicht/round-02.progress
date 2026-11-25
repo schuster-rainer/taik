@@ -1,0 +1,8 @@
+88	start	Factory hat den Auftrag übernommen
+290	probe	Prüfbefund aus round-01.run: AssertionError [ERR_ASSERTION]: one board element
+1019	worker	Savant erhält Auftrag und akzeptierten Ausgangsstand
+97569692	worker	worker_model=subq-savant-1.4 worker_input_tokens=5828 worker_output_tokens=29652 worker_cost_usd=0.015409 worker_duration_ms=97568 
+97569862	worker	Lease durch laufende Ausgabe gehalten, 1 Herzschläge, zuletzt bei 6 Zeichen
+97569890	evaluate	Unabhängiges, gespeichertes Prüfgate ausführen
+97668864	checks	AssertionError [ERR_ASSERTION]: one board element
+97681045	rejected	Revise the retained source using the gate diagnosis, then run the same gate.

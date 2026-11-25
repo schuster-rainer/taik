@@ -1,0 +1,7 @@
+136	start	Factory hat den Auftrag übernommen
+765	worker	Savant erhält Auftrag und akzeptierten Ausgangsstand
+72492004	worker	worker_model=subq-savant-1.4 worker_input_tokens=911 worker_output_tokens=24755 worker_cost_usd=0.012469 worker_duration_ms=72491 
+72492739	worker	Lease durch laufende Ausgabe gehalten, 1 Herzschläge, zuletzt bei 3 Zeichen
+72492771	evaluate	Unabhängiges, gespeichertes Prüfgate ausführen
+72569578	checks	SyntaxError: Invalid or unexpected token
+72582431	rejected	The gate produced no actionable assertion. Retain the previous accepted source, if any.

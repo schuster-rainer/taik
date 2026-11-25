@@ -1,0 +1,22 @@
+114	start	Factory hat den Auftrag übernommen
+821	worker	Eingehängter Worker claude-fable liefert Quellcode
+883	worker	4096 Bytes Quellcode empfangen
+920	worker	8192 Bytes Quellcode empfangen
+938	worker	12288 Bytes Quellcode empfangen
+958	worker	16384 Bytes Quellcode empfangen
+974	worker	20480 Bytes Quellcode empfangen
+988	worker	24576 Bytes Quellcode empfangen
+1002	worker	28672 Bytes Quellcode empfangen
+1017	worker	32768 Bytes Quellcode empfangen
+1054	worker	36864 Bytes Quellcode empfangen
+1078	worker	40960 Bytes Quellcode empfangen
+1097	worker	45056 Bytes Quellcode empfangen
+1117	worker	49152 Bytes Quellcode empfangen
+1134	worker	53248 Bytes Quellcode empfangen
+1148	worker	57344 Bytes Quellcode empfangen
+1162	worker	61440 Bytes Quellcode empfangen
+1175	worker	65536 Bytes Quellcode empfangen
+1192	worker	65803 Bytes Quellcode empfangen
+1201	evaluate	Unabhängiges, gespeichertes Prüfgate ausführen
+66921	checks	PASS: host contract, offline isolation, 21 token shadows without glow, contrast 5.12–13.04, lossless .run highlighting, token flow per round, one workpiece pane with live draft, animated flow, ticket board in one group at a time
+81170	accepted	Retain the accepted artifact. No further work was authorized by this round.

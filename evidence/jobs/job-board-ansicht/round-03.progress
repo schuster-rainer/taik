@@ -1,0 +1,8 @@
+91	start	Factory hat den Auftrag übernommen
+218	probe	Prüfbefund aus round-02.run: AssertionError [ERR_ASSERTION]: one board element
+552	worker	Savant erhält Auftrag und akzeptierten Ausgangsstand
+73624239	worker	worker_model=subq-savant-1.4 worker_input_tokens=6089 worker_output_tokens=22677 worker_cost_usd=0.011947 worker_duration_ms=73623 
+73624435	worker	Lease durch laufende Ausgabe gehalten, 1 Herzschläge, zuletzt bei 6 Zeichen
+73624454	evaluate	Unabhängiges, gespeichertes Prüfgate ausführen
+73702434	checks	AssertionError [ERR_ASSERTION]: board hook id="taik-board-waiting"
+73713691	rejected	Revise the retained source using the gate diagnosis, then run the same gate.

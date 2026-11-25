@@ -37,6 +37,26 @@ function renderFacts(mode) {
     result: rect(result), flow: rect(flow)
   };
   requireFact(facts.result.top >= facts.flow.bottom - 1, 'The workpiece overlaps the flow');
+  // Ticket board: one group at a time, every ticket as wide as its list, compact enough to leave the history in view.
+  const board = find('#taik-board');
+  if (board) {
+    const shown = [...board.querySelectorAll('.board-column')].filter(rendered);
+    requireFact(shown.length === 1, 'The board shows ' + shown.length + ' groups instead of one');
+    const tickets = [...shown[0].querySelectorAll('.ticket')];
+    const widths = tickets.map(ticket => Math.round(rect(ticket).width));
+    requireFact(new Set(widths).size <= 1, 'Tickets differ in width: ' + widths.join(','));
+    if (tickets.length) {
+      const list = shown[0].querySelector('.board-list');
+      requireFact(widths[0] >= list.clientWidth - 16, 'A ticket does not span its list: ' + widths[0] + ' of ' + list.clientWidth);
+      requireFact(tickets.every(ticket => rect(ticket).right <= rect(board).right + 1), 'A ticket leaves the board');
+    }
+    requireFact(![...board.querySelectorAll('.ticket .title')].some(title => /^\s*#/.test(title.textContent)), 'A ticket title starts with a raw heading mark');
+    requireFact(board.querySelectorAll('button[data-board-tab]').length === 3, 'The board lacks its three tabs');
+    facts.board = { height: Math.round(rect(board).height), tickets: tickets.length, ticketWidth: widths[0] ?? 0 };
+    if (mode === 'desktop') {
+      requireFact(facts.board.height <= innerHeight * 0.5, 'The board takes more than half the window: ' + facts.board.height);
+    }
+  }
   if (mode === 'desktop') {
     requireFact(rect(preview).left >= rect(activity).right - 1, 'Desktop right pane is not beside history/activity');
     requireFact(facts.result.bottom <= innerHeight + 1, 'The workpiece leaves the window');

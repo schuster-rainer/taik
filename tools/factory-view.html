@@ -170,44 +170,35 @@
   #taik-live .token-flow .in { background: var(--quiet); }
   #taik-live .token-flow .out { background: var(--active); }
 
-  #taik-live .proposals { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 12px; }
-  #taik-live .proposals li { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 11px 14px;
-    border-radius: 13px; box-shadow: var(--nm-inset-sm); }
-  #taik-live .proposals button { flex: none; color: var(--active); font-weight: 620; }
   #taik-live button:disabled { color: var(--quiet); box-shadow: var(--nm-inset-sm); }
 
-  /* Ticket board: one list for what waits, runs and was decided. */
-  #taik-live .board { display: grid; gap: 12px; }
-  #taik-live .board-lead { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
-  #taik-live .board-lead p { display: flex; align-items: baseline; gap: 8px; }
-  #taik-live .board-lead strong { font-size: 1.5rem; font-weight: 680; font-variant-numeric: tabular-nums; }
-  #taik-live .board-lead strong.wait { color: var(--active); }
-  #taik-live .board-lead button { flex: none; color: var(--active); font-weight: 620; }
-  #taik-live .board-columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: 12px;
-    max-height: 26rem; overflow-y: auto; padding-right: 2px; }
-  #taik-live .board-column { display: flex; flex-direction: column; min-width: 0; gap: 8px; }
-  #taik-live .board-column > h3 { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin: 0; }
-  #taik-live .board-column > h3 span { font: .74rem var(--mono); color: var(--quiet); font-variant-numeric: tabular-nums; }
-  #taik-live .board-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; align-content: start; }
-  #taik-live .board-list > li { min-width: 0; }
-  #taik-live .board-empty { color: var(--quiet); font-size: .78rem; padding: 8px 2px; }
-  #taik-live .ticket { display: grid; gap: 6px; min-width: 0; padding: 11px 13px; border-radius: 13px; box-shadow: var(--nm-raised-sm);
-    background: var(--nm-base); text-align: left; font: inherit; color: inherit; cursor: pointer; }
-  #taik-live .ticket:hover { color: var(--ink); }
+  /* Ticket board: three groups, one shown at a time, every ticket as wide as its list. */
+  #taik-live .board { display: grid; gap: 10px; margin-top: 12px; }
+  #taik-live .board-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+  #taik-live .board-tabs button { display: inline-flex; align-items: baseline; gap: 7px; padding: 5px 12px; font-size: .8rem; border-radius: 10px; }
+  #taik-live .board-tabs button:disabled { color: var(--ink); }
+  #taik-live .board-tabs button span { font: .72rem var(--mono); color: var(--quiet); font-variant-numeric: tabular-nums; }
+  #taik-live .board-tabs button.wait span { color: var(--active); font-weight: 700; }
+  #taik-live .board-column { min-width: 0; }
+  #taik-live .board-column[hidden] { display: none; }
+  #taik-live .board-list { list-style: none; margin: 0 -6px; padding: 6px; display: grid; gap: 10px; max-height: 15.5rem; overflow-y: auto; }
+  #taik-live .board-list > li { min-width: 0; display: grid; gap: 8px; }
+  #taik-live .board-empty { color: var(--quiet); font-size: .8rem; padding: 6px 2px; }
+  #taik-live .ticket { display: grid; gap: 4px; width: 100%; min-width: 0; padding: 10px 13px; border: 0; border-radius: 13px;
+    box-shadow: var(--nm-raised-sm); background: var(--nm-base); text-align: left; font: inherit; color: inherit; cursor: pointer; }
   #taik-live .ticket[aria-expanded="true"] { box-shadow: var(--nm-inset-sm); }
   #taik-live .ticket.wait { border-left: 3px solid var(--active); padding-left: 10px; }
-  #taik-live .ticket-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-  #taik-live .ticket .id { font: .74rem var(--mono); letter-spacing: .06em; color: var(--quiet);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  #taik-live .ticket .title { font-size: .9rem; font-weight: 580; line-height: 1.4; overflow-wrap: anywhere;
+  #taik-live .ticket-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; min-width: 0; }
+  #taik-live .ticket .title { min-width: 0; font-size: .9rem; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere;
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  #taik-live .ticket .meta { font-size: .8rem; line-height: 1.35; color: var(--quiet); overflow-wrap: anywhere;
+  #taik-live .ticket[aria-current="true"] .title { color: var(--active); }
+  #taik-live .ticket .meta { min-width: 0; font-size: .78rem; line-height: 1.35; color: var(--quiet);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #taik-live .flag { flex: none; padding: 3px 9px; border-radius: 7px; box-shadow: var(--nm-inset-sm); font-size: .76rem;
     letter-spacing: .02em; color: var(--quiet); white-space: nowrap; }
   #taik-live .flag.antwort, #taik-live .flag.entscheidung, #taik-live .flag.in-arbeit { color: var(--active); }
   #taik-live .flag.frage, #taik-live .flag.abgelehnt { color: var(--bad); }
-  #taik-live .ticket-detail { display: grid; gap: 8px; padding: 10px 12px 12px; border-radius: 13px; box-shadow: var(--nm-inset-sm); }
+  #taik-live .ticket-detail { display: grid; gap: 8px; min-width: 0; padding: 10px 12px 12px; border-radius: 13px; box-shadow: var(--nm-inset-sm); }
   #taik-live .ticket-detail[hidden] { display: none; }
   #taik-live .ticket-detail textarea { font: inherit; font-size: .82rem; color: var(--ink); border: 0; border-radius: 10px;
     min-height: 62px; resize: vertical; padding: 8px 11px; background: var(--nm-base); box-shadow: var(--nm-inset-sm); }
@@ -255,8 +246,8 @@
   #taik-live .flow-name { display: flex; align-items: center; gap: 7px; font-size: .86rem; font-weight: 620; margin-top: 2px; min-height: 1.35em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #taik-live .flow-node.active .flow-name::after { content: ""; width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--active);
     border-right-color: transparent; animation: taik-working .9s linear infinite; }
-  #taik-live .flow-detail { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; margin-top: 1px; min-height: 2.6em;
-    color: var(--quiet); font-size: .72rem; line-height: 1.3; overflow: hidden; overflow-wrap: anywhere; }
+  #taik-live .flow-detail { display: block; margin-top: 1px; color: var(--quiet); font-size: .72rem; line-height: 1.3;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #taik-live .flow-pane { gap: 10px; padding-bottom: 14px; }
 
   /* Right column */
@@ -400,6 +391,7 @@
     let workpieceMode = 'view';
     let workpieceKey = '';
     let openTicket = '';
+    let chosenBoardTab = '';
     let ticketDrafts = new Map();
     const appearances = { system: 'System', light: 'Hell', dark: 'Dunkel' };
     const systemAppearance = matchMedia('(prefers-color-scheme: dark)');
@@ -507,8 +499,8 @@
         : ({ start: 0, evaluate: 2, checks: 2, compare: 2, accepted: 4, retained: 4, rejected: 4, error: 4 })[last.kind] ?? 1;
       const failed = !running && (record.decision === 'rejected' || last?.kind === 'error');
       const software = job?.baseline.fields.kind === 'software';
-      const worker = record.worker_model || record.worker || (software ? 'Code-Worker' : 'lokale Suche');
-      const cost = record.worker_cost_usd ? ` · ${Number(record.worker_cost_usd).toFixed(3)} $` : '';
+      const worker = (record.worker_model ?? '').replace(/^(?:subq|claude)-/, '') || record.worker || (software ? 'Code-Worker' : 'lokale Suche');
+      const cost = money(record.worker_cost_usd) ? ` · ${money(record.worker_cost_usd)}` : '';
       const draftCount = job?.draft ? `${tokenCount(job.draft.length)} Zeichen` : '';
       const startedAt = Number(job?.sourceStartedAt) || 0;
       const nodes = [
@@ -636,17 +628,29 @@
 
     // Sorts every waiting, running and decided thing into one ticket. A job is in exactly one column:
     // the first row that matches, top to bottom.
+    // A brief may start with a Markdown heading. A title is plain text.
+    function ticketTitle(text) {
+      return String(text ?? '').replace(/^\s*#+\s*/, '').trim();
+    }
+
+    // The group that is shown: the user's choice, otherwise the first group that holds something.
+    function boardTab(columns, chosen) {
+      const names = ['open', 'run', 'decision'];
+      if (names.includes(chosen)) return chosen;
+      return names.find(name => columns[name].length) ?? 'open';
+    }
+
     function boardTickets(data) {
       const open = [], run = [], decision = [];
-      const title = job => job.goal ?? job.id;
+      const title = job => ticketTitle(job.goal) || job.id;
       for (const proposal of data.proposals ?? []) {
-        open.push({ key: 'proposal:' + proposal.name, proposal: proposal.name, job: proposal.origin, title: proposal.intent,
+        open.push({ key: 'proposal:' + proposal.name, proposal: proposal.name, job: proposal.origin, title: ticketTitle(proposal.intent) || proposal.name,
           flag: 'Entscheidung', column: 'open', meta: proposal.origin ? 'aus ' + proposal.origin.replace(/^job-/, '') : 'ohne Herkunft' });
       }
       for (const job of data.jobs) {
         const last = job.rounds.at(-1);
         const id = job.id.replace(/^job-/, '');
-        const cost = job.cost > 0 ? ' · ' + job.cost.toFixed(3) + ' $' : '';
+        const cost = job.cost > 0 ? ' · ' + job.cost.toFixed(3).replace('.', ',') + ' $' : '';
         const rounds = job.rounds.length ? ` · ${job.rounds.length} ${job.rounds.length === 1 ? 'Runde' : 'Runden'}` : '';
         if (job.sourceActive) {
           run.push({ key: job.id, job: job.id, title: title(job), flag: 'In Arbeit', column: 'run', meta: id + ' · Runde ' + (job.rounds.length + 1) + cost });
@@ -669,25 +673,24 @@
     function renderBoard() {
       const columns = boardTickets(snapshot);
       const waiting = columns.open.length;
+      const tab = boardTab(columns, chosenBoardTab);
       const ticket = entry => {
         const shown = openTicket === entry.key;
         return `<li><button type="button" class="ticket${entry.column === 'open' ? ' wait' : ''}" data-ticket="${escape(entry.key)}"
-          data-job="${escape(entry.job ?? '')}" aria-expanded="${shown}"><span class="ticket-head"><span class="id">${escape(entry.proposal ?? entry.job)}</span>
-          <span class="flag ${entry.flag.toLowerCase()}">${escape(entry.flag)}</span></span><span class="title" title="${escape(entry.title)}">${escape(entry.title)}</span>
-          <span class="meta">${escape(entry.meta)}</span></button>${shown ? ticketDetail(entry) : ''}</li>`;
+          data-job="${escape(entry.job ?? '')}" aria-expanded="${shown}" aria-current="${!!entry.job && entry.job === selected}">
+          <span class="ticket-head"><span class="title" title="${escape(entry.title)}">${escape(entry.title)}</span>
+          <span class="flag ${entry.flag.toLowerCase().replace(/\s+/g, '-')}">${escape(entry.flag)}</span></span>
+          <span class="meta">${escape(entry.proposal ? entry.proposal + ' · ' + entry.meta : entry.meta)}</span></button>${shown ? ticketDetail(entry) : ''}</li>`;
       };
-      const list = entries => entries.length ? entries.map(ticket).join('') : '<li class="board-empty">Nichts hier.</li>';
-      const heading = (text, entries) => `<h3>${text}<span>${entries.length}</span></h3>`;
+      const groups = [['open', 'Wartet', 'Wartet auf Antwort', 'Nichts wartet auf dich.'], ['run', 'Läuft', 'Läuft', 'Gerade läuft nichts.'],
+        ['decision', 'Entschieden', 'Entschieden', 'Noch nichts entschieden.']];
+      const tabs = groups.map(([key, label]) => `<button type="button" data-board-tab="${key}"${tab === key ? ' disabled' : ''}
+        class="${key === 'open' && waiting ? 'wait' : ''}">${label}<span>${columns[key].length}</span></button>`).join('');
+      const lists = groups.map(([key, , label, empty]) => `<section class="board-column" id="taik-board-${key}" aria-label="${label}"${tab === key ? '' : ' hidden'}>
+        <ul class="board-list">${columns[key].length ? columns[key].map(ticket).join('') : `<li class="board-empty">${empty}</li>`}</ul></section>`).join('');
       return `<section id="taik-board" aria-label="Tickets"><div class="section-heading"><h2>Tickets</h2>
-        <span class="sub">Antwort und Frage brauchen dich</span></div><div class="board">
-        <div class="board-lead"><p><strong class="${waiting ? 'wait' : ''}" id="taik-board-waiting">${waiting}</strong>
-          <span class="sub">${waiting === 1 ? 'wartet auf deine Antwort' : 'warten auf deine Antwort'}</span></p>
-          ${waiting ? '<button type="button" data-ticket-first>Zum ersten wartenden Ticket</button>' : ''}</div>
-        <div class="board-columns">
-          <section class="board-column" id="taik-board-open" aria-label="Wartet auf Antwort">${heading('Wartet auf Antwort', columns.open)}<ul class="board-list">${list(columns.open)}</ul></section>
-          <section class="board-column" id="taik-board-run" aria-label="Läuft">${heading('Läuft', columns.run)}<ul class="board-list">${list(columns.run)}</ul></section>
-          <section class="board-column" id="taik-board-decision" aria-label="Entschieden">${heading('Entschieden', columns.decision)}<ul class="board-list">${list(columns.decision)}</ul></section>
-        </div></div></section>`;
+        <span class="sub"><span id="taik-board-waiting">${waiting}</span> ${waiting === 1 ? 'wartet' : 'warten'} auf dich</span></div>
+        <div class="board"><div class="board-tabs" role="group" aria-label="Gruppe">${tabs}</div>${lists}</div></section>`;
     }
 
     function ticketDetail(entry) {
@@ -760,7 +763,7 @@
         <span class="result${rejected ? ' rejected' : ''}">${decision}${fields.worker_cost_usd ? ' · ' + money(fields.worker_cost_usd) : ''}</span></div>
         ${flow && flow.input + flow.output > 0 ? `<div class="token-flow" title="${escape(round.name)}"><span class="in" style="width:${flow.widthIn}%"></span><span class="out" style="width:${flow.widthOut}%"></span></div>
         <p class="sub">${tokenLine(flow)}</p>` : ''}
-        <h3>${escape(description)}</h3>
+        <h3>${escape(ticketTitle(description))}</h3>
         ${events.length ? `<details data-round="${escape(eventKey)}" data-initial-open="${eventsOpen}"${eventsOpen ? ' open' : ''}>
           <summary>Arbeitsschritte (${events.length})</summary>${eventList(events)}</details>` : ''}
         <details data-round="${escape(name)}" data-initial-open="${checksOpen}"${checksOpen ? ' open' : ''}>
@@ -806,7 +809,7 @@
         `<option value="${value}"${appearance === value ? ' selected' : ''}>${label}</option>`).join('');
       setHeader(`<h1><svg class="mark" viewBox="0 0 64 64" aria-hidden="true"><path d="M26.22 14.55A17.35 17.35 0 1 1 18.13 43.58A15.72 15.72 0 1 0 26.22 14.55Z M16.43 31.11A10.96 10.96 0 1 1 36.03 35.93A10.1 10.1 0 1 0 16.43 31.11Z M22.27 37.25A6.47 6.47 0 1 1 32.15 29.67A7.04 7.04 0 0 0 22.27 37.25Z"/><path class="core" d="M26.6 39.95A4.95 4.95 0 1 1 34.1 34.52A5.32 5.32 0 0 0 26.6 39.95Z"/></svg>TAIK <span>Factory</span></h1><div class="header-controls">
         <div class="status" role="status"><span class="dot ${tone}" aria-hidden="true"></span>${status}</div>
-        ${Number.isFinite(snapshot.spent) ? `<div class="status" title="Worker-Kosten der letzten 24 Stunden zum Listenpreis">24 h · ${snapshot.spent.toFixed(2)} $</div>` : ''}
+        ${Number.isFinite(snapshot.spent) ? `<div class="status" title="Worker-Kosten der letzten 24 Stunden zum Listenpreis">24 h · ${snapshot.spent.toFixed(2).replace('.', ',')} $</div>` : ''}
         ${Number.isFinite(snapshot.parallel) ? `<label class="appearance" title="Wie viele Software-Aufträge der Dienst gleichzeitig bearbeitet">Parallel <select id="taik-parallel">${[1, 2, 3, 4, 5, 6, 7, 8].map(slots =>
           `<option value="${slots}"${snapshot.parallel === slots ? ' selected' : ''}>${slots}</option>`).join('')}</select></label>` : ''}
         <label class="appearance">Darstellung <select id="taik-appearance">${appearanceOptions}</select></label>
@@ -818,9 +821,6 @@
         setContent(`<section><h2>Aufträge</h2><p class="sub lead">Hier erscheinen die Aufträge, sobald die Factory sie annimmt.</p></section>`);
         return;
       }
-      const proposals = (snapshot.proposals ?? []).map(proposal => `<li><div><h3>${escape(proposal.intent)}</h3>
-          <span class="sub">${escape(proposal.name)}${proposal.origin ? ' · aus ' + escape(proposal.origin.replace(/^job-/, '')) : ''}</span></div>
-          <button type="button" data-proposal="${escape(proposal.name)}">Freigeben</button></li>`).join('');
       const board = renderBoard();
       const agentState = agent => agent.event === 'Stop' ? ['', 'wartet']
         : agent.event === 'UserPromptSubmit' ? ['active', 'liest den Auftrag']
@@ -834,9 +834,7 @@
       }).join('');
       const working = agents ? `<section aria-label="Agenten"><div class="section-heading"><h2>Agenten</h2>
           <span class="sub">gemeldet über Hooks, ohne Modellaufruf</span></div><ul class="agents">${agents}</ul></section>` : '';
-      const waiting = proposals ? `<section aria-label="Vorschläge"><div class="section-heading"><h2>Vorschläge der Factory</h2>
-          <span class="sub">warten auf deine Freigabe</span></div><ul class="proposals">${proposals}</ul></section>` : '';
-      const goal = job.goal ? `<section class="goal" aria-labelledby="taik-goal"><h2 id="taik-goal">Auftragsziel</h2><p>${escape(job.goal)}</p></section>` : '';
+      const goal = job.goal ? `<section class="goal" aria-labelledby="taik-goal"><h2 id="taik-goal">Auftragsziel</h2><p>${escape(ticketTitle(job.goal))}</p></section>` : '';
       const accepted = latestAccepted(job);
       renderPreview(job);
       const initialOrder = order(job.baseline.fields.procedure);
@@ -858,7 +856,7 @@
       const rounds = job.rounds.length ? `<ol class="rounds">${job.rounds.map((round, index) => renderRound(round, index, job, flows[index])).join('')}</ol>`
         : '<p class="sub lead">Die Factory hat den Auftrag erhalten. Die erste Runde steht noch aus.</p>';
       const options = snapshot.jobs.map(entry => `<option value="${escape(entry.id)}"${selected === entry.id ? ' selected' : ''}>${escape(entry.id)} · ${jobStatus(entry)}${entry.cost > 0 ? ' · ' + money(entry.cost) : ''}</option>`).join('');
-      setContent(`${board}${working}${waiting}${goal}<section aria-label="Auftragsverlauf">
+      setContent(`${board}${working}${goal}<section aria-label="Auftragsverlauf">
         <div class="section-heading"><h2>Auftragsverlauf</h2><span class="sub">${escape(job.id)} · ${jobStatus(job)}${job.cost > 0 ? ' · ' + money(job.cost) : ''}</span></div>
         <div class="job-control"><label for="taik-live-job">Auftrag</label>
         <select id="taik-live-job"><option value="latest"${selected === 'latest' ? ' selected' : ''}>Neuester Auftrag</option>${options}</select></div>
@@ -945,9 +943,12 @@
         window.webkit?.messageHandlers?.approveProposal?.postMessage(approve.dataset.proposal);
         return;
       }
-      if (event.target.closest('button[data-ticket-first]')) {
-        const first = document.querySelector('#taik-board-open .ticket');
-        if (first) { openTicket = first.dataset.ticket; render(); first.focus(); }
+      const boardTabButton = event.target.closest('button[data-board-tab]');
+      if (boardTabButton) {
+        chosenBoardTab = boardTabButton.dataset.boardTab;
+        openTicket = '';
+        render();
+        document.querySelector(`button[data-board-tab="${chosenBoardTab}"]`)?.focus();
         return;
       }
       if (event.target.closest('button[data-ticket-close]')) { openTicket = ''; render(); return; }

@@ -1,0 +1,8 @@
+65	start	Factory hat den Auftrag übernommen
+102	probe	Prüfbefund aus round-03.run: AssertionError [ERR_ASSERTION]: board hook id="taik-board-waiting"
+366	worker	Savant erhält Auftrag und akzeptierten Ausgangsstand
+16749670	worker	worker_model=subq-savant-1.4 worker_input_tokens=6407 worker_output_tokens=6156 worker_cost_usd=0.003719 worker_duration_ms=16749 
+16749740	worker	Lease durch laufende Ausgabe gehalten, 1 Herzschläge, zuletzt bei 15519 Zeichen
+16749754	evaluate	Unabhängiges, gespeichertes Prüfgate ausführen
+16815950	checks	AssertionError [ERR_ASSERTION]: board hook id="taik-board-open"
+16831968	rejected	The source round budget is exhausted. Retain the previous accepted source, if any.
