@@ -770,7 +770,8 @@ pub(crate) fn sandbox_for_build(scratch: &Path, job: &Path, program: &str) -> Re
         job,
         program,
         false,
-        " (allow file-write* (literal \"/dev/null\")) (allow file-write* (regex #\"^/private/tmp/taik-\"))",
+        // mktemp on macOS ignores TMPDIR and writes tmp.XXXX into the temporary folder of the user.
+        " (allow file-write* (literal \"/dev/null\")) (allow file-write* (regex #\"^/private/tmp/taik-\")) (allow file-write* (regex #\"^/private/var/folders/[^/]+/[^/]+/T/tmp\\.\"))",
     )
 }
 

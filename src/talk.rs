@@ -138,7 +138,10 @@ pub fn rounds_done(job: &Path) -> usize {
             .filter(|entry| {
                 let name = entry.file_name();
                 let name = name.to_string_lossy();
-                name.starts_with("round-") && name.ends_with(".run")
+                // round-NN.run only. A ledger such as round-NN.analysis.run is no round.
+                name.len() == "round-00.run".len()
+                    && name.starts_with("round-")
+                    && name.ends_with(".run")
             })
             .count()
     })
@@ -187,5 +190,8 @@ mod tests {
             job.join("message-001.agent.md").is_file() && job.join("message-002.user.md").is_file()
         );
         assert_eq!(rounds_done(job), 0);
+        fs::write(job.join("round-01.run"), "x").unwrap();
+        fs::write(job.join("round-01.analysis.run"), "x").unwrap();
+        assert_eq!(rounds_done(job), 1, "the ledger of an analysis is no round");
     }
 }

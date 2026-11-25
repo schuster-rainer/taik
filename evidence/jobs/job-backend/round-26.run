@@ -1,0 +1,20 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-26
+intent=Der Beleg einer Analyse zählt nicht als Runde.
+baseline=taik-seed c27a0852b988a5b1df62a81508ab21952e98a2c9d829df09382f1f117b4e5892
+worker=claude-fable
+decided_by=the installed taik-seed c27a0852b988a5b1df62a81508ab21952e98a2c9d829df09382f1f117b4e5892 at /Users/rainer/.local/state/taik-factory/taik-seed
+limits=99 rounds; gate 900s; candidate checks 10s each
+gate_sha256=76b41170f51fa7e1a5424ba01f903bcf2276b8f8f19e4d87f952e88d18b6b0ce
+gate_ms=28696
+checks=PASS: Rust tests, Clippy with warnings denied, release build; candidate seeded, rejected an invalid procedure without touching the accepted record, and extended it
+evidence=round-26.checks.log
+artifact=round-26-taik-seed
+artifact_sha256=14b5e66cdc1282c9ef67cad2505d1d5807307dcb28fea414f992025e13fb5fd0
+rollback=round-26.rollback-taik-seed
+continuation=Restart the service so that it runs the accepted binary.
+advance=false
+end

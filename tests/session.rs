@@ -94,7 +94,7 @@ say '{{"type":"result","is_error":false,"result":"'"$text"'","usage":{{"output_t
     let brief = root.join("brief.md");
     fs::write(&brief, "Eine Datei hello.txt anlegen\n\nMit einem Gruß.\n").unwrap();
     let gate = root.join("gate.sh");
-    fs::write(&gate, "test -f hello.txt || { echo 'FAIL: hello.txt fehlt'; exit 1; }\n: > /dev/null || { echo 'FAIL: null device'; exit 1; }\nmkdir /tmp/taik-gate-$$ && rmdir /tmp/taik-gate-$$ || { echo 'FAIL: no fixtures in /tmp'; exit 1; }\nif touch \"$HOME/.taik-gate-probe\" 2>/dev/null; then rm -f \"$HOME/.taik-gate-probe\"; echo 'FAIL: the gate can write into the home'; exit 1; fi\necho 'PASS: hello.txt ist da'\n").unwrap();
+    fs::write(&gate, "test -f hello.txt || { echo 'FAIL: hello.txt fehlt'; exit 1; }\n: > /dev/null || { echo 'FAIL: null device'; exit 1; }\nmkdir /tmp/taik-gate-$$ && rmdir /tmp/taik-gate-$$ || { echo 'FAIL: no fixtures in /tmp'; exit 1; }\nmade=$(mktemp -d) && rmdir \"$made\" || { echo 'FAIL: mktemp'; exit 1; }\nif touch \"$HOME/.taik-gate-probe\" 2>/dev/null; then rm -f \"$HOME/.taik-gate-probe\"; echo 'FAIL: the gate can write into the home'; exit 1; fi\necho 'PASS: hello.txt ist da'\n").unwrap();
     let queue = |name: &str| {
         let queued = factory()
             .args(["queue-session", state.to_str().unwrap(), name])

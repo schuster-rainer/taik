@@ -1,0 +1,20 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-25
+intent=Das Gate einer Sitzung darf mit mktemp einen Arbeitsordner anlegen.
+baseline=taik-seed 478a0aed3c27c12fc91c0850c89b623d7e79ddd6187b93d4fafbe41a1f53d51b
+worker=claude-fable
+decided_by=the installed taik-seed 478a0aed3c27c12fc91c0850c89b623d7e79ddd6187b93d4fafbe41a1f53d51b at /Users/rainer/.local/state/taik-factory/taik-seed
+limits=99 rounds; gate 900s; candidate checks 10s each
+gate_sha256=76b41170f51fa7e1a5424ba01f903bcf2276b8f8f19e4d87f952e88d18b6b0ce
+gate_ms=31716
+checks=PASS: Rust tests, Clippy with warnings denied, release build; candidate seeded, rejected an invalid procedure without touching the accepted record, and extended it
+evidence=round-25.checks.log
+artifact=round-25-taik-seed
+artifact_sha256=c27a0852b988a5b1df62a81508ab21952e98a2c9d829df09382f1f117b4e5892
+rollback=round-25.rollback-taik-seed
+continuation=Restart the service so that it runs the accepted binary.
+advance=false
+end
