@@ -1,0 +1,7 @@
+233	start	Factory hat den Auftrag übernommen
+303	probe	Prüfbefund aus round-02.run: AssertionError [ERR_ASSERTION]: no unsafe code, processes, network or includes
+1126	worker	Claude erhält Auftrag und akzeptierten Ausgangsstand
+22427336	worker	worker_model=claude-opus-5-5 worker_output_tokens=2348 worker_cost_usd=0.071264 worker_duration_ms=22426 worker_account_usage=seven_day allowed_warning 0.96 
+22427463	evaluate	Unabhängiges, gespeichertes Prüfgate ausführen
+23971797	checks	PASS: compiled without warnings, five-record summary, empty-field summary and both error exits (119 lines of Rust)
+23983334	accepted	Retain the accepted artifact. No further work was authorized by this round.

@@ -1,0 +1,11 @@
+decision=observed
+identity=taik-stats-beobachtung-01
+intent=Prüfen, ob die Factory mit dem vorhandenen Mechanismus Software bauen kann, die kein HTML ist.
+scope=One queued job on the live service. The candidate is a one-file bundle of Rust source. The gate compiles it with rustc inside the sandbox and runs the program against five records.
+result=Accepted in round 3 after two rejections: 119 lines of Rust, compiled without warnings, correct summaries and error exits. Total 0.199 USD at list price, 65 s of worker time, gate 72 to 1531 ms.
+no_backend_change=Nothing in the Factory had to change. A Node gate can unpack a bundle, call a compiler and run the result within the sandbox and the 15 s limit.
+gate_defect=Both rejections came from a contradiction in the gate written by claude-fable. It forbade the text std::process and required exit status 2, which needs std::process. The repair loop passed the assertion back to the worker. The accepted candidate imports the module as use std::{process as exit_status}, which the text pattern does not match. The rule was a text match and did not enforce what it claimed.
+reuse=The accepted program was compiled outside the job and run on all 61 round records of the archive: accepted=55, rejected=6, cost_usd=0.875, gate_ms_max=16017. It also showed that one hand-written record carries a sentence in its worker field.
+limits=One file, standard library only, one job. The artifact is stored as round-03.html although it is Rust, and the viewer shows it as text. A program with dependencies or several files was not tried.
+continuation=Name the artifact by what it is and let a gate declare its file name. Try a multi-file program with a cargo build next. Write gate rules as behaviour checks, not as text patterns.
+end

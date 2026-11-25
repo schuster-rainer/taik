@@ -73,6 +73,10 @@
 - [Drosselung des Gates unter launchd, gemessen](jobs/job-dienst-drosselung/summary.run)
 - [Dauerprozess gegen Start bei Bedarf, gemessen](jobs/job-dienst-form/summary.run)
 
+## Software, die kein HTML ist
+
+- [Rust-Werkzeug `taik-stats`, vom Gate übersetzt und ausgeführt](jobs/job-taik-stats/round-03.run), [Auftrag](jobs/job-taik-stats/submission.brief.md), [Gate](jobs/job-taik-stats/submission.gate.mjs) und [Auswertung mit Gate-Fehler](jobs/job-taik-stats/observation.run)
+
 ## Marke
 
 - [Markenblatt](jobs/job-markenblatt/round-01.html), [Auftrag](jobs/job-markenblatt/submission.brief.md) und [Entscheidung](jobs/job-markenblatt/round-01.run)

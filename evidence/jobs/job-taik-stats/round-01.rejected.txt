@@ -1,0 +1,118 @@
+=== main.rs ===
+use std::collections::BTreeMap;
+use std::env;
+use std::fs;
+use std::process;
+
+struct Record {
+    decision: Option<String>,
+    worker: Option<String>,
+    cost: Option<String>,
+    gate_ms: Option<String>,
+}
+
+fn parse_record(text: &str) -> Record {
+    let mut rec = Record {
+        decision: None,
+        worker: None,
+        cost: None,
+        gate_ms: None,
+    };
+    for raw in text.lines() {
+        let line = raw.trim_end_matches('\r');
+        if line.trim() == "end" {
+            break;
+        }
+        let (key, value) = match line.find('=') {
+            Some(idx) => (&line[..idx], &line[idx + 1..]),
+            None => continue,
+        };
+        let key = key.trim();
+        let value = value.trim().to_string();
+        match key {
+            "decision" => rec.decision = Some(value),
+            "worker" => rec.worker = Some(value),
+            "worker_cost_usd" => rec.cost = Some(value),
+            "gate_ms" => rec.gate_ms = Some(value),
+            _ => {}
+        }
+    }
+    rec
+}
+
+fn main() {
+    let paths: Vec<String> = env::args().skip(1).collect();
+    if paths.is_empty() {
+        eprintln!("usage: taik-stats FILE.run [FILE.run ...]");
+        process::exit(2);
+    }
+
+    let mut records: Vec<Record> = Vec::with_capacity(paths.len());
+    for path in &paths {
+        match fs::read(path) {
+            Ok(bytes) => {
+                let text = String::from_utf8_lossy(&bytes);
+                records.push(parse_record(&text));
+            }
+            Err(err) => {
+                eprintln!("{}: {}", path, err);
+                process::exit(2);
+            }
+        }
+    }
+
+    let mut accepted: usize = 0;
+    let mut rejected: usize = 0;
+    let mut other: usize = 0;
+    let mut cost_total: f64 = 0.0;
+    let mut gate_max: i64 = 0;
+    let mut workers: BTreeMap<String, usize> = BTreeMap::new();
+
+    for rec in &records {
+        match rec.decision.as_deref() {
+            Some("accepted") => accepted += 1,
+            Some("rejected") => rejected += 1,
+            _ => other += 1,
+        }
+
+        if let Some(c) = rec.cost.as_deref() {
+            if let Ok(v) = c.parse::<f64>() {
+                if v.is_finite() {
+                    cost_total += v;
+                }
+            }
+        }
+
+        if let Some(g) = rec.gate_ms.as_deref() {
+            if let Ok(v) = g.parse::<i64>() {
+                if v > gate_max {
+                    gate_max = v;
+                }
+            }
+        }
+
+        if let Some(w) = rec.worker.as_deref() {
+            if !w.is_empty() {
+                *workers.entry(w.to_string()).or_insert(0) += 1;
+            }
+        }
+    }
+
+    let rounded = (cost_total * 1000.0).round() / 1000.0;
+    let rounded = if rounded == 0.0 { 0.0 } else { rounded };
+
+    let worker_list: Vec<String> = workers
+        .iter()
+        .map(|(name, count)| format!("{}:{}", name, count))
+        .collect();
+
+    let mut out = String::new();
+    out.push_str(&format!("records={}\n", records.len()));
+    out.push_str(&format!("accepted={}\n", accepted));
+    out.push_str(&format!("rejected={}\n", rejected));
+    out.push_str(&format!("other={}\n", other));
+    out.push_str(&format!("cost_usd={:.3}\n", rounded));
+    out.push_str(&format!("gate_ms_max={}\n", gate_max));
+    out.push_str(&format!("workers={}\n", worker_list.join(",")));
+    print!("{}", out);
+}
