@@ -30,6 +30,8 @@ private struct Job: Codable {
     let id: String
     let goal: String?
     let preview: String?
+    let previous: String?
+    let cost: Double
     let draft: String?
     let baseline: Round
     let rounds: [Round]
@@ -242,8 +244,23 @@ private final class FactoryMonitor {
         let preview = rounds.last(where: { $0.fields["decision"] == "accepted" }).flatMap {
             readPreview(for: $0, in: url)
         }
+        // The accepted state before the latest one, for a diff of the result.
+        let accepted = rounds.filter { $0.fields["decision"] == "accepted" }
+        let previous = accepted.count > 1 ? readPreview(for: accepted[accepted.count - 2], in: url)
+            : accepted.isEmpty ? nil : (readSource(at: url.appendingPathComponent("rollback.factory-view.html"))
+                ?? readSource(at: url.appendingPathComponent("submission.seed.html")))
+        // Everything this job spent on workers, including reflections, at list price.
+        var cost = 0.0
+        for file in (try? FileManager.default.contentsOfDirectory(at: url, includingPropertiesForKeys: nil)) ?? []
+        where file.pathExtension == "run" {
+            guard let text = try? String(contentsOf: file, encoding: .utf8) else { continue }
+            for line in text.split(separator: "\n") where line.hasPrefix("worker_cost_usd=") {
+                cost += Double(line.dropFirst("worker_cost_usd=".count)) ?? 0
+            }
+        }
         let draft = active ? readSource(at: url.appendingPathComponent(next + ".draft")) : nil
-        return Job(id: url.lastPathComponent, goal: goal, preview: preview, draft: draft, baseline: baseline, rounds: rounds, progress: progress,
+        return Job(id: url.lastPathComponent, goal: goal, preview: preview, previous: previous,
+            cost: (cost * 10000).rounded() / 10000, draft: draft, baseline: baseline, rounds: rounds, progress: progress,
             sourceQueued: queued, sourceActive: active, sourceStartedAt: startedAt)
     }
 

@@ -89,6 +89,7 @@
 
 ## Savant als Worker
 
+- [Savant als Worker des Dienstes](jobs/job-backend/round-06.run) und [erster Auftrag damit](jobs/job-savant-im-dienst/round-01.run)
 - [Zwei Aufträge mit Savant statt Opus, gleiche Gates](jobs/job-savant-worker/summary.run)
 - [Interpreter-Auftrag, je zwei Läufe](jobs/job-savant-worker/summary-02.run) und [Qualität jenseits des Gates](jobs/job-savant-worker/summary-03.run)
 
@@ -100,6 +101,7 @@
 
 - [Neumorphe Ansicht mit ausgezeichneten Prüfprotokollen](jobs/job-factory-neomorph/round-01.html), [Auftrag](jobs/job-factory-neomorph/round-01.brief.md) und [Entscheidung](jobs/job-factory-neomorph/round-01.run)
 - [Bildmarke in der Kopfzeile](jobs/job-factory-neomorph/round-02.run) und [Aufnahme der installierten Ansicht](jobs/job-factory-neomorph/round-02.screenshot.png)
+- [Kosten je Auftrag und Diff beim Ergebnis](jobs/job-factory-ansicht-2/round-03.run)
 - [Agentenanzeige über Hooks](jobs/job-factory-ansicht-2/round-02.run) und [Aufnahme](jobs/job-factory-ansicht-2/round-02.screenshot.png)
 - [Ablauf einer Runde als Stationen](jobs/job-factory-neomorph/round-04.run) und [Vorschläge mit Freigabe im Dashboard](jobs/job-factory-ansicht-2/round-01.run)
 - [Aufnahme des Kandidaten](jobs/job-factory-neomorph/round-01.screenshot.png), [WebKit-Prüfung](jobs/job-factory-neomorph/round-01.webkit.log) und [vorheriger Stand](jobs/job-factory-neomorph/rollback.factory-view.html)

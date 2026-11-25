@@ -1,0 +1,10 @@
+126	start	Factory hat den Auftrag übernommen
+726	worker	Eingehängter Worker savant-1-4 liefert Quellcode
+779	worker	4096 Bytes Quellcode empfangen
+802	worker	8192 Bytes Quellcode empfangen
+816	worker	12288 Bytes Quellcode empfangen
+833	worker	16384 Bytes Quellcode empfangen
+848	worker	20080 Bytes Quellcode empfangen
+854	evaluate	Unabhängiges, gespeichertes Prüfgate ausführen
+61290	checks	AssertionError [ERR_ASSERTION]: Bundle muss genau main.rs enthalten
+73173	rejected	Manual source round ended. Inspect the gate evidence before another submission.

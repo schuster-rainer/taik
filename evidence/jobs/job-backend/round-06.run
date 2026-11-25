@@ -1,0 +1,20 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-06
+intent=Savant als Worker des Dienstes einsetzen.
+baseline=taik-seed 8ae91bdbb2e6635cc3b43df2cd03f1e862de3b4d8ab58d9d27bc3e1da9985cfb
+worker=claude-fable
+decided_by=the installed taik-seed 8ae91bdbb2e6635cc3b43df2cd03f1e862de3b4d8ab58d9d27bc3e1da9985cfb at /Users/rainer/.local/state/taik-factory/taik-seed
+limits=99 rounds; gate 900s; candidate checks 10s each
+gate_sha256=76b41170f51fa7e1a5424ba01f903bcf2276b8f8f19e4d87f952e88d18b6b0ce
+gate_ms=14279
+checks=PASS: Rust tests, Clippy with warnings denied, release build; candidate seeded, rejected an invalid procedure without touching the accepted record, and extended it
+evidence=round-06.checks.log
+artifact=round-06-taik-seed
+artifact_sha256=fb5d2643f2e33bc37535416fffb107b6e82b4c73ab57516aa4a2b30948f2304d
+rollback=round-06.rollback-taik-seed
+continuation=Restart the service so that it runs the accepted binary.
+advance=false
+end

@@ -1,0 +1,11 @@
+decision=observed
+identity=reflection-savant-im-dienst-next
+derived_from=/Users/rainer/projects/ideas/talk/evidence/jobs/job-savant-im-dienst/round-01.run
+worker=savant
+worker_model=subq-savant-1.4
+worker_input_tokens=1449
+worker_output_tokens=134
+worker_cost_usd=0.000212
+worker_duration_ms=1712
+outcome=stop: Der Entscheidungsdatensatz behält das akzeptierte Artefakt bei und autorisiert keine weitere Arbeit.
+end

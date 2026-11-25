@@ -339,3 +339,96 @@ fn a_configured_second_worker_takes_over_and_is_named_in_the_record() {
         }
     }
 }
+
+#[test]
+fn savant_is_a_streamed_worker_with_its_own_cost_record() {
+    let root = tempfile::Builder::new()
+        .prefix("taik-savant-")
+        .tempdir_in("/tmp")
+        .unwrap();
+    let brief = root.path().join("brief.md");
+    fs::write(&brief, "Deliver a marked document\n").unwrap();
+    let gate = root.path().join("verify.mjs");
+    fs::write(
+        &gate,
+        "import { readFileSync } from 'node:fs';\nif (!readFileSync(process.argv[2], 'utf8').includes('<p>savant</p>')) throw new Error('missing mark');\nconsole.log('PASS: marked');\n",
+    )
+    .unwrap();
+    let stream = root.path().join("stream.txt");
+    let chunk = |delta: &str| format!("data: {{\"choices\":[{{\"delta\":{delta}}}]}}\n\n");
+    let complete = [
+        chunk(r#"{"role":"assistant","content":""}"#),
+        chunk(r#"{"reasoning":null}"#),
+        chunk(r#"{"content":"<!doctype html>"}"#),
+        chunk(r#"{"content":"<p>savant</p>"}"#),
+        "data: {\"choices\":[],\"usage\":{\"prompt_tokens\":1000,\"completion_tokens\":2000}}\n\n"
+            .to_owned(),
+        "data: [DONE]\n".to_owned(),
+    ]
+    .concat();
+    let cases = [
+        ("complete", complete.clone(), "test-key", Some(0)),
+        (
+            "cut-off",
+            complete.replace("data: [DONE]\n", ""),
+            "test-key",
+            Some(1),
+        ),
+        ("no-key", complete, "", Some(1)),
+    ];
+    for (name, body, key, expected) in cases {
+        fs::write(&stream, body).unwrap();
+        let state = root.path().join(name);
+        let queued = factory()
+            .arg("queue-source")
+            .arg(&state)
+            .arg(name)
+            .arg(&brief)
+            .arg(&gate)
+            .output()
+            .unwrap();
+        assert!(queued.status.success(), "{queued:?}");
+        let result = factory()
+            .arg("drain")
+            .arg(&state)
+            .env("TAIK_LEAD_WORKER", "savant")
+            .env("SUBQ_API_KEY", key)
+            .env("TAIK_SUBQ_ENDPOINT", format!("file://{}", stream.display()))
+            .env_remove("TAIK_SUBQ_KEYCHAIN")
+            .env_remove("TAIK_SECOND_WORKER")
+            .env_remove("TAIK_AUTO_PROPOSE")
+            .output()
+            .unwrap();
+        assert_eq!(result.status.code(), expected, "{name}: {result:?}");
+        let job = state.join("jobs").join(format!("job-{name}"));
+        let record = fs::read_to_string(job.join("round-01.run")).unwrap();
+        let trace = fs::read_to_string(job.join("round-01.progress")).unwrap();
+        assert!(!record.contains("test-key") && !trace.contains("test-key"));
+        assert!(record.contains("\nworker=savant\n"), "{record}");
+        match name {
+            "complete" => {
+                for line in [
+                    "decision=accepted",
+                    "worker_model=subq-savant-1.4",
+                    "worker_input_tokens=1000",
+                    "worker_output_tokens=2000",
+                    "worker_cost_usd=0.001100",
+                ] {
+                    assert!(
+                        record.lines().any(|found| found == line),
+                        "{line}\n{record}"
+                    );
+                }
+                assert_eq!(
+                    fs::read_to_string(job.join("round-01.html")).unwrap(),
+                    "<!doctype html><p>savant</p>\n"
+                );
+            }
+            "cut-off" => assert!(
+                record.contains("worker_failure=invalid-response"),
+                "{record}"
+            ),
+            _ => assert!(record.contains("worker_failure=configuration"), "{record}"),
+        }
+    }
+}

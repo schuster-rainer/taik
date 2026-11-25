@@ -1,0 +1,19 @@
+decision=rejected
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=# MiniCalc 2
+baseline=(empty)
+worker=savant-1-4-attached
+limits=4 rounds; worker 150s; verifier 15s; 96KiB source
+gate_sha256=1f145e2fe33ff4dac32b0804163e6161f3f2c1b84159ac6d05cf41a89b810dd0
+gate_ms=60
+checks=AssertionError [ERR_ASSERTION]: Bundle muss genau main.rs enthalten
+artifact=
+rejected_candidate=
+feedback=
+follow_up=
+continuation=Manual source round ended. Inspect the gate evidence before another submission.
+advance=false
+end

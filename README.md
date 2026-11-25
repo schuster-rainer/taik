@@ -78,7 +78,8 @@ Unattended rounds need a worker command:
 
 | Variable | Effect |
 | --- | --- |
-| `TAIK_LEAD_WORKER` | Path to a Claude CLI. It runs first, without tools, as Opus 5.5 at medium effort. Codex is not called. |
+| `TAIK_LEAD_WORKER` | Path to a Claude CLI, which runs first, without tools, as Opus 5.5 at medium effort. Or the word `savant`, which calls Savant 1.4 over the SubQ chat endpoint, streamed and without tools. Codex is not called. |
+| `TAIK_SUBQ_KEYCHAIN` | `service/account` of the macOS keychain entry with the SubQ key, used when `SUBQ_API_KEY` is unset. The key appears in no record. |
 | `TAIK_SECOND_WORKER` | Path to a Claude CLI that takes over when the Codex worker fails before a gate judgement. |
 | neither | The signed-in Codex subscription does the work. |
 | `TAIK_DAILY_BUDGET_USD` | Bound on the cost of Claude rounds within 24 hours, at list price. Default 3. A round beyond it is rejected before the worker is called. |
@@ -138,6 +139,8 @@ Only the installed binary may run this. It pins the gate, runs it in the checkou
 - Right, top: the published Floorplanner, running in a script-only sandbox without network.
 - Right, bottom: the selected job. During a round it renders the draft without scripts above its source, next to the live progress. The Claude worker streams, so the draft grows while it writes.
 
+- Costs: the header shows the worker cost of the last 24 hours, the job list and the history show the cost of each job and round at list price.
+- Diff: the result pane can show only the lines that changed against the previously accepted state. The viewer computes it locally.
 - Agents: Claude Code sessions in this checkout report each tool call through `tools/agent-hook.sh`, set up in `.claude/settings.json`. The hook writes one small file per session into `STATE/agents`. No model is called for it.
 
 The viewer is `tools/factory-view.html`. It changes only through a source job. Before installing, check a snapshot:

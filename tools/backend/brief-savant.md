@@ -1,0 +1,3 @@
+Savant als Worker des Dienstes einsetzen.
+
+Beobachtung aus `../job-savant-worker/summary-02.run` und `summary-03.run`: Savant bestand dieselben Gates wie Opus bei etwa einem Vierzehntel des Listenpreises, und das Claude-Wochenlimit des Kontos stand bei 97 Prozent. Der Nutzer hat am 2026-11-25 entschieden, Savant für alles zu testen. `TAIK_LEAD_WORKER=savant` ruft den Chat-Endpunkt von SubQ gestreamt und ohne Werkzeuge auf. Der Schlüssel kommt aus `SUBQ_API_KEY` oder aus dem in `TAIK_SUBQ_KEYCHAIN` genannten Schlüsselbund-Eintrag und erscheint in keinem Protokoll. Die Tagesgrenze gilt unverändert.

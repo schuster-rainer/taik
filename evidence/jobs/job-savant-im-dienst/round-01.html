@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>TAIK Markenblatt</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --base: light-dark(#e4e8ee, #21262e);
+      --ink: light-dark(#1b2330, #e9eef5);
+      --accent: light-dark(#0d6b5f, #6fd0bf);
+      --line: light-dark(rgba(27, 35, 48, .16), rgba(233, 238, 245, .18));
+      --light-base: #e4e8ee;
+      --dark-base: #21262e;
+      --light-ink: #1b2330;
+      --dark-ink: #e9eef5;
+      --light-accent: #0d6b5f;
+      --dark-accent: #6fd0bf;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--base);
+      color: var(--ink);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page {
+      width: min(100% - 40px, 960px);
+      margin-inline: auto;
+      padding: 64px 0 80px;
+    }
+
+    header {
+      padding-bottom: 40px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    h1 {
+      margin: 0 0 18px;
+      font-size: clamp(4rem, 16vw, 8rem);
+      line-height: .82;
+      letter-spacing: -.06em;
+      font-weight: 700;
+    }
+
+    .lede {
+      max-width: 48ch;
+      margin: 0;
+      font-size: clamp(1.05rem, 2.4vw, 1.35rem);
+    }
+
+    section { padding-top: 48px; }
+
+    h2 {
+      margin: 0 0 22px;
+      font-size: .76rem;
+      line-height: 1.2;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+      font-weight: 600;
+      opacity: .62;
+    }
+
+    .wordmark {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: .15em .65em;
+      font-size: clamp(1.8rem, 7.5vw, 4.5rem);
+      line-height: .95;
+      margin: 0;
+    }
+
+    .wordmark strong {
+      font-weight: 600;
+      letter-spacing: .22em;
+    }
+
+    .wordmark span {
+      font-weight: 400;
+      letter-spacing: .3em;
+      opacity: .48;
+    }
+
+    .mark-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 14px;
+    }
+
+    .mark-card {
+      margin: 0;
+      padding: 18px;
+      border: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 18px;
+      min-height: 190px;
+    }
+
+    .mark-card.on-light {
+      background: var(--light-base);
+      color: var(--light-ink);
+      --accent: var(--light-accent);
+      border-color: rgba(27, 35, 48, .14);
+    }
+
+    .mark-card.on-dark {
+      background: var(--dark-base);
+      color: var(--dark-ink);
+      --accent: var(--dark-accent);
+      border-color: rgba(233, 238, 245, .16);
+    }
+
+    .mark-stage {
+      min-height: 140px;
+      display: grid;
+      place-items: center;
+    }
+
+    .mark-card svg {
+      display: block;
+      max-width: 100%;
+      height: auto;
+    }
+
+    .mark-card figcaption {
+      display: flex;
+      justify-content: space-between;
+      gap: 1em;
+      font-size: .68rem;
+      line-height: 1.2;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      opacity: .72;
+    }
+
+    .palette {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 10px;
+    }
+
+    .swatch {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px;
+      border: 1px solid var(--line);
+    }
+
+    .chip {
+      width: 38px;
+      height: 38px;
+      flex: none;
+      border: 1px solid var(--line);
+    }
+
+    .swatch strong {
+      display: block;
+      font-size: .72rem;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .swatch code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: .8rem;
+    }
+
+    .name-notes {
+      margin: 0;
+      padding-left: 1.4em;
+      max-width: 70ch;
+    }
+
+    .name-notes li {
+      padding-left: .35em;
+      margin-block: .55em;
+    }
+
+    .name-notes em {
+      font-style: normal;
+      font-weight: 600;
+    }
+
+    .name-notes strong { font-weight: 700; }
+
+    .rules {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 8px 24px;
+      max-width: 80ch;
+    }
+
+    .rules li {
+      padding: 10px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .footnote {
+      margin-top: 18px;
+      font-size: .85rem;
+      opacity: .62;
+      max-width: 65ch;
+    }
+
+    @media (max-width: 520px) {
+      .page {
+        width: min(100% - 28px, 960px);
+        padding-top: 40px;
+      }
+
+      .mark-card { padding: 14px; }
+      .mark-stage { min-height: 128px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <h1>TAIK</h1>
+      <p class="lede">TAIK ist eine Software-Factory, die ihren eigenen Prozess auf sich selbst anwendet.</p>
+    </header>
+
+    <section aria-labelledby="wortmarke">
+      <h2 id="wortmarke">Wortmarke</h2>
+      <p class="wordmark"><strong>TAIK</strong> <span>FACTORY</span></p>
+    </section>
+
+    <section aria-labelledby="bildmarke">
+      <h2 id="bildmarke">Bildmarke</h2>
+      <div class="mark-grid">
+        <figure class="mark-card on-light">
+          <div class="mark-stage">
+            <svg width="128" height="128" viewBox="0 0 64 64" aria-hidden="true">
+              <path fill="currentColor" d="M26.22 14.55A17.35 17.35 0 1 1 18.13 43.58A15.72 15.72 0 1 0 26.22 14.55Z M16.43 31.11A10.96 10.96 0 1 1 36.03 35.93A10.1 10.1 0 1 0 16.43 31.11Z M22.27 37.25A6.47 6.47 0 1 1 32.15 29.67A7.04 7.04 0 0 0 22.27 37.25Z"/>
+              <path fill="var(--accent)" d="M26.6 39.95A4.95 4.95 0 1 1 34.1 34.52A5.32 5.32 0 0 0 26.6 39.95Z"/>
+            </svg>
+          </div>
+          <figcaption><span>128 px</span><span>hell</span></figcaption>
+        </figure>
+
+        <figure class="mark-card on-dark">
+          <div class="mark-stage">
+            <svg width="128" height="128" viewBox="0 0 64 64" aria-hidden="true">
+              <path fill="currentColor" d="M26.22 14.55A17.35 17.35 0 1 1 18.13 43.58A15.72 15.72 0 1 0 26.22 14.55Z M16.43 31.11A10.96 10.96 0 1 1 36.03 35.93A10.1 10.1 0 1 0 16.43 31.11Z M22.27 37.25A6.47 6.47 0 1 1 32.15 29.67A7.04 7.04 0 0 0 22.27 37.25Z"/>
+              <path fill="var(--accent)" d="M26.6 39.95A4.95 4.95 0 1 1 34.1 34.52A5.32 5.32 0 0 0 26.6 39.95Z"/>
+            </svg>
+          </div>
+          <figcaption><span>128 px</span><span>dunkel</span></figcaption>
+        </figure>
+
+        <figure class="mark-card on-light">
+          <div class="mark-stage">
+            <svg width="48" height="48" viewBox="0 0 64 64" aria-hidden="true">
+              <path fill="currentColor" d="M26.22 14.55A17.35 17.35 0 1 1 18.13 43.58A15.72 15.72 0 1 0 26.22 14.55Z M16.43 31.11A10.96 10.96 0 1 1 36.03 35.93A10.1 10.1 0 1 0 16.43 31.11Z M22.27 37.25A6.47 6.47 0 1 1 32.15 29.67A7.04 7.04 0 0 0 22.27 37.25Z"/>
+              <path fill="var(--accent)" d="M26.6 39.95A4.95 4.95 0 1 1 34.1 34.52A5.32 5.32 0 0 0 26.6 39.95Z"/>
+            </svg>
+          </div>
+          <figcaption><span>48 px</span><span>hell</span></figcaption>
+        </figure>
+
+        <figure class="mark-card on-dark">
+          <div class="mark-stage">
+            <svg width="48" height="48" viewBox="0 0 64 64" aria-hidden="true">
+              <path fill="currentColor" d="M26.22 14.55A17.35 17.35 0 1 1 18.13 43.58A15.72 15.72 0 1 0 26.22 14.55Z M16.43 31.11A10.96 10.96 0 1 1 36.03 35.93A10.1 10.1 0 1 0 16.43 31.11Z M22.27 37.25A6.47 6.47 0 1 1 32.15 29.67A7.04 7.04 0 0 0 22.27 37.25Z"/>
+              <path fill="var(--accent)" d="M26.6 39.95A4.95 4.95 0 1 1 34.1 34.52A5.32 5.32 0 0 0 26.6 39.95Z"/>
+            </svg>
+          </div>
+          <figcaption><span>48 px</span><span>dunkel</span></figcaption>
+        </figure>
+
+        <figure class="mark-card on-light">
+          <div class="mark-stage">
+            <svg width="20" height="20" viewBox="0 0 64 64" aria-hidden="true">
+              <path fill="currentColor" d="M26.22 14.55A17.35 17.35 0 1 1 18.13 43.58A15.72 15.72 0 1 0 26.22 14.55Z M16.43 31.11A10.96 10.96 0 1 1 36.03 35.93A10.1 10.1 0 1 0 16.43 31.11Z M22.27 37.25A6.47 6.47 0 1 1 32.15 29.67A7.04 7.04 0 0 0 22.27 37.25Z"/>
+              <path fill="var(--accent)" d="M26.6 39.95A4.95 4.95 0 1 1 34.1 34.52A5.32 5.32 0 0 0 26.6 39.95Z"/>
+            </svg>
+          </div>
+          <figcaption><span>20 px</span><span>hell</span></figcaption>
+        </figure>
+
+        <figure class="mark-card on-dark">
+          <div class="mark-stage">
+            <svg width="20" height="20" viewBox="0 0 64 64" aria-hidden="true">
+              <path fill="currentColor" d="M26.22 14.55A17.35 17.35 0 1 1 18.13 43.58A15.72 15.72 0 1 0 26.22 14.55Z M16.43 31.11A10.96 10.96 0 1 1 36.03 35.93A10.1 10.1 0 1 0 16.43 31.11Z M22.27 37.25A6.47 6.47 0 1 1 32.15 29.67A7.04 7.04 0 0 0 22.27 37.25Z"/>
+              <path fill="var(--accent)" d="M26.6 39.95A4.95 4.95 0 1 1 34.1 34.52A5.32 5.32 0 0 0 26.6 39.95Z"/>
+            </svg>
+          </div>
+          <figcaption><span>20 px</span><span>dunkel</span></figcaption>
+        </figure>
+      </div>
+      <p class="footnote">Der zweite Pfad ist der Kern und trägt die Akzentfarbe. Auf hellem Grund wird der Akzent hell eingesetzt, auf dunklem Grund der Akzent dunkel.</p>
+    </section>
+
+    <section aria-labelledby="farben">
+      <h2 id="farben">Farben</h2>
+      <ul class="palette">
+        <li class="swatch">
+          <span class="chip" style="background:#e4e8ee"></span>
+          <span><strong>Grund hell</strong><code>#e4e8ee</code></span>
+        </li>
+        <li class="swatch">
+          <span class="chip" style="background:#21262e"></span>
+          <span><strong>Grund dunkel</strong><code>#21262e</code></span>
+        </li>
+        <li class="swatch">
+          <span class="chip" style="background:#1b2330"></span>
+          <span><strong>Schrift hell</strong><code>#1b2330</code></span>
+        </li>
+        <li class="swatch">
+          <span class="chip" style="background:#e9eef5"></span>
+          <span><strong>Schrift dunkel</strong><code>#e9eef5</code></span>
+        </li>
+        <li class="swatch">
+          <span class="chip" style="background:#0d6b5f"></span>
+          <span><strong>Akzent hell</strong><code>#0d6b5f</code></span>
+        </li>
+        <li class="swatch">
+          <span class="chip" style="background:#6fd0bf"></span>
+          <span><strong>Akzent dunkel</strong><code>#6fd0bf</code></span>
+        </li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="name">
+      <h2 id="name">Der Name</h2>
+      <ol class="name-notes">
+        <li>Ein Wortbild zu <em>talk</em> wie in Smalltalk – nur nicht small.</li>
+        <li>Der Klang des deutschen Wortes <em>Teig</em>.</li>
+        <li><em>talk</em> mit <strong>AI</strong> in der Mitte.</li>
+      </ol>
+    </section>
+
+    <section aria-labelledby="regeln">
+      <h2 id="regeln">Regeln</h2>
+      <ul class="rules">
+        <li>Flach und matt.</li>
+        <li>Kein Glow.</li>
+        <li>Kein Verlauf.</li>
+        <li>Kein Schlagschatten auf der Marke.</li>
+        <li>Schutzraum: eine halbe Markenbreite rundum.</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

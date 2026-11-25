@@ -31,6 +31,15 @@ const STREAM_LIMIT: usize = 64 * LIMIT;
 // Upper bound in USD at list price for Claude rounds within 24 hours. The variable overrides it.
 const DAILY_BUDGET: &str = "TAIK_DAILY_BUDGET_USD";
 const DEFAULT_DAILY_BUDGET_USD: f64 = 3.0;
+// TAIK_LEAD_WORKER=savant selects Savant instead of a Claude CLI.
+const SAVANT: &str = "savant";
+const SAVANT_MODEL: &str = "subq-savant-1.4";
+const SAVANT_ENDPOINT: &str = "https://api.subq.ai/v1/chat/completions";
+// "service/account" of the macOS keychain entry that holds the SubQ key, when SUBQ_API_KEY is unset.
+const SUBQ_KEYCHAIN: &str = "TAIK_SUBQ_KEYCHAIN";
+// List prices per million tokens from the SubQ documentation of 2026-11-25.
+const SAVANT_INPUT_USD: f64 = 0.10;
+const SAVANT_OUTPUT_USD: f64 = 0.50;
 const POLICY: &str = r#"(version 1) (allow default) (deny file-write*)
     (allow file-write* (subpath (param "WORK")))
     (deny file-read* (subpath (param "PROJECT")))
@@ -339,7 +348,14 @@ fn run_round(
             let first = if let Ok(program) = env::var(LEAD_WORKER) {
                 progress.event(
                     "worker",
-                    format_args!("Claude erhält Auftrag und akzeptierten Ausgangsstand"),
+                    format_args!(
+                        "{} erhält Auftrag und akzeptierten Ausgangsstand",
+                        if program == SAVANT {
+                            "Savant"
+                        } else {
+                            "Claude"
+                        }
+                    ),
                 );
                 claude_called = true;
                 let (html, usage) = claude(&program, &workspace, path, &prompt, |text| {
@@ -447,7 +463,7 @@ fn run_round(
     let worker = match attached {
         Some("attached") => "attached".to_owned(),
         Some(name) => format!("{name}-attached"),
-        None if claude_called => "claude-cli".to_owned(),
+        None if claude_called => second_label().to_owned(),
         None => "codex-subscription".to_owned(),
     };
     let baseline = baseline
@@ -728,12 +744,156 @@ pub(crate) fn ask(
     progress: &mut Progress,
 ) -> (Result<(String, String)>, &'static str) {
     match env::var(LEAD_WORKER) {
-        Ok(program) => (claude(&program, scratch, job, prompt, |_| {}), "claude-cli"),
+        Ok(program) => (
+            claude(&program, scratch, job, prompt, |_| {}),
+            second_label(),
+        ),
         Err(_) => (
             codex(scratch, job, prompt, progress, |_| {}).map(|text| (text, String::new())),
             "codex-subscription",
         ),
     }
+}
+
+// The name under which the configured Claude or Savant worker appears in a record.
+fn second_label() -> &'static str {
+    let configured = env::var(LEAD_WORKER).or_else(|_| env::var(SECOND_WORKER));
+    if configured.is_ok_and(|value| value == SAVANT) {
+        "savant"
+    } else {
+        "claude-cli"
+    }
+}
+
+// Savant over the SubQ chat completions endpoint, streamed, without tools. The key comes from the
+// environment or from a keychain entry the user names. It reaches curl through a private file.
+fn savant(
+    scratch: &Path,
+    job: &Path,
+    prompt: &str,
+    mut show_code: impl FnMut(&str),
+    started: Instant,
+    named: &dyn Fn(WorkerFailure) -> WorkerFailure,
+) -> Result<(String, String)> {
+    let setup = |kind| named(WorkerFailure::new("setup", kind, started));
+    let key = match env::var("SUBQ_API_KEY") {
+        Ok(key) if !key.trim().is_empty() => key.trim().to_owned(),
+        _ => {
+            let entry = env::var(SUBQ_KEYCHAIN).map_err(|_| setup("configuration"))?;
+            let (service, account) = entry
+                .split_once('/')
+                .ok_or_else(|| setup("configuration"))?;
+            let found = Command::new("/usr/bin/security")
+                .args(["find-generic-password", "-s", service, "-a", account, "-w"])
+                .stdin(Stdio::null())
+                .stderr(Stdio::null())
+                .output()
+                .map_err(|_| setup("configuration"))?;
+            let key = String::from_utf8_lossy(&found.stdout).trim().to_owned();
+            if !found.status.success() || key.is_empty() {
+                return Err(setup("configuration").into());
+            }
+            key
+        }
+    };
+    if key.contains(['"', '\\', '\n']) {
+        return Err(setup("configuration").into());
+    }
+    let config = scratch.join("request.conf");
+    let written = File::options()
+        .write(true)
+        .create_new(true)
+        .mode(0o600)
+        .open(&config)
+        .and_then(|mut file| {
+            use std::io::Write as _;
+            write!(
+                file,
+                "header = \"Authorization: Bearer {key}\"\nheader = \"Content-Type: application/json\"\n"
+            )
+        });
+    drop(key);
+    written.map_err(|_| setup("configuration"))?;
+    let body = serde_json::json!({
+        "model": SAVANT_MODEL,
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": 60000,
+        "reasoning_effort": "low",
+        "stream": true,
+        "stream_options": {"include_usage": true},
+    });
+    fs::write(scratch.join("request.json"), body.to_string())?;
+    let endpoint = env::var("TAIK_SUBQ_ENDPOINT").unwrap_or_else(|_| SAVANT_ENDPOINT.to_owned());
+    let mut command = sandbox(scratch, job, "/usr/bin/curl", true)
+        .map_err(|_| named(WorkerFailure::new("setup", "sandbox", started)))?;
+    command.args([
+        "-sS",
+        "-N",
+        "--fail-with-body",
+        "--max-time",
+        "150",
+        "-K",
+        "request.conf",
+        "-d",
+        "@request.json",
+        &endpoint,
+    ]);
+    let mut next_line = 0;
+    let mut written = String::new();
+    let mut usage = (0u64, 0u64);
+    let mut done = false;
+    let response = run_worker_limited(
+        &mut command,
+        WORKER_TIMEOUT,
+        STREAM_LIMIT,
+        "execute",
+        started,
+        |data| {
+            while let Some(newline) = data[next_line..].iter().position(|byte| *byte == b'\n') {
+                let line = &data[next_line..next_line + newline];
+                next_line += newline + 1;
+                let Some(payload) = line.strip_prefix(b"data: ") else {
+                    continue;
+                };
+                if payload == b"[DONE]" {
+                    done = true;
+                } else if let Ok(event) = serde_json::from_slice::<serde_json::Value>(payload) {
+                    if let Some(text) = event["choices"][0]["delta"]["content"].as_str()
+                        && !text.is_empty()
+                    {
+                        written.push_str(text);
+                        show_code(&written);
+                    }
+                    if let Some(prompt_tokens) = event["usage"]["prompt_tokens"].as_u64() {
+                        usage = (
+                            prompt_tokens,
+                            event["usage"]["completion_tokens"].as_u64().unwrap_or(0),
+                        );
+                    }
+                }
+            }
+        },
+    );
+    let _ = fs::remove_file(&config);
+    response.map_err(|error| match error.downcast::<WorkerFailure>() {
+        Ok(failure) => named(*failure).into(),
+        Err(error) => error,
+    })?;
+    let invalid = || named(WorkerFailure::new("output", "invalid-response", started));
+    if !done || written.len() > LIMIT {
+        return Err(invalid().into());
+    }
+    let html = unfenced(&written).ok_or_else(invalid)?;
+    let cost = usage.0 as f64 * SAVANT_INPUT_USD / 1e6 + usage.1 as f64 * SAVANT_OUTPUT_USD / 1e6;
+    Ok((
+        html,
+        format!(
+            "worker_model={SAVANT_MODEL}\nworker_input_tokens={}\nworker_output_tokens={}\nworker_cost_usd={cost:.6}\nworker_duration_ms={}\n",
+            usage.0,
+            usage.1,
+            started.elapsed().as_millis(),
+        ),
+    ))
 }
 
 // Cost that Claude rounds recorded in this queue during the last 24 hours.
@@ -771,8 +931,9 @@ fn claude(
     mut show_code: impl FnMut(&str),
 ) -> Result<(String, String)> {
     let started = Instant::now();
-    let named = |mut failure: WorkerFailure| {
-        failure.worker = "Claude";
+    let savant = program == SAVANT;
+    let named = move |mut failure: WorkerFailure| {
+        failure.worker = if savant { "Savant" } else { "Claude" };
         failure
     };
     // The worker spends the user's account. Refuse before the call once the day's bound is reached.
@@ -782,6 +943,9 @@ fn claude(
         .unwrap_or(DEFAULT_DAILY_BUDGET_USD);
     if recent_worker_cost(job) >= budget {
         return Err(named(WorkerFailure::new("setup", "budget", started)).into());
+    }
+    if savant {
+        return self::savant(scratch, job, prompt, show_code, started, &named);
     }
     let mut command = sandbox(scratch, job, program, true)
         .map_err(|_| named(WorkerFailure::new("setup", "sandbox", started)))?;
