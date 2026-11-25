@@ -112,6 +112,7 @@
 
 - [Neumorphe Ansicht mit ausgezeichneten Prüfprotokollen](jobs/job-factory-neomorph/round-01.html), [Auftrag](jobs/job-factory-neomorph/round-01.brief.md) und [Entscheidung](jobs/job-factory-neomorph/round-01.run)
 - [Bildmarke in der Kopfzeile](jobs/job-factory-neomorph/round-02.run) und [Aufnahme der installierten Ansicht](jobs/job-factory-neomorph/round-02.screenshot.png)
+- [Crew: Agenten und Abos in der Ansicht, Agent je Ticket](jobs/job-ansicht-crew/round-01.run), [Freigabe](jobs/job-ansicht-crew/release-round-01.run), Aufnahmen [Standard](jobs/job-ansicht-crew/round-01.default.png), [Formular](jobs/job-ansicht-crew/round-01.agent-form.png) und [Ticket](jobs/job-ansicht-crew/round-01.ticket-agent.png)
 - [Ticket-Board geordnet: eine Gruppe zur Zeit, Karten über die volle Breite](jobs/job-ansicht-tickets/round-01.run), [Freigabe](jobs/job-ansicht-tickets/release-round-01.run), Aufnahmen [Standard](jobs/job-ansicht-tickets/round-01.default.png), [Entschieden in Hell](jobs/job-ansicht-tickets/round-01.decided-light.png) und [geöffnetes Ticket](jobs/job-ansicht-tickets/round-01.open-ticket.png)
 - [Erster Board-Auftrag, viermal abgelehnt](jobs/job-board-ansicht/round-04.run)
 - [Änderung der Ansicht ohne Agent bis zur Installation](jobs/job-ansicht-fragment/observation.run), mit [Runde](jobs/job-ansicht-fragment/round-01.run) und [Freigabe](jobs/job-ansicht-fragment/release-round-01.run)

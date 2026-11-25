@@ -93,6 +93,32 @@ Unattended rounds need a worker command. Both workers get the same prompt and th
 
 The Claude CLI runs headless as a subprocess (`claude -p`) with the login of the account, without tools. A Claude round records model, output tokens, cost, duration and the usage state the account reported. A failed worker records its stage, kind and duration, never its raw output. Setting either variable lets the service spend usage on your account.
 
+## Agents
+
+An agent is a file `STATE/crew/NAME.agent`:
+
+```text
+harness=grok
+model=grok-4.7-build-fast
+effort=low
+persona=Du arbeitest knapp und genau.
+end
+```
+
+A job names the agent of its next round in a file `agent` in its folder, set at queueing with `--agent=NAME` or later from the viewer. The service reads both before every round. Without the file, the worker of the environment does the round. An agent that does not exist stops the job. Nothing runs on another account instead. The persona stands before the Factory's own contract sentence and never replaces it. The record names the agent and the model the harness reported.
+
+| Harness | How the core calls it | Tools | Reports |
+| --- | --- | --- | --- |
+| `claude` | Claude Code CLI, `claude -p`, streamed | off | model, tokens, cost |
+| `codex` | Codex CLI, `codex exec` in a private home | off | events, no cost |
+| `savant` | SubQ chat endpoint through `curl`, streamed | none | model, tokens, cost from list prices |
+| `grok` | Grok Build CLI, single turn from a prompt file, streamed | off | model, tokens, cost |
+| `pi` | Pi CLI, print mode with JSON events | off | provider and model, tokens, cost |
+
+Every call runs in the write-denying sandbox. Grok and Pi may write their own state folder (`~/.grok`, `~/.pi`) and nothing else. A harness that reports no cost counts with 0.25 USD per call toward the daily bound. `taik-seed crew STATE` writes the overview of harnesses, sign-in state, models and agents that the viewer shows. It reads the sign-in state, never a credential. Gemini and OpenCode are installed on the author's machine but not signed in and not wired.
+
+Each call is one turn without tools: the worker returns one document and the gate judges it. An agent that works with tools in a checkout, as an agent harness does on its own, is not built.
+
 ## The service
 
 `taik-seed serve STATE` watches `STATE/jobs`, works up to three software jobs side by side (the viewer's setting in `STATE/parallel`, otherwise `TAIK_PARALLEL`, at most eight), each to its final decision, and then blocks on the kernel until the next one arrives. It does not poll. `taik-seed drain STATE` runs the same logic once and exits.
@@ -146,12 +172,13 @@ Only the installed binary may run this. It pins the gate, runs it in the checkou
 
 `./tools/open-factory-view.sh` builds and installs **TAIK Factory.app** into `~/Applications`. The window follows the job with the latest activity and updates on filesystem events. It makes no model calls.
 
-- Left: the ticket board, working agents, waiting proposals, the goal and the history of the selected job. Each round shows its token flow as a bar, with time and cost. **Arbeitsschritte** shows the trace of a round, **Prüfprotokoll** its decision record with keys, outcomes, digests, file names and quantities marked.
+- Left: the ticket board, the crew, reported sessions, the goal and the history of the selected job. Each round shows its token flow as a bar, with time and cost. **Arbeitsschritte** shows the trace of a round, **Prüfprotokoll** its decision record with keys, outcomes, digests, file names and quantities marked.
 - Tickets: one card for each thing that needs a person. **Wartet auf Antwort** holds a waiting proposal, a queued revision and a job whose last round was rejected; an exhausted round limit is marked on the card. **Läuft** holds active work and pending rounds, **Entschieden** the finished ones. A card opens a detail with a reply field. A reply is written to `STATE/inbox` as one file per comment, and the approve button stays the approval.
 - Right, top: the flow of a round through its five stations. The active station moves while a round runs.
 - Right, below: the workpiece of the selected job, as view, source or diff. During a round it shows the live draft without scripts, marked as unverified, and the accepted result afterwards. An accepted result runs in a script-only sandbox without network.
 - Header: worker cost of the last 24 hours, the number of parallel slots and the appearance.
-- Agents: Claude Code sessions in this checkout report each tool call through `tools/agent-hook.sh`, set up in `.claude/settings.json`. No model is called for it.
+- Crew: agents with harness, model, effort and persona, and the harnesses with their sign-in state. An open ticket chooses the agent of its next round, and `@name` in a reply hands the round over.
+- Sessions: Claude Code sessions in this checkout report each tool call through `tools/agent-hook.sh`, set up in `.claude/settings.json`. No model is called for it.
 
 The viewer is `tools/factory-view.html`. It changes only through a source job. After a viewer job is accepted, one step checks and installs it:
 
