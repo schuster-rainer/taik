@@ -206,8 +206,8 @@ const board = boardTickets({
 const everyTicket = [...board.open, ...board.run, ...board.decision];
 assert.equal(everyTicket.length, 6, 'six things, six tickets');
 assert.equal(new Set(everyTicket.map(ticket => ticket.key)).size, 6, 'no ticket is listed twice');
-assert(board.open.some(t => t.proposal === 'vorschlag-1' && t.flag === 'Entscheidung'), 'a waiting proposal is an Entscheidung ticket');
-assert(board.open.some(t => t.job === 'job-b' && t.flag === 'Frage'), 'a rejected round asks a Frage');
+assert(board.open.some(t => t.proposal === 'vorschlag-1' && t.flag === 'Freigabe'), 'a waiting proposal asks for approval');
+assert(board.open.some(t => t.job === 'job-b' && t.flag === 'Abgelehnt'), 'a rejected round is named as rejected, not as a question');
 assert(board.open.some(t => t.job === 'job-d' && t.flag === 'Antwort'), 'a queued revision asks for an Antwort');
 assert(board.run.some(t => t.job === 'job-a' && t.flag === 'In Arbeit'), 'an active software job is In Arbeit');
 assert(board.run.some(t => t.job === 'job-e' && t.flag === 'Warteschlange'), 'a pending next round is Warteschlange');
@@ -375,9 +375,9 @@ assert.equal(stock.decision.length, 4, 'searching leaves the groups untouched');
 for (const hook of ['class="ticket-state"', 'class="round-change"', 'ticketState(', 'changeLine(']) assert(html.includes(hook), `state hook ${hook}`);
 const { ticketState, changeLine } = new Function(threadBlock + '\nreturn { ticketState, changeLine };')();
 const stood = (decision, more = {}) => ({ name: 'round.run', fields: { decision, intent: 'Eine Seite bauen', advance: 'false', ...more } });
-assert.deepEqual(ticketState({ rounds: [], messages: [] }), { done: 'Noch keine Runde gelaufen.', problem: '', question: '', next: 'Wartet auf die erste Runde.', analysis: [] });
+assert.deepEqual(ticketState({ rounds: [], messages: [] }), { done: 'Noch keine Runde gelaufen.', problem: '', question: '', next: 'Wartet auf die erste Runde.', analysis: [], waits: '' });
 assert.deepEqual(ticketState({ rounds: [stood('accepted')], messages: [] }),
-  { done: 'Runde 1 angenommen: Eine Seite bauen', problem: '', question: '', next: 'Fertig. Eine Antwort von dir gibt eine weitere Runde.', analysis: [] });
+  { done: 'Runde 1 angenommen: Eine Seite bauen', problem: '', question: '', next: 'Fertig. Eine Antwort von dir gibt eine weitere Runde.', analysis: [], waits: '' });
 const failed = ticketState({ rounds: [stood('accepted'), stood('rejected', { checks: 'FAIL: kein Titel', worker_failure: '' })], messages: [] });
 assert.equal(failed.done, 'Runde 2 abgelehnt. Der Stand aus Runde 1 gilt weiter.');
 assert.equal(failed.problem, 'FAIL: kein Titel');
@@ -417,4 +417,26 @@ assert.deepEqual(dialogLine({ tool: 'Glob', target: '' }), { who: 'Glob', text: 
 assert.equal(dialogLine(undefined), null);
 assert.doesNotMatch(css, /#taik-live \.round-(?:dialog|summary)[^{]*\{[^}]*(?:text-overflow|white-space:\s*nowrap|line-clamp)/, 'the dialog is not cut off');
 
-console.log(`PASS: host contract, offline isolation, ${shadows.length} token shadows without glow, contrast ${Math.min(...measured).toFixed(2)}–${Math.max(...measured).toFixed(2)}, lossless .run highlighting, token flow per round, one workpiece pane with live draft, animated flow, ticket board in one group at a time, crew with agents and harnesses, conversation in the ticket, one ticket with the full history, tickets opened in the viewer, the whole stock on the board, top-down state and changes, analysis of a rejection, dialog of an agent session`);
+// 20. Every waiting ticket says why it waits, on the board and in the ticket.
+const waiting = boardTickets({ proposals: [{ name: 'idee', intent: 'Eine Idee', origin: '' }], jobs: [
+  { id: 'job-fragt', goal: 'A', cost: 0, rounds: [], messages: [{ author: 'agent', round: 0, text: 'Welche Farbe?' }] },
+  { id: 'job-erklaert', goal: 'B', cost: 0, rounds: [{ name: 'round-01.run', fields: { decision: 'rejected', checks: 'FAIL: kein Titel' } }], messages: [],
+    analyses: { 'round-01': 'Verlangt: ein Titel.\nUrsache: fehlt.\nNächster Schritt: Du stellst den Auftrag klar.' } },
+  { id: 'job-roh', goal: 'C', cost: 0, rounds: [{ name: 'round-01.run', fields: { decision: 'rejected', checks: 'FAIL: kein Titel' } }], messages: [] },
+] });
+const why = Object.fromEntries(waiting.open.map(entry => [entry.key, entry.why]));
+assert.deepEqual(why, {
+  'proposal:idee': 'Die Factory schlägt diesen Auftrag vor. Er startet erst mit deiner Freigabe.',
+  'job-fragt': 'Der Agent fragt: Welche Farbe?',
+  'job-erklaert': 'Du stellst den Auftrag klar.',
+  'job-roh': 'Runde 1 wurde abgelehnt: FAIL: kein Titel',
+}, 'each waiting ticket carries its reason');
+assert(waiting.open.every(entry => entry.why), 'no ticket waits without a reason');
+assert(html.includes('class="why"') && html.includes('class="waits"'), 'the reason is shown on the board and in the ticket');
+assert.equal(ticketState({ rounds: [], messages: [{ author: 'agent', round: 0, text: 'Welche Farbe?' }] }).waits, 'Der Agent hat eine Frage gestellt und arbeitet erst nach deiner Antwort weiter.');
+assert.equal(ticketState({ rounds: [stood('rejected', { checks: 'x' })], messages: [] }).waits, 'Die letzte Runde wurde abgelehnt. Es läuft nichts weiter, bis du im Feld unten antwortest.');
+assert.equal(ticketState({ rounds: [stood('accepted')], messages: [] }).waits, '', 'an accepted job does not wait');
+assert.equal(ticketState({ rounds: [stood('rejected', { checks: 'x' })], messages: [], sourceActive: true }).waits, '', 'a job at work does not wait');
+assert.doesNotMatch(css, /#taik-live \.ticket \.why[^{]*\{[^}]*(?:text-overflow|white-space:\s*nowrap|line-clamp)/, 'the reason is not cut off');
+
+console.log(`PASS: host contract, offline isolation, ${shadows.length} token shadows without glow, contrast ${Math.min(...measured).toFixed(2)}–${Math.max(...measured).toFixed(2)}, lossless .run highlighting, token flow per round, one workpiece pane with live draft, animated flow, ticket board in one group at a time, crew with agents and harnesses, conversation in the ticket, one ticket with the full history, tickets opened in the viewer, the whole stock on the board, top-down state and changes, analysis of a rejection, dialog of an agent session, a reason for every waiting ticket`);

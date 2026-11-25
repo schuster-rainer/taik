@@ -198,7 +198,7 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #taik-live .flag { flex: none; padding: 3px 9px; border-radius: 7px; box-shadow: var(--nm-inset-sm); font-size: .76rem;
     letter-spacing: .02em; color: var(--quiet); white-space: nowrap; }
-  #taik-live .flag.antwort, #taik-live .flag.entscheidung, #taik-live .flag.in-arbeit { color: var(--active); }
+  #taik-live .flag.antwort, #taik-live .flag.entscheidung, #taik-live .flag.freigabe, #taik-live .flag.in-arbeit { color: var(--active); }
   #taik-live .flag.frage, #taik-live .flag.abgelehnt { color: var(--bad); }
   #taik-live .ticket-detail { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; min-width: 0; padding: 10px 12px 12px; border-radius: 13px; box-shadow: var(--nm-inset-sm); }
   #taik-live .ticket-detail[hidden] { display: none; }
@@ -245,6 +245,8 @@
   #taik-live .ticket-state dt { font-size: .68rem; font-weight: 640; letter-spacing: .12em; text-transform: uppercase; color: var(--quiet); }
   #taik-live .ticket-state dd { margin: 0; font-size: .86rem; line-height: 1.45; overflow-wrap: anywhere; }
   #taik-live .ticket-state .problem dd { color: var(--bad); }
+  #taik-live .ticket-state .waits dd { color: var(--active); font-weight: 600; }
+  #taik-live .ticket .why { display: block; margin-top: 5px; font-size: .8rem; line-height: 1.4; color: var(--ink); overflow-wrap: anywhere; text-align: left; }
   #taik-live .round-summary { margin-top: 6px; font-size: .84rem; line-height: 1.5; overflow-wrap: anywhere; }
   #taik-live .round-dialog { margin-top: 6px; font-size: .8rem; color: var(--quiet); }
   #taik-live .round-dialog ol { list-style: none; margin: 6px 0 0; padding: 9px 12px; display: grid; gap: 7px; max-height: 20rem; overflow: auto; border-radius: 11px; box-shadow: var(--nm-inset-sm); }
@@ -733,7 +735,7 @@
           continue;
         }
         open.push({ key: 'proposal:' + proposal.name, proposal: proposal.name, job: proposal.origin, title: ticketTitle(proposal.intent) || proposal.name,
-          flag: 'Entscheidung', column: 'open', meta: proposal.origin ? 'aus ' + proposal.origin.replace(/^job-/, '') : 'ohne Herkunft' });
+          flag: 'Freigabe', why: 'Die Factory schlägt diesen Auftrag vor. Er startet erst mit deiner Freigabe.', column: 'open', meta: proposal.origin ? 'aus ' + proposal.origin.replace(/^job-/, '') : 'ohne Herkunft' });
       }
       for (const job of data.jobs) {
         const last = job.rounds.at(-1);
@@ -744,13 +746,16 @@
         if (job.sourceActive) {
           run.push({ key: job.id, job: job.id, title: title(job), flag: 'In Arbeit', column: 'run', meta: id + ' · Runde ' + (job.rounds.length + 1) + cost });
         } else if (said?.author === 'agent') {
-          open.push({ key: job.id, job: job.id, title: title(job), flag: 'Frage', column: 'open', meta: id + ' · fragt nach' + cost });
+          open.push({ key: job.id, job: job.id, title: title(job), flag: 'Frage', why: 'Der Agent fragt: ' + said.text, column: 'open', meta: id + ' · fragt nach' + cost });
         } else if (said?.author === 'user' && said.round >= job.rounds.length) {
           run.push({ key: job.id, job: job.id, title: title(job), flag: 'Warteschlange', column: 'run', meta: id + ' · Antwort wartet auf ihre Runde' + cost });
         } else if (job.sourceQueued) {
-          open.push({ key: job.id, job: job.id, title: title(job), flag: 'Antwort', column: 'open', meta: id + ' · Überarbeitung vorgesehen' + cost });
+          open.push({ key: job.id, job: job.id, title: title(job), flag: 'Antwort', why: 'Eine Überarbeitung ist vorgesehen und noch nicht gestartet.', column: 'open', meta: id + ' · Überarbeitung vorgesehen' + cost });
         } else if (last?.fields.decision === 'rejected') {
-          open.push({ key: job.id, job: job.id, title: title(job), flag: 'Frage', column: 'open',
+          const step = String(job.analyses?.[job.rounds.at(-1).name?.replace(/\.run$/, '')] ?? '').split('\n')
+            .find(line => line.startsWith('Nächster Schritt: '))?.slice('Nächster Schritt: '.length);
+          open.push({ key: job.id, job: job.id, title: title(job), flag: 'Abgelehnt', column: 'open',
+            why: step || `Runde ${job.rounds.length} wurde abgelehnt: ${last.fields.checks || last.fields.worker_failure || 'ohne Befund'}`,
             meta: id + ' · Runde ' + job.rounds.length + ' abgelehnt' + (limitReached(job) ? ' · Rundenlimit' : '') + cost,
             limit: limitReached(job) });
         } else if (last?.fields.advance === 'true') {
@@ -835,7 +840,7 @@
       const messages = job?.messages ?? [];
       const last = rounds.at(-1)?.fields;
       const said = messages.at(-1);
-      const state = { done: 'Noch keine Runde gelaufen.', problem: '', question: '', next: 'Wartet auf die erste Runde.', analysis: [] };
+      const state = { done: 'Noch keine Runde gelaufen.', problem: '', question: '', next: 'Wartet auf die erste Runde.', analysis: [], waits: '' };
       if (last?.decision === 'accepted') {
         state.done = `Runde ${rounds.length} angenommen: ${last.intent ?? ''}`.trim();
         state.next = 'Fertig. Eine Antwort von dir gibt eine weitere Runde.';
@@ -849,6 +854,11 @@
       }
       if (said?.author === 'agent') { state.question = said.text; state.next = 'Deine Antwort im Feld unten.'; }
       else if (said?.author === 'user' && said.round >= rounds.length) state.next = 'Deine Antwort wartet auf ihre Runde.';
+      if (said?.author === 'agent') state.waits = 'Der Agent hat eine Frage gestellt und arbeitet erst nach deiner Antwort weiter.';
+      else if (last && last.decision !== 'accepted' && last.advance !== 'true' && !(said?.author === 'user' && said.round >= rounds.length)) {
+        state.waits = 'Die letzte Runde wurde abgelehnt. Es läuft nichts weiter, bis du im Feld unten antwortest.';
+      }
+      if (job?.sourceActive) state.waits = '';
       if (job?.sourceActive) state.next = `Der Agent arbeitet an Runde ${rounds.length + 1}.`;
       else if (last?.advance === 'true') state.next = `Runde ${rounds.length + 1} ist vorgesehen.`;
       return state;
@@ -956,6 +966,7 @@
           data-job="${escape(entry.job ?? '')}" aria-current="${shown}">
           <span class="ticket-head"><span class="title" title="${escape(entry.title)}">${escape(entry.title)}</span>
           <span class="flag ${entry.flag.toLowerCase().replace(/\s+/g, '-')}">${escape(entry.flag)}</span></span>
+          ${entry.why ? `<span class="why">${escape(entry.why)}</span>` : ''}
           <span class="meta">${escape(entry.proposal ? entry.proposal + ' · ' + entry.meta : entry.meta)}</span></button></li>`;
       };
       const groups = [['open', 'Wartet', 'Wartet auf Antwort', 'Nichts wartet auf dich.'], ['run', 'Läuft', 'Läuft', 'Gerade läuft nichts.'],
@@ -1181,7 +1192,7 @@
       const told = ticketThread(job).map(item => item.kind === 'round'
         ? renderRound(job.rounds[item.number - 1], item.number - 1, job, flows[item.number - 1])
         : `<li class="thread-message ${item.author === 'user' ? 'user' : 'agent'}"><span class="who">${item.author === 'user' ? 'Du' : 'Agent'}</span>${escape(item.text)}</li>`).join('');
-      const stateBlock = state => `<dl class="ticket-state"><div><dt>Stand</dt><dd>${escape(state.done)}</dd></div>
+      const stateBlock = state => `<dl class="ticket-state">${state.waits ? `<div class="waits"><dt>Wartet auf dich</dt><dd>${escape(state.waits)}</dd></div>` : ''}<div><dt>Stand</dt><dd>${escape(state.done)}</dd></div>
           ${state.problem ? `<div class="problem"><dt>Problem</dt><dd>${escape(state.problem)}</dd></div>` : ''}
           ${state.analysis.map(([label, text]) => `<div class="analysis"><dt>${escape(label || 'Analyse')}</dt><dd>${escape(text)}</dd></div>`).join('')}
           ${state.question ? `<div class="question"><dt>Offene Frage</dt><dd>${escape(state.question)}</dd></div>` : ''}
