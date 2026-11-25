@@ -248,6 +248,46 @@ fn assess_progress(
     Ok(outcome)
 }
 
+/// The reason a job is closed with. A closed job gets no further round.
+pub const CLOSED: &str = "closed.md";
+const MAX_CLOSE_REASON_BYTES: usize = 2000;
+
+// Closes STATE/jobs/NAME for good with the reason on standard input. The file is written once.
+fn close(state: &Path, name: &std::ffi::OsStr) -> Result<()> {
+    use std::io::{Read, Write};
+    let mut parts = Path::new(name).components();
+    if !matches!(
+        (parts.next(), parts.next()),
+        (Some(std::path::Component::Normal(_)), None)
+    ) {
+        return Err("a job is named by one folder name".into());
+    }
+    let job = state.join("jobs").join(name);
+    if !job.is_dir() {
+        return Err(format!("no such job: {}", job.display()).into());
+    }
+    let closed = job.join(CLOSED);
+    if closed.symlink_metadata().is_ok() {
+        return Err(format!("job is already closed: {}", closed.display()).into());
+    }
+    let mut reason = Vec::new();
+    std::io::stdin()
+        .take(MAX_CLOSE_REASON_BYTES as u64 + 1)
+        .read_to_end(&mut reason)?;
+    if reason.is_empty() || reason.len() > MAX_CLOSE_REASON_BYTES {
+        return Err("a closing reason is between 1 and 2000 bytes".into());
+    }
+    let mut pending = tempfile::Builder::new()
+        .prefix(".taik-")
+        .suffix(".pending")
+        .tempfile_in(&job)?;
+    pending.write_all(&reason)?;
+    pending.as_file().sync_all()?;
+    // Never replaces an existing closed.md.
+    pending.persist_noclobber(&closed).map_err(|error| error.error)?;
+    Ok(())
+}
+
 fn emit(output: &Path, record: &str) -> Result<()> {
     record::publish(output, record)?;
     // The durable decision is available even when the consumer closes stdout.
@@ -348,6 +388,10 @@ fn run() -> Result<bool> {
             })?.accepted)
         }
         "evolve" if rest.len() == 1 => Ok(evolve(first, Path::new(&rest[0]))?.accepted),
+        "close" if rest.len() == 1 => {
+            close(first, &rest[0])?;
+            Ok(true)
+        }
         "experiment" if rest.len() == 1 => {
             experiment::run(first, Path::new(&rest[0]))?;
             Ok(true)
