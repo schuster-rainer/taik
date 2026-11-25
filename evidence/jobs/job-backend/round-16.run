@@ -1,0 +1,20 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-16
+intent=Einstellungen, Agenten und Vorschläge im Zustandsverzeichnis des Nutzers suchen, auch wenn der Auftragsordner ein Link ist.
+baseline=taik-seed fdda0a101cb2943d097a93461fcb7a91d48bfe03398b6c33551dff6ad4e6b53d
+worker=claude-fable
+decided_by=the installed taik-seed fdda0a101cb2943d097a93461fcb7a91d48bfe03398b6c33551dff6ad4e6b53d at /Users/rainer/.local/state/taik-factory/taik-seed
+limits=99 rounds; gate 900s; candidate checks 10s each
+gate_sha256=76b41170f51fa7e1a5424ba01f903bcf2276b8f8f19e4d87f952e88d18b6b0ce
+gate_ms=22086
+checks=PASS: Rust tests, Clippy with warnings denied, release build; candidate seeded, rejected an invalid procedure without touching the accepted record, and extended it
+evidence=round-16.checks.log
+artifact=round-16-taik-seed
+artifact_sha256=ffd5f49ed5cb0637c19106fe89313d4ecf3ea899447c3926cbd0c1ef2af50d4c
+rollback=round-16.rollback-taik-seed
+continuation=Restart the service so that it runs the accepted binary.
+advance=false
+end

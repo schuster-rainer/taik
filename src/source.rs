@@ -52,7 +52,9 @@ const DAILY_BUDGET: &str = "TAIK_DAILY_BUDGET_USD";
 const DEFAULT_DAILY_BUDGET_USD: f64 = 3.0;
 // TAIK_LEAD_WORKER=savant selects Savant instead of a Claude CLI.
 const SAVANT: &str = "savant";
-const SAVANT_MODEL: &str = "subq-savant-1.4";
+pub(crate) const SAVANT_MODEL: &str = "subq-savant-1.4";
+// A harness that reports no cost still counts toward the daily bound with this amount per call.
+const UNREPORTED_COST_USD: f64 = 0.25;
 const SAVANT_ENDPOINT: &str = "https://api.subq.ai/v1/chat/completions";
 // "service/account" of the macOS keychain entry that holds the SubQ key, when SUBQ_API_KEY is unset.
 const SUBQ_KEYCHAIN: &str = "TAIK_SUBQ_KEYCHAIN";
@@ -78,10 +80,13 @@ pub(crate) fn intent(brief: &str) -> Result<&str> {
 
 pub fn run(job: &Path, brief: &Path, gate: &Path, attached: Option<&str>) -> Result<bool> {
     let job = SourceJob::open(job, brief, gate)?;
-    Ok(run_round(&job, job.history()?, attached, false, None)?.accepted)
+    Ok(run_round(&job, job.history()?, attached, false, None, None)?.accepted)
 }
 
-pub fn run_queued(path: &Path) -> Result<(Option<bool>, Option<FollowUp>)> {
+pub fn run_queued(
+    path: &Path,
+    agent: Option<&crate::crew::Agent>,
+) -> Result<(Option<bool>, Option<FollowUp>)> {
     let job = SourceJob::open(
         path,
         &path.join("submission.brief.md"),
@@ -96,7 +101,7 @@ pub fn run_queued(path: &Path) -> Result<(Option<bool>, Option<FollowUp>)> {
             Some(_) => return Ok((None, job.follow_up(history)?)),
             None => None,
         };
-        let outcome = run_round(&job, history, None, true, feedback.as_ref())?;
+        let outcome = run_round(&job, history, None, true, feedback.as_ref(), agent)?;
         if !outcome.advance {
             let follow_up = if outcome.accepted {
                 job.follow_up(job.history()?)?
@@ -274,6 +279,7 @@ fn run_round(
     attached: Option<&str>,
     queued: bool,
     feedback: Option<&Feedback>,
+    agent: Option<&crate::crew::Agent>,
 ) -> Result<Outcome> {
     let SourceJob {
         path,
@@ -319,6 +325,7 @@ fn run_round(
 
     let mut second_worker = String::new();
     let mut claude_called = false;
+    let mut agent_label: Option<&'static str> = None;
     let mut gate_ms = None;
     let mut patch_blocks = None;
     let mut beat = Instant::now();
@@ -373,7 +380,30 @@ fn run_round(
             }
             let workspace = scratch.join("worker");
             fs::create_dir(&workspace)?;
-            let first = if let Ok(program) = env::var(LEAD_WORKER) {
+            let first = if let Some(agent) = agent {
+                progress.event(
+                    "worker",
+                    format_args!(
+                        "Agent {} ({}) erhält Auftrag und akzeptierten Ausgangsstand",
+                        agent.name, agent.harness
+                    ),
+                );
+                claude_called = true;
+                agent_label = Some(agent.harness.label());
+                second_worker = format!("agent={}\n", agent.name);
+                let asked = agent.prompt(&prompt);
+                let (html, usage) =
+                    call_agent(agent, &workspace, path, &asked, &mut progress, |text| {
+                        show_draft(draft.as_mut(), text.as_bytes());
+                        if beat.elapsed() >= HEARTBEAT {
+                            beat = Instant::now();
+                            heartbeats.push(text.len());
+                        }
+                    })?;
+                progress.event("worker", format_args!("{}", single_line(&usage)));
+                second_worker.push_str(&usage);
+                Ok(html)
+            } else if let Ok(program) = env::var(LEAD_WORKER) {
                 progress.event(
                     "worker",
                     format_args!(
@@ -531,7 +561,7 @@ fn run_round(
     let worker = match attached {
         Some("attached") => "attached".to_owned(),
         Some(name) => format!("{name}-attached"),
-        None if claude_called => second_label().to_owned(),
+        None if claude_called => agent_label.unwrap_or_else(second_label).to_owned(),
         None => "codex-subscription".to_owned(),
     };
     let baseline = baseline
@@ -652,8 +682,30 @@ fn history(job: &Path, mut baseline: Option<PathBuf>) -> Result<History> {
 }
 
 pub(crate) fn sandbox(scratch: &Path, job: &Path, program: &str, network: bool) -> Result<Command> {
+    sandbox_owning(scratch, job, program, network, &[])
+}
+
+// Some harnesses keep sessions and locks in a directory of their own and refuse to start without
+// write access to it. They get exactly that directory, nothing else outside the scratch folder.
+fn sandbox_owning(
+    scratch: &Path,
+    job: &Path,
+    program: &str,
+    network: bool,
+    own: &[PathBuf],
+) -> Result<Command> {
     let mut command = Command::new("/usr/bin/sandbox-exec");
-    let network_rule = if network { "" } else { " (deny network*)" };
+    let mut network_rule = String::from(if network { "" } else { " (deny network*)" });
+    for folder in own {
+        let folder = folder.to_str().ok_or("harness folder is not UTF-8")?;
+        if folder.contains(['"', '\\']) {
+            return Err("harness folder cannot be named in the sandbox policy".into());
+        }
+        network_rule.push_str(&format!(" (allow file-write* (subpath \"{folder}\"))"));
+    }
+    if !own.is_empty() {
+        network_rule.push_str(" (allow file-write* (literal \"/dev/null\"))");
+    }
     command
         .arg("-D")
         .arg(format!("WORK={}", scratch.display()))
@@ -932,10 +984,13 @@ fn second_label() -> &'static str {
 
 // Savant over the SubQ chat completions endpoint, streamed, without tools. The key comes from the
 // environment or from a keychain entry the user names. It reaches curl through a private file.
+#[allow(clippy::too_many_arguments)]
 fn savant(
     scratch: &Path,
     job: &Path,
     prompt: &str,
+    model: &str,
+    effort: &str,
     mut show_code: impl FnMut(&str),
     started: Instant,
     named: &dyn Fn(WorkerFailure) -> WorkerFailure,
@@ -980,10 +1035,10 @@ fn savant(
     drop(key);
     written.map_err(|_| setup("configuration"))?;
     let body = serde_json::json!({
-        "model": SAVANT_MODEL,
+        "model": if model.is_empty() { SAVANT_MODEL } else { model },
         "messages": [{"role": "user", "content": prompt}],
         "max_tokens": 60000,
-        "reasoning_effort": "low",
+        "reasoning_effort": if effort.is_empty() { "low" } else { effort },
         "stream": true,
         "stream_options": {"include_usage": true},
     });
@@ -1006,6 +1061,7 @@ fn savant(
     let mut next_line = 0;
     let mut written = String::new();
     let mut usage = (0u64, 0u64);
+    let mut reported_model: Option<String> = None;
     let mut done = false;
     let response = run_worker_limited(
         &mut command,
@@ -1028,6 +1084,11 @@ fn savant(
                     {
                         written.push_str(text);
                         show_code(&written);
+                    }
+                    if reported_model.is_none()
+                        && let Some(name) = event["model"].as_str()
+                    {
+                        reported_model = Some(single_line(name));
                     }
                     if let Some(prompt_tokens) = event["usage"]["prompt_tokens"].as_u64() {
                         usage = (
@@ -1053,9 +1114,227 @@ fn savant(
     Ok((
         html,
         format!(
-            "worker_model={SAVANT_MODEL}\nworker_input_tokens={}\nworker_output_tokens={}\nworker_cost_usd={cost:.6}\nworker_duration_ms={}\n",
+            "worker_model={}\nworker_input_tokens={}\nworker_output_tokens={}\nworker_cost_usd={cost:.6}\nworker_duration_ms={}\n",
+            reported_model.as_deref().unwrap_or(if model.is_empty() {
+                SAVANT_MODEL
+            } else {
+                model
+            }),
             usage.0,
             usage.1,
+            started.elapsed().as_millis(),
+        ),
+    ))
+}
+
+fn harness_command(program: &str, scratch: &Path, job: &Path, folder: &str) -> Result<Command> {
+    let home = PathBuf::from(env::var_os("HOME").ok_or("a harness needs HOME")?);
+    let mut command = sandbox_owning(scratch, job, program, true, &[home.join(folder)])?;
+    // The service has a short PATH. The harness finds its runtime next to itself.
+    if let Some(folder) = Path::new(program).parent() {
+        let path = env::var_os("PATH").unwrap_or_default();
+        let mut places = vec![folder.to_path_buf(), PathBuf::from("/opt/homebrew/bin")];
+        places.extend(env::split_paths(&path));
+        command.env("PATH", env::join_paths(places)?);
+    }
+    Ok(command)
+}
+
+// Grok Build in headless mode: one turn, no tools, streamed.
+fn grok(
+    program: &str,
+    scratch: &Path,
+    job: &Path,
+    prompt: &str,
+    model: &str,
+    effort: &str,
+    mut show_code: impl FnMut(&str),
+) -> Result<(String, String)> {
+    let started = Instant::now();
+    let named = |mut failure: WorkerFailure| {
+        failure.worker = "Grok";
+        failure
+    };
+    if !budget_left(job) {
+        return Err(named(WorkerFailure::new("setup", "budget", started)).into());
+    }
+    fs::write(scratch.join("prompt.txt"), prompt)?;
+    let mut command = harness_command(program, scratch, job, ".grok")
+        .map_err(|_| named(WorkerFailure::new("setup", "sandbox", started)))?;
+    command.args([
+        "--prompt-file",
+        "prompt.txt",
+        "--output-format",
+        "streaming-json",
+        "--tools",
+        "",
+        "--no-subagents",
+        "--no-memory",
+        "--disable-web-search",
+        "--max-turns",
+        "1",
+    ]);
+    if !model.is_empty() {
+        command.args(["-m", model]);
+    }
+    if !effort.is_empty() {
+        command.args(["--reasoning-effort", effort]);
+    }
+    let mut next_line = 0;
+    let mut written = String::new();
+    let mut end: Option<serde_json::Value> = None;
+    run_worker_limited(
+        &mut command,
+        worker_ceiling(),
+        STREAM_LIMIT,
+        "execute",
+        started,
+        |data| {
+            while let Some(newline) = data[next_line..].iter().position(|byte| *byte == b'\n') {
+                let line = &data[next_line..next_line + newline];
+                next_line += newline + 1;
+                let Ok(event) = serde_json::from_slice::<serde_json::Value>(line) else {
+                    continue;
+                };
+                match event["type"].as_str() {
+                    Some("text") => {
+                        if let Some(text) = event["data"].as_str() {
+                            written.push_str(text);
+                            show_code(&written);
+                        }
+                    }
+                    Some("end") => end = Some(event),
+                    _ => {}
+                }
+            }
+        },
+    )
+    .map_err(|error| match error.downcast::<WorkerFailure>() {
+        Ok(failure) => named(*failure).into(),
+        Err(error) => error,
+    })?;
+    let invalid = || named(WorkerFailure::new("output", "invalid-response", started));
+    let end = end.ok_or_else(invalid)?;
+    if end["stopReason"] != "end_turn" || written.len() > LIMIT {
+        return Err(invalid().into());
+    }
+    let html = unfenced(&written).ok_or_else(invalid)?;
+    let reported = end["modelUsage"]
+        .as_object()
+        .and_then(|models| models.keys().next())
+        .map_or("", String::as_str);
+    let cost = match end["total_cost_usd"].as_f64() {
+        Some(cost) => format!("worker_cost_usd={cost:.6}"),
+        None => format!("worker_cost_assumed_usd={UNREPORTED_COST_USD}"),
+    };
+    Ok((
+        html,
+        format!(
+            "worker_model={}\nworker_input_tokens={}\nworker_output_tokens={}\n{cost}\nworker_duration_ms={}\n",
+            single_line(reported),
+            end["usage"]["input_tokens"].as_u64().unwrap_or(0),
+            end["usage"]["output_tokens"].as_u64().unwrap_or(0),
+            started.elapsed().as_millis(),
+        ),
+    ))
+}
+
+// Pi in print mode: no tools, no extensions, no project files, events as JSON lines.
+fn pi(
+    program: &str,
+    scratch: &Path,
+    job: &Path,
+    prompt: &str,
+    model: &str,
+    effort: &str,
+    mut show_code: impl FnMut(&str),
+) -> Result<(String, String)> {
+    let started = Instant::now();
+    let named = |mut failure: WorkerFailure| {
+        failure.worker = "Pi";
+        failure
+    };
+    if !budget_left(job) {
+        return Err(named(WorkerFailure::new("setup", "budget", started)).into());
+    }
+    let mut command = harness_command(program, scratch, job, ".pi")
+        .map_err(|_| named(WorkerFailure::new("setup", "sandbox", started)))?;
+    command.args([
+        "-p",
+        "--no-tools",
+        "--no-extensions",
+        "--no-mcp",
+        "--no-skills",
+        "--no-context-files",
+        "--no-prompt-templates",
+        "--no-session",
+        "--offline",
+        "--mode",
+        "json",
+    ]);
+    if !model.is_empty() {
+        command.args(["--model", model]);
+    }
+    if !effort.is_empty() {
+        command.args(["--thinking", effort]);
+    }
+    command.arg("--").arg(prompt);
+    let mut next_line = 0;
+    let mut written = String::new();
+    let mut last: Option<serde_json::Value> = None;
+    run_worker_limited(
+        &mut command,
+        worker_ceiling(),
+        STREAM_LIMIT,
+        "execute",
+        started,
+        |data| {
+            while let Some(newline) = data[next_line..].iter().position(|byte| *byte == b'\n') {
+                let line = &data[next_line..next_line + newline];
+                next_line += newline + 1;
+                let Ok(mut event) = serde_json::from_slice::<serde_json::Value>(line) else {
+                    continue;
+                };
+                match event["type"].as_str() {
+                    Some("message_update") => {
+                        let update = &event["assistantMessageEvent"];
+                        if update["type"] == "text_delta"
+                            && let Some(text) = update["delta"].as_str()
+                        {
+                            written.push_str(text);
+                            show_code(&written);
+                        }
+                    }
+                    Some("message_end") if event["message"]["role"] == "assistant" => {
+                        last = Some(event["message"].take());
+                    }
+                    _ => {}
+                }
+            }
+        },
+    )
+    .map_err(|error| match error.downcast::<WorkerFailure>() {
+        Ok(failure) => named(*failure).into(),
+        Err(error) => error,
+    })?;
+    let invalid = || named(WorkerFailure::new("output", "invalid-response", started));
+    let last = last.ok_or_else(invalid)?;
+    if last["stopReason"] != "stop" || written.is_empty() || written.len() > LIMIT {
+        return Err(invalid().into());
+    }
+    let html = unfenced(&written).ok_or_else(invalid)?;
+    let cost = match last["usage"]["cost"]["total"].as_f64() {
+        Some(cost) => format!("worker_cost_usd={cost:.6}"),
+        None => format!("worker_cost_assumed_usd={UNREPORTED_COST_USD}"),
+    };
+    Ok((
+        html,
+        format!(
+            "worker_model={}/{}\nworker_input_tokens={}\nworker_output_tokens={}\n{cost}\nworker_duration_ms={}\n",
+            single_line(last["provider"].as_str().unwrap_or("")),
+            single_line(last["model"].as_str().unwrap_or("")),
+            last["usage"]["input"].as_u64().unwrap_or(0),
+            last["usage"]["output"].as_u64().unwrap_or(0),
             started.elapsed().as_millis(),
         ),
     ))
@@ -1081,7 +1360,12 @@ fn recent_worker_cost(job: &Path) -> f64 {
         .filter_map(|path| record::read_regular(&path, record::MAX_RECORD_BYTES).ok())
         .flat_map(|text| {
             text.lines()
-                .filter_map(|line| line.strip_prefix("worker_cost_usd=")?.parse::<f64>().ok())
+                .filter_map(|line| {
+                    line.strip_prefix("worker_cost_usd=")
+                        .or_else(|| line.strip_prefix("worker_cost_assumed_usd="))?
+                        .parse::<f64>()
+                        .ok()
+                })
                 .collect::<Vec<_>>()
         })
         .sum()
@@ -1093,6 +1377,102 @@ fn claude(
     scratch: &Path,
     job: &Path,
     prompt: &str,
+    show_code: impl FnMut(&str),
+) -> Result<(String, String)> {
+    claude_as(program, scratch, job, prompt, "", "", show_code)
+}
+
+// The day's bound on what workers may spend on the user's accounts.
+fn budget_left(job: &Path) -> bool {
+    let budget = env::var(DAILY_BUDGET)
+        .ok()
+        .and_then(|value| value.parse::<f64>().ok())
+        .unwrap_or(DEFAULT_DAILY_BUDGET_USD);
+    recent_worker_cost(job) < budget
+}
+
+/// One round by a named agent. The record carries what the harness reported, not what was asked for.
+fn call_agent(
+    agent: &crate::crew::Agent,
+    scratch: &Path,
+    job: &Path,
+    prompt: &str,
+    progress: &mut Progress,
+    show_code: impl FnMut(&str),
+) -> Result<(String, String)> {
+    use crate::crew::Harness;
+    let started = Instant::now();
+    let missing = |worker: &'static str| {
+        let mut failure = WorkerFailure::new("setup", "configuration", started);
+        failure.worker = worker;
+        failure
+    };
+    let located = |name: &str, worker: &'static str| -> Result<String> {
+        crate::crew::program(name)
+            .and_then(|path| path.to_str().map(str::to_owned))
+            .ok_or_else(|| missing(worker).into())
+    };
+    match agent.harness {
+        Harness::Savant => claude_as(
+            SAVANT,
+            scratch,
+            job,
+            prompt,
+            &agent.model,
+            &agent.effort,
+            show_code,
+        ),
+        Harness::Claude => claude_as(
+            &located("claude", "Claude")?,
+            scratch,
+            job,
+            prompt,
+            &agent.model,
+            &agent.effort,
+            show_code,
+        ),
+        Harness::Grok => grok(
+            &located("grok", "Grok")?,
+            scratch,
+            job,
+            prompt,
+            &agent.model,
+            &agent.effort,
+            show_code,
+        ),
+        Harness::Pi => pi(
+            &located("pi", "Pi")?,
+            scratch,
+            job,
+            prompt,
+            &agent.model,
+            &agent.effort,
+            show_code,
+        ),
+        Harness::Codex => {
+            if !budget_left(job) {
+                return Err(WorkerFailure::new("setup", "budget", started).into());
+            }
+            let html = codex(scratch, job, prompt, progress, show_code)?;
+            Ok((
+                html,
+                format!(
+                    "worker_cost_assumed_usd={UNREPORTED_COST_USD}\nworker_duration_ms={}\n",
+                    started.elapsed().as_millis()
+                ),
+            ))
+        }
+    }
+}
+
+// Model and effort may be empty. Then the harness default of the Factory applies.
+fn claude_as(
+    program: &str,
+    scratch: &Path,
+    job: &Path,
+    prompt: &str,
+    model: &str,
+    effort: &str,
     mut show_code: impl FnMut(&str),
 ) -> Result<(String, String)> {
     let started = Instant::now();
@@ -1102,25 +1482,29 @@ fn claude(
         failure
     };
     // The worker spends the user's account. Refuse before the call once the day's bound is reached.
-    let budget = env::var(DAILY_BUDGET)
-        .ok()
-        .and_then(|value| value.parse::<f64>().ok())
-        .unwrap_or(DEFAULT_DAILY_BUDGET_USD);
-    if recent_worker_cost(job) >= budget {
+    if !budget_left(job) {
         return Err(named(WorkerFailure::new("setup", "budget", started)).into());
     }
     if savant {
-        return self::savant(scratch, job, prompt, show_code, started, &named);
+        return self::savant(
+            scratch, job, prompt, model, effort, show_code, started, &named,
+        );
     }
+    let model = if model.is_empty() {
+        "claude-opus-5-5"
+    } else {
+        model
+    };
+    let effort = if effort.is_empty() { "medium" } else { effort };
     let mut command = sandbox(scratch, job, program, true)
         .map_err(|_| named(WorkerFailure::new("setup", "sandbox", started)))?;
     command
         .args([
             "-p",
             "--model",
-            "claude-opus-5-5",
+            model,
             "--effort",
-            "medium",
+            effort,
             "--tools",
             "",
             "--no-session-persistence",

@@ -1,0 +1,6 @@
+78	start	Factory hat den Auftrag übernommen
+526	worker	Agent grok-schnell (grok) erhält Auftrag und akzeptierten Ausgangsstand
+5057251	worker	worker_model=grok-4.7-build-fast worker_input_tokens=10205 worker_output_tokens=98 worker_cost_usd=0.050828 worker_duration_ms=5056 
+5057487	evaluate	Unabhängiges, gespeichertes Prüfgate ausführen
+5139667	checks	PASS: inert probe document with heading and paragraph
+5150851	accepted	Retain the accepted artifact. No further work was authorized by this round.

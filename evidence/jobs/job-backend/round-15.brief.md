@@ -1,0 +1,3 @@
+Einstellungen, Agenten und Vorschläge im Zustandsverzeichnis des Nutzers suchen, auch wenn der Auftragsordner ein Link ist.
+
+Beobachtung am echten Dienst nach Runde 14: Zwei Aufträge mit benanntem Agenten blieben stehen, der Dienst meldete „agent grok-schnell is not defined". Er leitete sein Zustandsverzeichnis aus dem aufgelösten Auftragsordner ab und landete in `evidence/` statt in `STATE`. Derselbe Fehler betraf seit Runde 11 die Einstellung `STATE/parallel` aus der Ansicht und seit Runde 5 die selbst erzeugten Vorschläge: Beide wurden am falschen Ort gelesen oder geschrieben. Die Tests liefen mit einem echten Ordner statt eines Links und sahen es nicht. Der Agententest benutzt jetzt einen Link.

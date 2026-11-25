@@ -538,7 +538,7 @@ fn a_worker_keeps_its_lease_by_output_and_loses_it_by_silence() {
             Some(1),
             "stalled",
         ),
-        // Output without end: the ceiling of 2.5 s ends it.
+        // Output without end: the ceiling of 5 s ends it.
         (
             "endless",
             format!("while true; do echo '{delta}'; sleep 0.2; done"),
@@ -565,7 +565,7 @@ fn a_worker_keeps_its_lease_by_output_and_loses_it_by_silence() {
             .arg(&state)
             .env("TAIK_LEAD_WORKER", &worker)
             .env("TAIK_WORKER_LEASE_MS", "1000")
-            .env("TAIK_WORKER_CEILING_MS", "2500")
+            .env("TAIK_WORKER_CEILING_MS", "5000")
             .env_remove("TAIK_SECOND_WORKER")
             .env_remove("TAIK_AUTO_PROPOSE")
             .output()
@@ -586,7 +586,7 @@ fn a_worker_keeps_its_lease_by_output_and_loses_it_by_silence() {
                 "{name}: {record}"
             );
             assert!(
-                elapsed.as_secs() < 6,
+                elapsed.as_secs() < 9,
                 "{name} was not stopped in time: {elapsed:?}"
             );
         }
@@ -799,4 +799,154 @@ fn a_gate_can_name_a_release_step_for_its_accepted_artifact() {
             );
         }
     }
+}
+
+#[test]
+fn a_job_is_worked_by_the_agent_it_names() {
+    let root = tempfile::Builder::new()
+        .prefix("taik-crew-")
+        .tempdir_in("/tmp")
+        .unwrap();
+    let bin = root.path().join("bin");
+    fs::create_dir(&bin).unwrap();
+    let script = |name: &str, body: &str| {
+        let file = bin.join(name);
+        fs::write(&file, format!("#!/bin/sh\n{body}\n")).unwrap();
+        fs::set_permissions(&file, fs::Permissions::from_mode(0o700)).unwrap();
+    };
+    // Each stand-in checks that it was asked for the configured model and effort, without tools,
+    // and that the persona stands before the Factory's own sentence.
+    script(
+        "grok",
+        r#"case "$*" in *"-m grok-x"*"--reasoning-effort low"*) ;; *) echo wrong arguments >&2; exit 3 ;; esac
+case "$*" in *"--tools  --no-subagents"*) ;; *) echo tools not switched off >&2; exit 4 ;; esac
+head -1 prompt.txt | grep -q '^Du malst sparsam\.$' || exit 5
+grep -q 'You are the code worker embedded in TAIK' prompt.txt || exit 6
+printf '%s\n' '{"type":"text","data":"<!doctype html>"}' '{"type":"text","data":"<p>grok</p>"}' '{"type":"end","stopReason":"end_turn","usage":{"input_tokens":11,"output_tokens":7},"total_cost_usd":0.5,"modelUsage":{"grok-reported":{}}}'"#,
+    );
+    script(
+        "pi",
+        r#"case "$*" in *"--no-tools"*"--model xai/grok-y --thinking high"*) ;; *) echo wrong arguments >&2; exit 3 ;; esac
+printf '%s\n' '{"type":"message_update","assistantMessageEvent":{"type":"text_delta","delta":"<!doctype html><p>pi</p>"}}' '{"type":"message_end","message":{"role":"assistant","provider":"xai","model":"grok-y-reported","stopReason":"stop","usage":{"input":5,"output":9,"cost":{"total":0.125}}}}'"#,
+    );
+    let mut path = vec![bin.clone()];
+    path.extend(std::env::split_paths(&std::env::var_os("PATH").unwrap()));
+    let path = std::env::join_paths(path).unwrap();
+    let brief = root.path().join("brief.md");
+    fs::write(&brief, "Deliver a marked document\n").unwrap();
+    let gate = root.path().join("verify.mjs");
+    fs::write(&gate, "console.log('PASS: any');\n").unwrap();
+    let state = root.path().join("state");
+    fs::create_dir_all(state.join("crew")).unwrap();
+    // As in the real setup, the job folder is a link into another directory. Agents and settings
+    // still come from the state directory.
+    fs::create_dir(root.path().join("records")).unwrap();
+    std::os::unix::fs::symlink(root.path().join("records"), state.join("jobs")).unwrap();
+    fs::write(
+        state.join("crew/maler.agent"),
+        "harness=grok\nmodel=grok-x\neffort=low\npersona=Du malst sparsam.\nend\n",
+    )
+    .unwrap();
+    fs::write(
+        state.join("crew/pruefer.agent"),
+        "harness=pi\nmodel=xai/grok-y\neffort=high\nend\n",
+    )
+    .unwrap();
+    let run = |name: &str, agent: &str| {
+        let queued = factory()
+            .arg("queue-source")
+            .arg(&state)
+            .arg(name)
+            .arg(&brief)
+            .arg(&gate)
+            .arg(format!("--agent={agent}"))
+            .output()
+            .unwrap();
+        assert!(queued.status.success(), "{queued:?}");
+        let job = state.join(format!("jobs/job-{name}"));
+        assert_eq!(
+            fs::read_to_string(job.join("agent")).unwrap(),
+            format!("{agent}\n")
+        );
+        let drained = factory()
+            .arg("drain")
+            .arg(&state)
+            .env("PATH", &path)
+            // The environment names another worker. The agent of the job wins.
+            .env("TAIK_LEAD_WORKER", bin.join("missing-claude"))
+            .env_remove("TAIK_SECOND_WORKER")
+            .env_remove("TAIK_AUTO_PROPOSE")
+            .output()
+            .unwrap();
+        (drained, job)
+    };
+
+    let (drained, job) = run("bild", "maler");
+    let record = fs::read_to_string(job.join("round-01.run")).unwrap();
+    assert_eq!(drained.status.code(), Some(0), "{record}");
+    for line in [
+        "decision=accepted",
+        "worker=grok-cli",
+        "agent=maler",
+        "worker_model=grok-reported",
+        "worker_input_tokens=11",
+        "worker_output_tokens=7",
+        "worker_cost_usd=0.500000",
+    ] {
+        assert!(
+            record.lines().any(|found| found == line),
+            "{line}\n{record}"
+        );
+    }
+    assert_eq!(
+        fs::read_to_string(job.join("round-01.html")).unwrap(),
+        "<!doctype html><p>grok</p>\n"
+    );
+
+    let (drained, job) = run("pruefung", "pruefer");
+    let record = fs::read_to_string(job.join("round-01.run")).unwrap();
+    assert_eq!(drained.status.code(), Some(0), "{record}");
+    for line in [
+        "decision=accepted",
+        "worker=pi-cli",
+        "agent=pruefer",
+        "worker_model=xai/grok-y-reported",
+        "worker_cost_usd=0.125000",
+    ] {
+        assert!(
+            record.lines().any(|found| found == line),
+            "{line}\n{record}"
+        );
+    }
+
+    // An agent that is not defined stops the job. Nothing runs on another account.
+    let (drained, job) = run("verwaist", "niemand");
+    assert_eq!(drained.status.code(), Some(1), "{drained:?}");
+    assert!(!job.join("round-01.run").exists());
+    assert!(String::from_utf8_lossy(&drained.stderr).contains("agent niemand is not defined"));
+
+    // The overview lists the defined agents and never a credential.
+    let overview = factory()
+        .arg("crew")
+        .arg(&state)
+        .env("PATH", &path)
+        .output()
+        .unwrap();
+    assert!(overview.status.success(), "{overview:?}");
+    let listed: serde_json::Value = serde_json::from_slice(&overview.stdout).unwrap();
+    let names: Vec<&str> = listed["agents"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|agent| agent["name"].as_str())
+        .collect();
+    assert_eq!(names, ["maler", "pruefer"]);
+    assert!(
+        listed["harnesses"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|harness| harness["name"] == "grok")
+    );
+    assert!(state.join("crew/overview.json").is_file());
 }

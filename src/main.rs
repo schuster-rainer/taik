@@ -1,5 +1,7 @@
 #[cfg(target_os = "macos")]
 mod activation;
+#[cfg(target_os = "macos")]
+mod crew;
 mod experiment;
 mod procedure;
 mod progress;
@@ -43,11 +45,12 @@ const USAGE: &str = "usage: taik-seed seed OUTPUT.run
        taik-seed evaluate BASELINE.run OUTPUT.run ORDER
        taik-seed source JOB BRIEF GATE [--attached[=WORKER]]
        taik-seed promote JOB BRIEF GATE INSTALLED_BINARY WORKER
+       taik-seed crew STATE
        taik-seed propose STATE NAME RECORD.run
        taik-seed approve STATE NAME
        taik-seed experiment BASELINE.run OUTPUT_DIRECTORY
        taik-seed queue STATE BASELINE.run
-       taik-seed queue-source STATE NAME BRIEF GATE [ACCEPTED_SOURCE]
+       taik-seed queue-source STATE NAME BRIEF GATE [ACCEPTED_SOURCE] [--agent=NAME]
        taik-seed queue-self STATE
        taik-seed drain|serve STATE\n       taik-seed serve STATE --reflect";
 
@@ -350,6 +353,11 @@ fn run() -> Result<bool> {
             )
         }
         #[cfg(target_os = "macos")]
+        "crew" if rest.is_empty() => {
+            println!("{}", crew::publish_overview(first)?);
+            Ok(true)
+        }
+        #[cfg(target_os = "macos")]
         "propose" if rest.len() == 2 => {
             let name = rest[0].to_str().ok_or("proposal name must be ASCII")?;
             match proposal::propose(first, name, Path::new(&rest[1]))? {
@@ -399,16 +407,26 @@ fn run() -> Result<bool> {
             Ok(true)
         }
         #[cfg(target_os = "macos")]
-        "queue-source" if rest.len() == 3 || rest.len() == 4 => {
+        "queue-source" if (3..=5).contains(&rest.len()) => {
             let name = rest[0].to_str().ok_or("job name must be ASCII")?;
+            // An optional last argument --agent=NAME names the agent that works the job.
+            let agent = rest
+                .last()
+                .and_then(|last| last.to_str())
+                .and_then(|last| last.strip_prefix("--agent="));
+            let plain = &rest[..rest.len() - usize::from(agent.is_some())];
+            if !(3..=4).contains(&plain.len()) {
+                return Err(USAGE.into());
+            }
             println!(
                 "{}",
                 service::queue_source(
                     first,
                     name,
-                    Path::new(&rest[1]),
-                    Path::new(&rest[2]),
-                    rest.get(3).map(Path::new),
+                    Path::new(&plain[1]),
+                    Path::new(&plain[2]),
+                    plain.get(3).map(Path::new),
+                    agent,
                 )?
                 .display()
             );

@@ -75,6 +75,8 @@
 - [Patch-Format und aufbauende Aufträge](jobs/job-backend/round-07.run) und [Lease mit Heartbeat statt starrer Zeitgrenze](jobs/job-backend/round-08.run)
 - [Nebenläufige Aufträge](jobs/job-backend/round-09.run), [formatneutraler Worker-Auftrag und sofort besetzte Plätze](jobs/job-backend/round-10.run) und [Messung am Dienst](jobs/job-dienst-durchsatz/summary.run)
 - [Freigabeschritt durch den Dienst](jobs/job-backend/round-12.run)
+- [Benannte Agenten, Grok und Pi als Worker](jobs/job-backend/round-13.run), [Agent beim Einreihen](jobs/job-backend/round-14.run), [abgelehnte Runde wegen eines Zeittests](jobs/job-backend/round-15.run), [Zustandsverzeichnis richtig bestimmt](jobs/job-backend/round-16.run)
+- Erste Runden benannter Agenten am Dienst: [Grok](jobs/job-probe-grok-schnell/round-01.run) und [Pi](jobs/job-probe-pi-grok/round-01.run)
 - [Drosselung des Gates unter launchd, gemessen](jobs/job-dienst-drosselung/summary.run)
 - [Dauerprozess gegen Start bei Bedarf, gemessen](jobs/job-dienst-form/summary.run)
 

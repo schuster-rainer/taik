@@ -129,7 +129,7 @@ const DAILY_REFLECTIONS: usize = 3;
 pub const AUTO: &str = "TAIK_AUTO_PROPOSE";
 
 // After a job reached its final decision the service asks once what follows from it.
-pub fn reflect(jobs: &Path, job: &Path) -> Result<()> {
+pub fn reflect(state: &Path, jobs: &Path, job: &Path) -> Result<()> {
     let recent = |path: &Path| {
         path.metadata()
             .and_then(|metadata| metadata.modified())
@@ -162,7 +162,6 @@ pub fn reflect(jobs: &Path, job: &Path) -> Result<()> {
         .map(|number| job.join(format!("round-{number:02}.run")))
         .find(|path| path.is_file())
         .ok_or("job without a round record")?;
-    let state = jobs.parent().ok_or("jobs without a state directory")?;
     propose(state, &name, &last).map(|_| ())
 }
 
@@ -174,6 +173,7 @@ pub fn approve(state: &Path, name: &str) -> Result<PathBuf> {
         name,
         &proposal.join("brief.md"),
         &proposal.join("verify.mjs"),
+        None,
         None,
     )?;
     record::publish_text(

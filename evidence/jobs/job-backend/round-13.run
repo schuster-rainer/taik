@@ -1,0 +1,20 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-13
+intent=Benannte Agenten einführen: Harness, Modell, Effort und Persona je Auftrag, dazu Grok und Pi als Worker.
+baseline=taik-seed f3f5893e06684e79a5ab0744abf0456d8e5e862d5e4cae8d565eb31badeaedf7
+worker=claude-fable
+decided_by=the installed taik-seed f3f5893e06684e79a5ab0744abf0456d8e5e862d5e4cae8d565eb31badeaedf7 at /Users/rainer/.local/state/taik-factory/taik-seed
+limits=99 rounds; gate 900s; candidate checks 10s each
+gate_sha256=76b41170f51fa7e1a5424ba01f903bcf2276b8f8f19e4d87f952e88d18b6b0ce
+gate_ms=21725
+checks=PASS: Rust tests, Clippy with warnings denied, release build; candidate seeded, rejected an invalid procedure without touching the accepted record, and extended it
+evidence=round-13.checks.log
+artifact=round-13-taik-seed
+artifact_sha256=2dcd6174598cf51f8355779a73e409a4c3649dc641fda2152f3c5bc8d8f3fb0f
+rollback=round-13.rollback-taik-seed
+continuation=Restart the service so that it runs the accepted binary.
+advance=false
+end

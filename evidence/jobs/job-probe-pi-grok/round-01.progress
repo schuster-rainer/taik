@@ -1,0 +1,6 @@
+70	start	Factory hat den Auftrag übernommen
+451	worker	Agent pi-grok (pi) erhält Auftrag und akzeptierten Ausgangsstand
+1862727	worker	worker_model=xai/grok-4.7 worker_input_tokens=708 worker_output_tokens=87 worker_cost_usd=0.002514 worker_duration_ms=1862 
+1862788	evaluate	Unabhängiges, gespeichertes Prüfgate ausführen
+1920667	checks	PASS: inert probe document with heading and paragraph
+1933109	accepted	Retain the accepted artifact. No further work was authorized by this round.

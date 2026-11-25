@@ -1,0 +1,20 @@
+decision=rejected
+kind=software
+procedure=
+tags=
+identity=round-15
+intent=Einstellungen, Agenten und Vorschläge im Zustandsverzeichnis des Nutzers suchen, auch wenn der Auftragsordner ein Link ist.
+baseline=taik-seed fdda0a101cb2943d097a93461fcb7a91d48bfe03398b6c33551dff6ad4e6b53d
+worker=claude-fable
+decided_by=the installed taik-seed fdda0a101cb2943d097a93461fcb7a91d48bfe03398b6c33551dff6ad4e6b53d at /Users/rainer/.local/state/taik-factory/taik-seed
+limits=99 rounds; gate 900s; candidate checks 10s each
+gate_sha256=76b41170f51fa7e1a5424ba01f903bcf2276b8f8f19e4d87f952e88d18b6b0ce
+gate_ms=
+checks=gate failed (exit status: 101): error: test failed, to rerun pass `--test source_worker`
+evidence=round-15.checks.log
+artifact=
+artifact_sha256=
+rollback=
+continuation=The installed binary stays in place.
+advance=false
+end

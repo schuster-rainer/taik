@@ -1,0 +1,5 @@
+Einstellungen, Agenten und Vorschläge im Zustandsverzeichnis des Nutzers suchen, auch wenn der Auftragsordner ein Link ist.
+
+Beobachtung am echten Dienst nach Runde 14: Zwei Aufträge mit benanntem Agenten blieben stehen, der Dienst meldete „agent grok-schnell is not defined". Er leitete sein Zustandsverzeichnis aus dem aufgelösten Auftragsordner ab und landete in `evidence/` statt in `STATE`. Derselbe Fehler betraf seit Runde 11 die Einstellung `STATE/parallel` aus der Ansicht und seit Runde 5 die selbst erzeugten Vorschläge: Beide wurden am falschen Ort gelesen oder geschrieben. Die Tests liefen mit einem echten Ordner statt eines Links und sahen es nicht. Der Agententest benutzt jetzt einen Link.
+
+Runde 15 mit dieser Änderung wurde abgelehnt: Der Test `a_worker_keeps_its_lease_by_output_and_loses_it_by_silence` lief unter der Last des Gates über seine Obergrenze von 2,5 s, obwohl sein arbeitender Worker nur 1,8 s braucht. Der Test betrifft die Änderung nicht. Seine Obergrenze steht jetzt bei 5 s. Was er prüft, bleibt gleich: Ein arbeitender Worker überlebt seine Lease von 1 s, ein stiller endet als `stalled`, ein endloser an der Obergrenze.

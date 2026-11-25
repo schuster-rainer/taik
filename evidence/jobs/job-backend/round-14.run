@@ -1,0 +1,20 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-14
+intent=Den Agenten eines Auftrags schon beim Einreihen festlegen.
+baseline=taik-seed 2dcd6174598cf51f8355779a73e409a4c3649dc641fda2152f3c5bc8d8f3fb0f
+worker=claude-fable
+decided_by=the installed taik-seed 2dcd6174598cf51f8355779a73e409a4c3649dc641fda2152f3c5bc8d8f3fb0f at /Users/rainer/.local/state/taik-factory/taik-seed
+limits=99 rounds; gate 900s; candidate checks 10s each
+gate_sha256=76b41170f51fa7e1a5424ba01f903bcf2276b8f8f19e4d87f952e88d18b6b0ce
+gate_ms=21704
+checks=PASS: Rust tests, Clippy with warnings denied, release build; candidate seeded, rejected an invalid procedure without touching the accepted record, and extended it
+evidence=round-14.checks.log
+artifact=round-14-taik-seed
+artifact_sha256=fdda0a101cb2943d097a93461fcb7a91d48bfe03398b6c33551dff6ad4e6b53d
+rollback=round-14.rollback-taik-seed
+continuation=Restart the service so that it runs the accepted binary.
+advance=false
+end

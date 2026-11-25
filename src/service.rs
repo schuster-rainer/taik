@@ -65,6 +65,7 @@ pub fn queue_source(
     brief: &Path,
     gate: &Path,
     seed: Option<&Path>,
+    agent: Option<&str>,
 ) -> Result<PathBuf> {
     if name.is_empty()
         || name.len() > 48
@@ -97,6 +98,16 @@ pub fn queue_source(
         &gate,
         crate::source::LIMIT,
     )?;
+    // The agent of the job is in place before the service can see the job.
+    #[cfg(target_os = "macos")]
+    if let Some(agent) = agent {
+        if !crate::crew::valid_name(agent) {
+            return Err("invalid agent name".into());
+        }
+        fs::write(job.path().join("agent"), format!("{agent}\n"))?;
+    }
+    #[cfg(not(target_os = "macos"))]
+    let _ = agent;
     // An accepted artifact from elsewhere that the job builds on.
     if let Some(seed) = seed {
         let source = record::read_regular(seed, crate::source::LIMIT)?;
@@ -134,6 +145,9 @@ fn publish_job(job: tempfile::TempDir, published: PathBuf) -> Result<PathBuf> {
 
 pub fn run(state: &Path, continuous: bool, reflection: bool) -> Result<bool> {
     let jobs = jobs_in(state)?;
+    // Settings, agents and proposals live in the state directory the user names. The job folder may
+    // be a link into a checkout, so its parent is not that directory.
+    let home = state.canonicalize()?;
     let state = jobs.parent().unwrap();
     let lock = File::options()
         .create(true)
@@ -160,6 +174,7 @@ pub fn run(state: &Path, continuous: bool, reflection: bool) -> Result<bool> {
     let mut first_use = false;
     loop {
         let succeeded = drain(
+            &home,
             &jobs,
             &mut table,
             &mut first_use,
@@ -184,6 +199,7 @@ fn installed_identity() -> Option<(u64, u64)> {
 }
 
 fn drain(
+    home: &Path,
     jobs: &Path,
     table: &mut Option<SearchTable>,
     first_use: &mut bool,
@@ -266,9 +282,8 @@ fn drain(
     #[cfg(target_os = "macos")]
     {
         // The viewer writes STATE/parallel. It wins over the environment and is read on every pass.
-        let width = jobs
-            .parent()
-            .and_then(|state| fs::read_to_string(state.join("parallel")).ok())
+        let width = fs::read_to_string(home.join("parallel"))
+            .ok()
             .or_else(|| std::env::var("TAIK_PARALLEL").ok())
             .and_then(|value| value.trim().parse::<usize>().ok())
             .unwrap_or(DEFAULT_PARALLEL)
@@ -332,7 +347,7 @@ fn drain(
                             changed.notify_all();
                             break;
                         };
-                        let accepted = run_source_job(jobs, &job).unwrap_or_else(|error| {
+                        let accepted = run_source_job(home, jobs, &job).unwrap_or_else(|error| {
                             eprintln!("{}: {error}", job.display());
                             false
                         });
@@ -353,8 +368,18 @@ fn drain(
 }
 
 #[cfg(target_os = "macos")]
-fn run_source_job(jobs: &Path, job: &Path) -> Result<bool> {
-    let (mut outcome, follow_up) = crate::source::run_queued(job)?;
+fn run_source_job(home: &Path, jobs: &Path, job: &Path) -> Result<bool> {
+    // The agent of this job, if it names one. Read before every pass, so the viewer can change it.
+    let agent = crate::crew::for_job(home, job);
+    let agent = match agent {
+        Ok(agent) => agent,
+        Err(error) => {
+            // A choice that cannot be honoured stops the job. It never falls back to another account.
+            eprintln!("{}: agent: {error}", job.display());
+            return Ok(false);
+        }
+    };
+    let (mut outcome, follow_up) = crate::source::run_queued(job, agent.as_ref())?;
     if let Some(follow_up) = follow_up {
         let mut name = job
             .file_name()
@@ -371,7 +396,9 @@ fn run_source_job(jobs: &Path, job: &Path) -> Result<bool> {
             let staged = stage(jobs)?;
             follow_up.write(staged.path())?;
             let destination = publish_job(staged, destination)?;
-            outcome = crate::source::run_queued(&destination)?.0.or(outcome);
+            outcome = crate::source::run_queued(&destination, agent.as_ref())?
+                .0
+                .or(outcome);
         }
     }
     // A gate may name a release step for its accepted artifact. The job's author wrote that line
@@ -386,7 +413,7 @@ fn run_source_job(jobs: &Path, job: &Path) -> Result<bool> {
     #[cfg(target_os = "macos")]
     if outcome.is_some()
         && std::env::var_os(crate::proposal::AUTO).is_some()
-        && let Err(error) = crate::proposal::reflect(jobs, job)
+        && let Err(error) = crate::proposal::reflect(home, jobs, job)
     {
         eprintln!("{}: reflection: {error}", job.display());
     }
