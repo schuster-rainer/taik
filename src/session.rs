@@ -76,6 +76,8 @@ pub fn queue(
     brief: &Path,
     gate: &Path,
     repo: Option<&Path>,
+    agent: Option<&str>,
+    said: &[talk::Message],
 ) -> Result<PathBuf> {
     let name = crate::worker_name(name).ok_or("invalid job name")?;
     let brief = record::read_regular(brief, record::MAX_RECORD_BYTES)?;
@@ -102,6 +104,16 @@ pub fn queue(
             &format!("{}\n", repo.display()),
             record::MAX_RECORD_BYTES,
         )?;
+    }
+    // The agent and what was said before the job existed are in place before the service sees it.
+    if let Some(agent) = agent {
+        if !crate::crew::valid_name(agent) {
+            return Err("invalid agent name".into());
+        }
+        fs::write(staged.path().join("agent"), format!("{agent}\n"))?;
+    }
+    for message in said {
+        talk::write(staged.path(), message.author, 0, &message.text)?;
     }
     record::publish(&staged.path().join("request.run"), source::REQUEST)?;
     fs::rename(staged.path(), &job)?;

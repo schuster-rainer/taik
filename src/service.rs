@@ -149,9 +149,11 @@ fn derive_requests(home: &Path) {
         {
             continue;
         }
-        if let Err(error) =
-            crate::proposal::propose(home, &name, &requests.join(format!("{name}.run")))
-        {
+        // The orchestrator decides how the request is carried out, then the agent it names writes the gate.
+        let request = requests.join(format!("{name}.run"));
+        let derived = crate::orchestrator::plan(home, &name, &request)
+            .and_then(|plan| crate::proposal::propose_planned(home, &name, &request, Some(&plan)));
+        if let Err(error) = derived {
             eprintln!("request {name}: {error}");
             let _ = fs::write(
                 requests.join(format!("{name}.failed")),

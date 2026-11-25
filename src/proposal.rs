@@ -132,6 +132,34 @@ fn products(state: &Path) -> Vec<Product> {
 }
 
 pub fn propose(state: &Path, name: &str, record_path: &Path) -> Result<Option<PathBuf>> {
+    propose_planned(state, name, record_path, None)
+}
+
+const SESSION_CONTRACT: &str = "You prepare a job of the TAIK Factory that an agent will do in a session on a repository. Write a brief and an independent gate. Another agent will later see only the brief, work in a copy of the repository with file tools and no shell, and never see the gate.
+
+Reply with exactly two files in this form and nothing else:
+
+=== brief.md ===
+<brief>
+=== gate.sh ===
+<gate>
+
+Brief: Markdown in German, at most 6000 bytes. Its first line is one sentence that names the intent, without Markdown markup. State everything the agent needs: which behaviour must hold afterwards, every name and value that the gate checks, and what must stay as it is.
+
+Gate: a POSIX shell script of at most 12000 bytes. It runs in a clean checkout of the agent's commit, as the working directory, in a sandbox without network. It exits with a status other than 0 and prints one clear line when a requirement is not met. On success its last line starts with 'PASS: '. It may use only tools that the listed files show the repository already uses, plus sh, grep, test and node.
+
+Rules for the gate: check behaviour and results, not the presence of words. Every requirement must be satisfiable together with all others. Never require what the brief does not state. Keep the job as small as the request justifies.
+
+If the request cannot be checked by a gate or is unclear, reply with exactly one line 'STOP: <reason in one German sentence>' and nothing else.";
+
+/// Derives a proposal. With a plan of the orchestrator the gate is written by the agent the plan
+/// names, and a session job gets a shell gate for its repository.
+pub fn propose_planned(
+    state: &Path,
+    name: &str,
+    record_path: &Path,
+    plan: Option<&crate::orchestrator::Plan>,
+) -> Result<Option<PathBuf>> {
     let name = crate::worker_name(name).ok_or("invalid proposal name")?;
     let state = state.canonicalize()?;
     let target = state.join("proposals").join(name);
@@ -176,20 +204,68 @@ pub fn propose(state: &Path, name: &str, record_path: &Path) -> Result<Option<Pa
     for product in &products {
         listing.push_str(&format!("- {}: {}\n", product.name, product.about));
     }
-    let prompt = format!(
-        "{CONTRACT}{LOOP}{listing}\n\nDECISION RECORD ({}):\n{decision}\nBRIEF OF THAT JOB:\n{}",
-        record_path.display(),
-        if origin_brief.is_empty() {
-            "(none)"
-        } else {
-            &origin_brief
-        },
-    );
+    let session = plan
+        .filter(|plan| plan.session)
+        .and_then(|plan| plan.repo.as_ref());
+    let prompt = if let Some((repo, path)) = session {
+        let files = std::process::Command::new("git")
+            .arg("-C")
+            .arg(path)
+            .args(["ls-files"])
+            .output()
+            .map(|output| String::from_utf8_lossy(&output.stdout).into_owned())
+            .unwrap_or_default();
+        let files: String = files
+            .lines()
+            .filter(|file| !file.starts_with("evidence/"))
+            .take(300)
+            .collect::<Vec<_>>()
+            .join("\n");
+        let about: String = fs::read_to_string(path.join("README.md"))
+            .unwrap_or_default()
+            .chars()
+            .take(4000)
+            .collect();
+        format!(
+            "{SESSION_CONTRACT}\n\nREPOSITORY {repo}, its files:\n{files}\n\nBEGINNING OF ITS README:\n{about}\n\nREQUEST ({}):\n{decision}",
+            record_path.display()
+        )
+    } else {
+        format!(
+            "{CONTRACT}{LOOP}{listing}\n\nDECISION RECORD ({}):\n{decision}\nBRIEF OF THAT JOB:\n{}",
+            record_path.display(),
+            if origin_brief.is_empty() {
+                "(none)"
+            } else {
+                &origin_brief
+            },
+        )
+    };
     let scratch = tempfile::tempdir()?;
     let scratch = scratch.path().canonicalize()?;
     let workspace = scratch.join("worker");
     fs::create_dir(&workspace)?;
-    let (answer, worker) = source::ask(&workspace, job, &prompt, &mut Progress::silent());
+    // The plan names who writes the gate. Without a plan it is the standard worker.
+    let author = plan
+        .map(|plan| plan.gate.as_str())
+        .filter(|name| *name != crate::orchestrator::STANDARD)
+        .map(|name| crate::crew::load(&state, name))
+        .transpose()?;
+    let (answer, worker) = match &author {
+        Some(agent) => (
+            source::call_agent(
+                agent,
+                &workspace,
+                job,
+                &prompt,
+                &mut Progress::silent(),
+                |_| {},
+            ),
+            "named-agent",
+        ),
+        None => source::ask(&workspace, job, &prompt, &mut Progress::silent()),
+    };
+    let worker = author.as_ref().map_or(worker, |agent| agent.name.as_str());
     let (answer, usage) = answer?;
     // An optional first line names the open intent that the worker took up.
     let mut answer = answer.trim_start().to_owned();
@@ -240,9 +316,13 @@ pub fn propose(state: &Path, name: &str, record_path: &Path) -> Result<Option<Pa
                 record::read_regular(&product.seed, source::LIMIT)?,
             )),
         )
-    } else {
+    } else if session.is_some() {
         let (brief, gate) =
-            split(&answer).ok_or("the worker did not return brief.md and verify.mjs")?;
+            split(&answer, "gate.sh").ok_or("the worker did not return brief.md and gate.sh")?;
+        (brief, gate, None)
+    } else {
+        let (brief, gate) = split(&answer, "verify.mjs")
+            .ok_or("the worker did not return brief.md and verify.mjs")?;
         (brief, gate, None)
     };
     source::intent(&brief)?;
@@ -254,18 +334,35 @@ pub fn propose(state: &Path, name: &str, record_path: &Path) -> Result<Option<Pa
     }
     let check = scratch.join("check");
     fs::create_dir(&check)?;
-    fs::write(check.join("verify.mjs"), &gate)?;
+    let gate_name = if session.is_some() {
+        "gate.sh"
+    } else {
+        "verify.mjs"
+    };
+    fs::write(check.join(gate_name), &gate)?;
+    let (program, flag) = if session.is_some() {
+        ("/bin/sh", "-n")
+    } else {
+        ("node", "--check")
+    };
     let syntax = source::run_child(
-        source::sandbox(&check, job, "node", false)?.args(["--check", "verify.mjs"]),
+        source::sandbox(&check, job, program, false)?.args([flag, gate_name]),
         CHECK_TIMEOUT,
         |_| {},
     )?;
     if !syntax.status.success() {
-        return Err("the proposed gate is not valid JavaScript".into());
+        return Err("the proposed gate has a syntax error".into());
     }
     fs::create_dir_all(&target)?;
     record::publish_text(&target.join("brief.md"), &brief, record::MAX_RECORD_BYTES)?;
-    record::publish_text(&target.join("verify.mjs"), &gate, source::LIMIT)?;
+    record::publish_text(&target.join(gate_name), &gate, source::LIMIT)?;
+    if let Some(plan) = plan {
+        record::publish_text(
+            &target.join("plan.txt"),
+            &plan.text(),
+            record::MAX_RECORD_BYTES,
+        )?;
+    }
     let mut product_line = String::new();
     if let Some((product, source_text)) = &seed {
         record::publish_text(&target.join("seed.html"), source_text, source::LIMIT)?;
@@ -326,18 +423,40 @@ pub fn reflect(state: &Path, jobs: &Path, job: &Path) -> Result<()> {
 pub fn approve(state: &Path, name: &str) -> Result<PathBuf> {
     let name = crate::worker_name(name).ok_or("invalid proposal name")?;
     let proposal = state.canonicalize()?.join("proposals").join(name);
-    let job = service::queue_source(
-        state,
-        name,
-        &proposal.join("brief.md"),
-        &proposal.join("verify.mjs"),
-        Some(proposal.join("seed.html"))
-            .filter(|seed| seed.is_file())
-            .as_deref(),
-        None,
-        // What the user said about the proposal starts the conversation of the job.
-        &crate::talk::read(&proposal),
-    )?;
+    let plan = crate::orchestrator::Plan::read(&proposal.join("plan.txt"));
+    let worker = plan
+        .as_ref()
+        .map(|plan| plan.work.as_str())
+        .filter(|name| *name != crate::orchestrator::STANDARD);
+    let said = crate::talk::read(&proposal);
+    let job = if let Some((_, repo)) = plan
+        .as_ref()
+        .filter(|plan| plan.session)
+        .and_then(|plan| plan.repo.as_ref())
+    {
+        crate::session::queue(
+            state,
+            name,
+            &proposal.join("brief.md"),
+            &proposal.join("gate.sh"),
+            Some(repo),
+            worker,
+            &said,
+        )?
+    } else {
+        service::queue_source(
+            state,
+            name,
+            &proposal.join("brief.md"),
+            &proposal.join("verify.mjs"),
+            Some(proposal.join("seed.html"))
+                .filter(|seed| seed.is_file())
+                .as_deref(),
+            worker,
+            // What the user said about the proposal starts the conversation of the job.
+            &said,
+        )?
+    };
     record::publish_text(
         &proposal.join("approved.txt"),
         &format!("job={}\n", job.display()),
@@ -346,8 +465,8 @@ pub fn approve(state: &Path, name: &str) -> Result<PathBuf> {
     Ok(job)
 }
 
-fn split(answer: &str) -> Option<(String, String)> {
+fn split(answer: &str, gate: &str) -> Option<(String, String)> {
     let rest = answer.trim_start().strip_prefix("=== brief.md ===\n")?;
-    let (brief, gate) = rest.split_once("\n=== verify.mjs ===\n")?;
+    let (brief, gate) = rest.split_once(&format!("\n=== {gate} ===\n"))?;
     Some((format!("{}\n", brief.trim()), format!("{}\n", gate.trim())))
 }

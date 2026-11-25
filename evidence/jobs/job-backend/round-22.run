@@ -1,0 +1,20 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-22
+intent=Ein Orchestrator legt für jeden Wunsch fest, wie er ausgeführt wird, wer das Gate schreibt und wer arbeitet.
+baseline=taik-seed 89e3216177ae63c0e47d9cc43795f0bad415270311a97bf3222e87e7d20d789a
+worker=claude-fable
+decided_by=the installed taik-seed 89e3216177ae63c0e47d9cc43795f0bad415270311a97bf3222e87e7d20d789a at /Users/rainer/.local/state/taik-factory/taik-seed
+limits=99 rounds; gate 900s; candidate checks 10s each
+gate_sha256=76b41170f51fa7e1a5424ba01f903bcf2276b8f8f19e4d87f952e88d18b6b0ce
+gate_ms=26235
+checks=PASS: Rust tests, Clippy with warnings denied, release build; candidate seeded, rejected an invalid procedure without touching the accepted record, and extended it
+evidence=round-22.checks.log
+artifact=round-22-taik-seed
+artifact_sha256=32956479970197b98d61d554042712ecfdadeae798e35e29f3db914a911571dc
+rollback=round-22.rollback-taik-seed
+continuation=Restart the service so that it runs the accepted binary.
+advance=false
+end

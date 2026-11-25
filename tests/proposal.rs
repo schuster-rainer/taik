@@ -376,3 +376,143 @@ fn a_rejected_round_gets_a_short_analysis_once() {
     answer("Verlangt: a\nGescheitert an: b\nUrsache: c\nNächster Schritt: d");
     assert_eq!(said(&analyse()), "nothing to analyse");
 }
+
+#[test]
+fn the_orchestrator_plans_a_request_and_approval_follows_the_plan() {
+    use std::io::Write;
+    use std::process::Stdio;
+    let root = tempfile::Builder::new()
+        .prefix("taik-plan-")
+        .tempdir_in("/tmp")
+        .unwrap();
+    let root = root.path().canonicalize().unwrap();
+    let factory = || Command::new(env!("CARGO_BIN_EXE_taik-seed"));
+    let state = root.join("state");
+    fs::create_dir_all(state.join("jobs")).unwrap();
+    fs::create_dir_all(state.join("repos")).unwrap();
+    fs::create_dir_all(state.join("crew")).unwrap();
+    // A repository the user made known, and a second agent beside the standard worker.
+    let repo = root.join("demo");
+    fs::create_dir_all(&repo).unwrap();
+    for arguments in [
+        vec!["init", "--quiet"],
+        vec![
+            "-c",
+            "user.name=t",
+            "-c",
+            "user.email=t@t.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "commit",
+            "--quiet",
+            "--allow-empty",
+            "-m",
+            "start",
+        ],
+    ] {
+        assert!(
+            Command::new("git")
+                .arg("-C")
+                .arg(&repo)
+                .args(arguments)
+                .status()
+                .unwrap()
+                .success()
+        );
+    }
+    fs::write(
+        state.join("repos/demo.repo"),
+        format!("{}\n", repo.display()),
+    )
+    .unwrap();
+    let worker = root.join("lead");
+    fs::write(
+        state.join("crew/pruefer.agent"),
+        "harness=claude\nmodel=m\neffort=low\npersona=Schreibt Prüfungen.\nend\n",
+    )
+    .unwrap();
+    // One stand-in for both roles: it answers the orchestrator with a plan, everyone else with files.
+    let reply = |text: &str| {
+        serde_json::json!({"type": "result", "is_error": false, "result": text,
+            "usage": {"output_tokens": 1}, "total_cost_usd": 0.01, "modelUsage": {"m": {}}})
+        .to_string()
+    };
+    fs::write(
+        root.join("plan.json"),
+        reply("Art: sitzung\nRepo: demo\nGate: pruefer\nArbeit: standard\nGrund: Es müssen bestehende Dateien geändert werden."),
+    )
+    .unwrap();
+    fs::write(
+        root.join("files.json"),
+        reply("=== brief.md ===\nEine Datei hello.txt anlegen\n\n=== gate.sh ===\ntest -f hello.txt && echo 'PASS: da'\n"),
+    )
+    .unwrap();
+    fs::write(
+        &worker,
+        format!(
+            "#!/bin/sh\ncase \"$*\" in *'orchestrator of a software factory'*) cat '{0}/plan.json';; *) cat '{0}/files.json';; esac\n",
+            root.display()
+        ),
+    )
+    .unwrap();
+    fs::set_permissions(&worker, fs::Permissions::from_mode(0o700)).unwrap();
+    // The named agent runs on the Claude harness, which is this stand-in under the name `claude`.
+    fs::copy(&worker, root.join("claude")).unwrap();
+    let home = state.to_str().unwrap();
+    let mut asked = factory()
+        .args(["request", home])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .spawn()
+        .unwrap();
+    asked
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(b"Lege hello.txt im Repo demo an")
+        .unwrap();
+    assert!(asked.wait().unwrap().success());
+    let served = factory()
+        .arg("drain")
+        .arg(&state)
+        .env("TAIK_LEAD_WORKER", &worker)
+        .env(
+            "PATH",
+            format!("{}:{}", root.display(), std::env::var("PATH").unwrap()),
+        )
+        .env_remove("TAIK_SECOND_WORKER")
+        .env_remove("TAIK_AUTO_PROPOSE")
+        .output()
+        .unwrap();
+    let plan = fs::read_to_string(state.join("requests/ticket-001.plan"))
+        .unwrap_or_else(|_| panic!("{served:?}"));
+    assert!(
+        plan.contains("kind=sitzung\n")
+            && plan.contains("repo=demo\n")
+            && plan.contains("gate=pruefer\n")
+            && plan.contains("work=standard\n"),
+        "{plan}"
+    );
+    let proposal = state.join("proposals/ticket-001");
+    assert!(proposal.join("gate.sh").is_file(), "{served:?}");
+    assert_eq!(fs::read_to_string(proposal.join("plan.txt")).unwrap(), plan);
+    // The gate was written by the agent the plan names.
+    let origin = fs::read_to_string(proposal.join("origin.txt")).unwrap();
+    assert!(origin.contains("proposed_by=pruefer\n"), "{origin}");
+
+    let approved = factory()
+        .args(["approve", home, "ticket-001"])
+        .output()
+        .unwrap();
+    assert_eq!(approved.status.code(), Some(0), "{approved:?}");
+    let job = state.join("jobs/job-ticket-001");
+    assert!(job.join("session.brief.md").is_file() && job.join("session.gate.sh").is_file());
+    assert_eq!(
+        fs::read_to_string(job.join("session.repo")).unwrap().trim(),
+        repo.to_str().unwrap()
+    );
+    assert!(
+        !job.join("agent").exists(),
+        "the standard worker needs no agent file"
+    );
+}

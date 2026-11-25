@@ -1479,7 +1479,7 @@ fn budget_left(job: &Path) -> bool {
 }
 
 /// One round by a named agent. The record carries what the harness reported, not what was asked for.
-fn call_agent(
+pub(crate) fn call_agent(
     agent: &crate::crew::Agent,
     scratch: &Path,
     job: &Path,

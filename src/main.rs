@@ -5,6 +5,9 @@ mod analysis;
 #[cfg(target_os = "macos")]
 mod crew;
 mod experiment;
+#[cfg(unix)]
+#[cfg(target_os = "macos")]
+mod orchestrator;
 mod procedure;
 mod progress;
 #[cfg(target_os = "macos")]
@@ -20,7 +23,6 @@ mod research;
 mod restart_probe;
 #[cfg(unix)]
 mod self_improve;
-#[cfg(unix)]
 mod service;
 #[cfg(target_os = "macos")]
 mod session;
@@ -390,6 +392,8 @@ fn run() -> Result<bool> {
                 Path::new(&rest[1]),
                 Path::new(&rest[2]),
                 rest.get(3).map(Path::new),
+                None,
+                &[],
             )?;
             println!("{}", job.display());
             Ok(true)
