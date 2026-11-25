@@ -176,6 +176,8 @@
   #taik-live .board { display: grid; gap: 10px; margin-top: 12px; }
   #taik-live .board-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
   #taik-live .board-tabs button { display: inline-flex; align-items: baseline; gap: 7px; padding: 5px 12px; font-size: .8rem; border-radius: 10px; }
+  #taik-live .board-tabs input { flex: 1 1 6rem; min-width: 0; margin-left: auto; font: inherit; font-size: .8rem; color: var(--ink); border: 0; border-radius: 10px;
+    padding: 5px 11px; background: var(--nm-base); box-shadow: var(--nm-inset-sm); }
   #taik-live .board-tabs button:disabled { color: var(--ink); }
   #taik-live .board-tabs button span { font: .72rem var(--mono); color: var(--quiet); font-variant-numeric: tabular-nums; }
   #taik-live .board-tabs button.wait span { color: var(--active); font-weight: 700; }
@@ -448,6 +450,7 @@
     let chosenBoardTab = '';
     let selectedProposal = '';
     let newTicketNote = '';
+    let boardSearch = '';
     let waitingBefore = null;
     let agentDraft = null;
     let agentProblem = '';
@@ -738,7 +741,22 @@
           decision.push({ key: job.id, job: job.id, title: title(job), flag: 'Angenommen', column: 'decision', meta: id + rounds + cost });
         }
       }
+      // The stock: jobs that are not loaded in full. They are decided, however they ended.
+      const loaded = new Set(data.jobs.map(job => job.id));
+      for (const entry of data.index ?? []) {
+        if (loaded.has(entry.id)) continue;
+        decision.push({ key: entry.id, job: entry.id, title: ticketTitle(entry.title) || entry.id, archived: true, column: 'decision',
+          flag: entry.decision === 'accepted' ? 'Angenommen' : entry.decision === 'rejected' ? 'Abgelehnt' : 'Ohne Runde',
+          meta: entry.id.replace(/^job-/, '') + (entry.rounds ? ` · ${entry.rounds} ${entry.rounds === 1 ? 'Runde' : 'Runden'}` : '') });
+      }
       return { open, run, decision };
+    }
+
+    // The tickets whose title or id contains what the user searches for.
+    function filterTickets(columns, query) {
+      const wanted = String(query ?? '').trim().toLowerCase();
+      const match = entry => !wanted || entry.title.toLowerCase().includes(wanted) || entry.key.toLowerCase().includes(wanted);
+      return { open: columns.open.filter(match), run: columns.run.filter(match), decision: columns.decision.filter(match) };
     }
 
     // The ticket shown before the user chose one: the first of the group that is shown.
@@ -862,8 +880,9 @@
     }
 
     function renderBoard(shownKey) {
-      const columns = boardTickets(snapshot);
-      const waiting = columns.open.length;
+      const all = boardTickets(snapshot);
+      const columns = filterTickets(all, boardSearch);
+      const waiting = all.open.length;
       const tab = boardTab(columns, chosenBoardTab);
       const ticket = entry => {
         const shown = entry.key === shownKey;
@@ -881,7 +900,8 @@
         <ul class="board-list">${columns[key].length ? columns[key].map(ticket).join('') : `<li class="board-empty">${empty}</li>`}</ul></section>`).join('');
       return `<section id="taik-board" aria-label="Tickets"><div class="section-heading"><h2>Tickets</h2>
         <span class="sub"><span id="taik-board-waiting">${waiting}</span> ${waiting === 1 ? 'wartet' : 'warten'} auf dich</span></div>
-        <div class="board"><div class="board-tabs" role="group" aria-label="Gruppe">${tabs}</div>${lists}</div></section>
+        <div class="board"><div class="board-tabs" role="group" aria-label="Gruppe">${tabs}
+          <input id="taik-board-search" type="search" aria-label="Tickets durchsuchen" placeholder="Suchen" value="${escape(boardSearch)}"></div>${lists}</div></section>
         <section aria-label="Neues Ticket"><div class="section-heading"><h2>Neues Ticket</h2><span class="sub">in deinen Worten</span></div>
         <div class="ticket-detail new-ticket" data-detail="new">
           <textarea aria-label="Neues Ticket" placeholder="Neues Ticket: Was soll entstehen? Die erste Zeile ist der Titel.">${escape(ticketDrafts.get('new') ?? '')}</textarea>
@@ -1026,7 +1046,8 @@
       }
       const proposal = (snapshot.proposals ?? []).find(entry => entry.name === (selectedProposal || (first?.startsWith('proposal:') ? first.slice(9) : '')));
       if (!proposal) selectedProposal = '';
-      const board = renderBoard(proposal ? 'proposal:' + proposal.name : job.id);
+      const awaited = !proposal && selected !== 'latest' && job.id !== selected ? (snapshot.index ?? []).find(entry => entry.id === selected) : null;
+      const board = renderBoard(proposal ? 'proposal:' + proposal.name : awaited ? awaited.id : job.id);
       const waitingNow = boardTickets(snapshot).open.length;
       if (waitingBefore !== null && waitingNow > waitingBefore) window.webkit?.messageHandlers?.attention?.postMessage(waitingNow);
       waitingBefore = waitingNow;
@@ -1068,8 +1089,9 @@
       const proposalState = { deriving: 'Die Factory leitet Auftrag und Gate ab', declined: 'Die Factory hat daraus keinen Auftrag abgeleitet', failed: 'Das Ableiten ist fehlgeschlagen' };
       const proposalKey = proposal ? `proposal:${proposal.name}/brief` : '';
       const proposalOpen = openRounds.get(proposalKey) ?? true;
+      const ticketOpen = '<section id="taik-ticket" aria-label="Ticket"';
       const ticket = proposal
-        ? `<section id="taik-ticket" aria-label="Ticket" data-proposal="${escape(proposal.name)}">
+        ? `${ticketOpen} data-proposal="${escape(proposal.name)}">
           <div class="section-heading"><h2>Ticket</h2><span class="sub">${escape(proposal.name)} · ${proposal.state ? proposalState[proposal.state] ?? escape(proposal.state) : 'Vorschlag der Factory, wartet auf deine Freigabe'}</span></div>
           <div class="ticket-top"><h3 class="ticket-title">${escape(ticketTitle(proposal.intent))}</h3></div>
           ${proposal.note ? `<p class="round-checks">${escape(proposal.note)}</p>` : ''}
@@ -1077,7 +1099,7 @@
           <div class="thread" aria-label="Auftragsverlauf">${(proposal.messages ?? []).length ? `<ol class="rounds">${proposal.messages.map(item =>
             `<li class="thread-message ${item.author === 'user' ? 'user' : 'agent'}"><span class="who">${item.author === 'user' ? 'Du' : 'Agent'}</span>${escape(item.text)}</li>`).join('')}</ol>` : ''}</div>
           ${proposal.state ? '' : ticketDetail({ key: 'proposal:' + proposal.name, proposal: proposal.name })}</section>`
-        : `<section id="taik-ticket" aria-label="Ticket" data-job="${escape(job.id)}">
+        : `${ticketOpen} data-job="${escape(job.id)}">
           <div class="section-heading"><h2>Ticket</h2><span class="sub">${escape(job.id)} · ${jobStatus(job)}${job.agent ? ' · @' + escape(job.agent) : ''}${job.cost > 0 ? ' · ' + money(job.cost) : ''}</span></div>
           <div class="ticket-top"><h3 class="ticket-title">${escape(ticketTitle(job.goal) || job.id)}</h3>${artifactButton}</div>
           ${job.brief ? `<details class="ticket-brief" data-round="${escape(briefKey)}" data-initial-open="${briefOpen}"${briefOpen ? ' open' : ''}><summary>Beschreibung</summary><pre>${escape(job.brief)}</pre></details>` : ''}
@@ -1085,7 +1107,10 @@
           ${told ? `<ol class="rounds">${told}</ol>` : '<p class="sub lead">Die Factory hat den Auftrag erhalten. Die erste Runde steht noch aus.</p>'}</div>
           ${isPending(job) ? progressPanel(job) : ''}
           ${ticketDetail({ key: job.id, job: job.id })}</section>`;
-      setContent(`${board}${ticket}${renderCrew()}${working}${results}${comparison(job, accepted)}`);
+      const shownTicket = awaited ? `${ticketOpen} data-job="${escape(awaited.id)}">
+          <div class="section-heading"><h2>Ticket</h2><span class="sub">${escape(awaited.id)} · wird geladen</span></div>
+          <div class="ticket-top"><h3 class="ticket-title">${escape(ticketTitle(awaited.title) || awaited.id)}</h3></div></section>` : ticket;
+      setContent(`${board}${shownTicket}${renderCrew()}${working}${results}${comparison(job, accepted)}`);
     }
 
     function setHeader(html) {
@@ -1100,7 +1125,8 @@
       if (html === lastHTML) return;
       lastHTML = html;
       const focusId = document.activeElement?.id;
-      const fieldCaret = focusId?.startsWith('taik-agent-') && document.activeElement.setSelectionRange
+      const kept = focusId?.startsWith('taik-agent-') || focusId === 'taik-board-search';
+      const fieldCaret = kept && document.activeElement.setSelectionRange
         ? [document.activeElement.selectionStart, document.activeElement.selectionEnd] : null;
       // A reply is typed while the snapshot refreshes. Keep its field and caret.
       const typing = document.activeElement?.closest?.('.ticket-detail')?.dataset.detail ? document.activeElement : null;
@@ -1112,7 +1138,7 @@
         element.scrollTop = offsets.get(element.parentElement.dataset.round) ?? 0;
       }
       updateElapsed();
-      if (focusId?.startsWith('taik-agent-')) {
+      if (kept) {
         const again = document.getElementById(focusId);
         again?.focus({ preventScroll: true });
         if (again && fieldCaret && again.setSelectionRange) again.setSelectionRange(fieldCaret[0], fieldCaret[1]);
@@ -1260,7 +1286,10 @@
       if (ticketButton) {
         const key = ticketButton.dataset.ticket;
         selectedProposal = key.startsWith('proposal:') ? key.slice('proposal:'.length) : '';
-        if (!selectedProposal) selected = key;
+        if (!selectedProposal) {
+          selected = key;
+          if (!snapshot.jobs.some(job => job.id === key)) window.webkit?.messageHandlers?.showJob?.postMessage(key);
+        }
         render();
         document.querySelector(`button[data-ticket="${CSS.escape(key)}"]`)?.focus();
         return;
@@ -1271,6 +1300,7 @@
     root.addEventListener('input', event => {
       const part = { 'taik-agent-name': 'name', 'taik-agent-model': 'model', 'taik-agent-persona': 'persona' }[event.target.id];
       if (part && agentDraft) { agentDraft[part] = event.target.value; return; }
+      if (event.target.id === 'taik-board-search') { boardSearch = event.target.value; render(); return; }
       const field = event.target.closest('.ticket-detail textarea');
       const key = field?.closest('.ticket-detail')?.dataset.detail;
       if (key) ticketDrafts.set(key, field.value);
@@ -1286,7 +1316,8 @@
     window.updateFactory = data => {
       if (!data) return;
       snapshot = data;
-      if (selected !== 'latest' && !snapshot.jobs.some(job => job.id === selected)) selected = 'latest';
+      if (selected !== 'latest' && !snapshot.jobs.some(job => job.id === selected)
+        && !(snapshot.index ?? []).some(entry => entry.id === selected)) selected = 'latest';
       render();
     };
     window.updateFactory(/*FACTORY_DATA*/null);

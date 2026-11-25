@@ -192,6 +192,44 @@ async function runDesignGate(requireOpen) {
       await delayFrame();
       await chooseTicket('job-floorplanner');
     }
+    // The stock: old jobs are on the board, can be searched and opened.
+    {
+      const stocked = structuredClone(snapshot);
+      stocked.index = [...stocked.jobs.map(job => ({ id: job.id, title: job.goal ?? '', decision: 'accepted', rounds: job.rounds.length })),
+        { id: 'job-uralt', title: 'Ein Auftrag von früher', decision: 'accepted', rounds: 2 },
+        { id: 'job-verworfen', title: 'Ein verworfener Versuch', decision: 'rejected', rounds: 4 }];
+      window.updateFactory(stocked);
+      await delayFrame();
+      find('button[data-board-tab="decision"]').click();
+      await delayFrame();
+      requireFact(!!find('#taik-board button[data-ticket="job-uralt"]') && !!find('#taik-board button[data-ticket="job-verworfen"]'), 'The stock is not on the board');
+      const search = find('#taik-board-search');
+      search.focus();
+      search.value = 'früher';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+      await delayFrame();
+      requireFact(document.activeElement?.id === 'taik-board-search' && find('#taik-board-search').value === 'früher', 'Searching loses the field');
+      const shown = [...document.querySelectorAll('#taik-board-decision button[data-ticket]')].map(button => button.dataset.ticket);
+      requireFact(shown.length === 1 && shown[0] === 'job-uralt', 'The search does not narrow the tickets: ' + shown.join(','));
+      find('#taik-board button[data-ticket="job-uralt"]').click();
+      await delayFrame();
+      requireFact(find('#taik-ticket')?.dataset.job === 'job-uralt' && find('#taik-ticket').textContent.includes('Ein Auftrag von früher'), 'A job of the stock does not open');
+      // The app delivers the job in full.
+      const old = structuredClone(stocked.jobs.find(job => job.id === 'job-floorplanner'));
+      old.id = 'job-uralt';
+      old.goal = 'Ein Auftrag von früher';
+      stocked.jobs.push(old);
+      window.updateFactory(stocked);
+      await delayFrame();
+      requireFact(find('#taik-ticket')?.dataset.job === 'job-uralt' && find('#taik-ticket .rounds .round'), 'A loaded job of the stock does not show its history');
+      const field = find('#taik-board-search');
+      field.value = '';
+      field.dispatchEvent(new Event('input', { bubbles: true }));
+      document.activeElement?.blur();
+      window.updateFactory(snapshot);
+      await delayFrame();
+      await chooseTicket('job-floorplanner');
+    }
     // Crew: a new agent is typed while the snapshot refreshes. The draft and the focus survive.
     const crew = find('#taik-crew');
     if (crew) {

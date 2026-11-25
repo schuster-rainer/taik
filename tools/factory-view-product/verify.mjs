@@ -350,4 +350,25 @@ assert.deepEqual(foldSteps(steps), [steps[0], { elapsed: 4, kind: 'worker', deta
 assert.equal(JSON.stringify(steps), before, 'folding leaves the events untouched');
 assert.deepEqual(foldSteps([]), []);
 
-console.log(`PASS: host contract, offline isolation, ${shadows.length} token shadows without glow, contrast ${Math.min(...measured).toFixed(2)}–${Math.max(...measured).toFixed(2)}, lossless .run highlighting, token flow per round, one workpiece pane with live draft, animated flow, ticket board in one group at a time, crew with agents and harnesses, conversation in the ticket, one ticket with the full history, tickets opened in the viewer`);
+// 16. The board holds the whole stock. Jobs that are not loaded appear as light entries and can be searched.
+for (const hook of ['id="taik-board-search"', 'showJob', 'filterTickets(']) assert(html.includes(hook), `stock hook ${hook}`);
+const { filterTickets } = new Function(boardBlock + '\nreturn { filterTickets };')();
+const stock = boardTickets({ proposals: [], jobs: [
+  { id: 'job-neu', goal: 'Neuer Auftrag', cost: 0, rounds: [{ fields: { decision: 'accepted', advance: 'false' } }] },
+], index: [
+  { id: 'job-neu', title: 'doppelt', decision: 'accepted', rounds: 1 },
+  { id: 'job-alt', title: 'Alter Auftrag', decision: 'accepted', rounds: 3 },
+  { id: 'job-gescheitert', title: 'Gescheitert', decision: 'rejected', rounds: 4 },
+  { id: 'job-leer', title: '', decision: '', rounds: 0 },
+] });
+assert.deepEqual(stock.decision.map(entry => entry.key), ['job-neu', 'job-alt', 'job-gescheitert', 'job-leer'], 'the stock follows the loaded jobs, each job once');
+assert.deepEqual(stock.open, [], 'an old rejected job does not wait for the user');
+assert.deepEqual(stock.decision.slice(1).map(entry => [entry.flag, entry.archived]), [['Angenommen', true], ['Abgelehnt', true], ['Ohne Runde', true]], 'the stock tells how each job ended');
+assert(stock.decision[1].meta.includes('3 Runden') && stock.decision[3].title === 'job-leer', 'a stock entry names its rounds and falls back to its id');
+const found = filterTickets(stock, '  ALTER ');
+assert.deepEqual([found.open.length, found.run.length, found.decision.map(entry => entry.key)], [0, 0, ['job-alt']], 'the search matches titles without regard to case');
+assert.deepEqual(filterTickets(stock, 'gescheitert').decision.map(entry => entry.key), ['job-gescheitert'], 'the search matches the id');
+assert.equal(filterTickets(stock, '').decision.length, 4, 'an empty search shows everything');
+assert.equal(stock.decision.length, 4, 'searching leaves the groups untouched');
+
+console.log(`PASS: host contract, offline isolation, ${shadows.length} token shadows without glow, contrast ${Math.min(...measured).toFixed(2)}–${Math.max(...measured).toFixed(2)}, lossless .run highlighting, token flow per round, one workpiece pane with live draft, animated flow, ticket board in one group at a time, crew with agents and harnesses, conversation in the ticket, one ticket with the full history, tickets opened in the viewer, the whole stock on the board`);

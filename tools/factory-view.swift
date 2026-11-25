@@ -95,7 +95,16 @@ private struct Agent: Codable {
     let cwd: String
 }
 
+// One light line per job of the stock, so that every job can be found.
+private struct StockEntry: Codable {
+    let id: String
+    let title: String
+    let decision: String
+    let rounds: Int
+}
+
 private struct Snapshot: Codable {
+    let index: [StockEntry]
     let crew: String?
     let parallel: Int
     let agents: [Agent]
@@ -127,6 +136,7 @@ private final class FactoryMonitor {
             watchPath(queue)
             watchPath(state.appendingPathComponent("service-error.log"))
             watchPath(state.appendingPathComponent("proposals", isDirectory: true))
+            watchPath(state.appendingPathComponent("requests", isDirectory: true))
             watchPath(state.appendingPathComponent("agents", isDirectory: true))
             watchPath(state.appendingPathComponent("crew", isDirectory: true))
         }
@@ -138,6 +148,7 @@ private final class FactoryMonitor {
             for url in workFiles { watchPath(url) }
             let retained = Set(jobURLs + workFiles + [state, queue, state.appendingPathComponent("service-error.log"),
                 state.appendingPathComponent("proposals", isDirectory: true),
+                state.appendingPathComponent("requests", isDirectory: true),
                 state.appendingPathComponent("agents", isDirectory: true),
                 state.appendingPathComponent("crew", isDirectory: true)])
             for url in Array(directories.keys) where !retained.contains(url) { stopWatching(url) }
@@ -146,7 +157,7 @@ private final class FactoryMonitor {
         let pid = runningService()
         if watch { watchServiceExit(pid) }
         let snapshot = Snapshot(
-            crew: crewOverview(), parallel: parallelSlots(), agents: recentAgents(), proposals: waitingProposals(), spent: recentWorkerCost(in: queue), jobs: jobs, pending: jobs.filter(\.pending).count,
+            index: stock(in: queue), crew: crewOverview(), parallel: parallelSlots(), agents: recentAgents(), proposals: waitingProposals(), spent: recentWorkerCost(in: queue), jobs: jobs, pending: jobs.filter(\.pending).count,
             service: state == defaultState ? (pid == nil ? "offline" : "running") : "unmanaged", pid: pid
         )
         let encoder = JSONEncoder()
@@ -283,6 +294,28 @@ private final class FactoryMonitor {
         return (total * 1000).rounded() / 1000
     }
 
+    // The job the user opened from the stock. It is loaded in full beside the latest ones.
+    var shownJob = ""
+
+    private func stock(in queue: URL) -> [StockEntry] {
+        let entries = (try? FileManager.default.contentsOfDirectory(at: queue, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])) ?? []
+        return entries.filter { $0.lastPathComponent.hasPrefix("job-") }.sorted { $0.lastPathComponent < $1.lastPathComponent }.compactMap { url in
+            guard FileManager.default.fileExists(atPath: url.appendingPathComponent("request.run").path)
+                || FileManager.default.fileExists(atPath: url.appendingPathComponent("baseline.run").path) else { return nil }
+            var last: Round?
+            var rounds = 0
+            for number in 1...99 {
+                guard let round = Round(file: url.appendingPathComponent(String(format: "round-%02d.run", number))) else { break }
+                last = round
+                rounds = number
+            }
+            let brief = (try? String(contentsOf: url.appendingPathComponent("submission.brief.md"), encoding: .utf8))?
+                .split(separator: "\n").first.map(String.init)
+            let title = brief ?? last?.fields["intent"] ?? ""
+            return StockEntry(id: url.lastPathComponent, title: String(title.prefix(300)), decision: last?.fields["decision"] ?? "", rounds: rounds)
+        }
+    }
+
     private func latestJobs(in queue: URL) -> [URL] {
         // A job folder changes whenever a round adds a file, so this orders by latest activity.
         let keys: Set<URLResourceKey> = [.isDirectoryKey, .isSymbolicLinkKey, .contentModificationDateKey]
@@ -300,7 +333,7 @@ private final class FactoryMonitor {
             return first.1 > second.1
         }.map(\.0)
         return ordered.enumerated().compactMap { index, url in
-            index < 12 || url.lastPathComponent == "job-floorplanner" ? url : nil
+            index < 12 || url.lastPathComponent == "job-floorplanner" || url.lastPathComponent == shownJob ? url : nil
         }
     }
 
@@ -502,6 +535,7 @@ private final class FactoryWindow: NSObject, NSApplicationDelegate, WKNavigation
         configuration.userContentController.add(self, name: "approveProposal")
         configuration.userContentController.add(self, name: "commentTicket")
         configuration.userContentController.add(self, name: "newTicket")
+        configuration.userContentController.add(self, name: "showJob")
         configuration.userContentController.add(self, name: "setParallel")
         for name in ["saveAgent", "deleteAgent", "setJobAgent", "refreshCrew", "attention"] {
             configuration.userContentController.add(self, name: name)
@@ -627,6 +661,12 @@ private final class FactoryWindow: NSObject, NSApplicationDelegate, WKNavigation
             approval.executableURL = state.appendingPathComponent("taik-seed")
             approval.arguments = ["approve", state.path, name]
             try? approval.run()
+            return
+        }
+        if message.name == "showJob", let name = message.body as? String,
+           name.range(of: #"^job-[A-Za-z0-9-]{1,60}$"#, options: .regularExpression) != nil {
+            monitor.shownJob = name
+            monitor.refresh(watch: true)
             return
         }
         if message.name == "attention" {
