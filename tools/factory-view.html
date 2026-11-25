@@ -245,6 +245,13 @@
   #taik-live .ticket-state dt { font-size: .68rem; font-weight: 640; letter-spacing: .12em; text-transform: uppercase; color: var(--quiet); }
   #taik-live .ticket-state dd { margin: 0; font-size: .86rem; line-height: 1.45; overflow-wrap: anywhere; }
   #taik-live .ticket-state .problem dd { color: var(--bad); }
+  #taik-live .round-summary { margin-top: 6px; font-size: .84rem; line-height: 1.5; overflow-wrap: anywhere; }
+  #taik-live .round-dialog { margin-top: 6px; font-size: .8rem; color: var(--quiet); }
+  #taik-live .round-dialog ol { list-style: none; margin: 6px 0 0; padding: 9px 12px; display: grid; gap: 7px; max-height: 20rem; overflow: auto; border-radius: 11px; box-shadow: var(--nm-inset-sm); }
+  #taik-live .round-dialog li { color: var(--ink); line-height: 1.45; overflow-wrap: anywhere; white-space: pre-wrap; }
+  #taik-live .round-dialog .who { display: inline-block; min-width: 3.4rem; margin-right: 8px; font-size: .68rem; font-weight: 640; letter-spacing: .1em; text-transform: uppercase; color: var(--active); }
+  #taik-live .round-dialog .tool .who { color: var(--quiet); }
+  #taik-live .round-dialog code { font: .74rem var(--mono); }
   #taik-live .analysis strong { font-weight: 620; color: var(--ink); }
   #taik-live .round.rejected .round-checks.analysis { color: var(--quiet); }
   #taik-live .ticket-state .question dd { color: var(--active); }
@@ -807,6 +814,13 @@
       return told;
     }
 
+    // One entry of the dialog of an agent session: something said, or a tool used on a target.
+    function dialogLine(entry) {
+      if (!entry) return null;
+      if (entry.tool) return { who: entry.tool, text: entry.target ?? '', tool: true };
+      return { who: entry.who === 'user' ? 'Du' : 'Agent', text: entry.text ?? '', tool: false };
+    }
+
     // An analysis is a few lines "Label: text". Read them for display.
     function analysisLines(text) {
       return String(text ?? '').split('\n').map(line => line.trim()).filter(Boolean).map(line => {
@@ -1013,6 +1027,18 @@
       return groups ? `<section aria-label="Gemessene Änderung"><h2>Aufwand im Prüflauf</h2><div class="measures">${groups}</div></section>` : '';
     }
 
+    // What the agent said and did in the round, in order.
+    function roundDialog(job, round, name) {
+      const entries = (job.dialogs?.[round.name.replace(/\.run$/, '')] ?? []).map(dialogLine).filter(Boolean);
+      if (!entries.length) return '';
+      const key = `${name}/dialog`;
+      const open = openRounds.get(key) ?? false;
+      return `<details class="round-dialog" data-round="${escape(key)}" data-initial-open="${open}"${open ? ' open' : ''}>
+        <summary>Dialog (${entries.length})</summary><ol>${entries.map(entry => entry.tool
+          ? `<li class="tool"><span class="who">${escape(entry.who)}</span><code>${escape(entry.text)}</code></li>`
+          : `<li><span class="who">${escape(entry.who)}</span>${escape(entry.text)}</li>`).join('')}</ol></details>`;
+    }
+
     // What the round changed: one line, and the changed lines behind it.
     function roundChange(job, round, name) {
       const change = job.changes?.[round.name.replace(/\.run$/, '')];
@@ -1052,7 +1078,9 @@
         ${fields.checks ? `<p class="round-checks">${escape(fields.checks)}</p>` : ''}
         ${rejected && !latest ? analysisLines(job.analyses?.[round.name.replace(/\.run$/, '')]).map(([label, text]) =>
           `<p class="round-checks analysis">${label ? `<strong>${escape(label)}:</strong> ` : ''}${escape(text)}</p>`).join('') : ''}
+        ${fields.summary ? `<p class="round-summary">${escape(fields.summary)}</p>` : ''}
         ${roundChange(job, round, name)}
+        ${roundDialog(job, round, name)}
         ${events.length ? `<details data-round="${escape(eventKey)}" data-initial-open="${eventsOpen}"${eventsOpen ? ' open' : ''}>
           <summary>Arbeitsschritte (${events.length})</summary>${eventList(events)}</details>` : ''}
         <details data-round="${escape(name)}" data-initial-open="${checksOpen}"${checksOpen ? ' open' : ''}>

@@ -1,0 +1,26 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=Die Funktion greet grüßt auf Deutsch und kommt mit fehlenden Namen zurecht.
+baseline=54b1ff8929965c8a421f2c29511828ae230885e7
+worker=claude-session
+worker_model=claude-opus-5-5
+worker_output_tokens=975
+worker_cache_read_tokens=24893
+session_listed_usd=0.0585026
+worker_failure=
+worker_duration_ms=17196
+session=393bc00c-9888-4bcb-8d82-5d6be0341645
+limits=6 rounds and one per reply; lease 600s without ceiling; file tools only
+gate_sha256=68093d482638c8d8e8257ea27ba9569d6421b68ff0558786d578c73961b9ab56
+gate_ms=104
+checks=PASS: German greeting, fallback for missing names, README updated
+artifact=752687a48d5b83dc3baf31c020fdfbd1f656f0f8
+commit=752687a48d5b83dc3baf31c020fdfbd1f656f0f8
+files=README.md +1 -1; greet.mjs +4 -2
+summary=`greet` in `greet.mjs` grüßt jetzt auf Deutsch, also liefert `greet('Rainer')` den Text `Hallo, Rainer!`. Leerzeichen am Rand des Namens werden entfernt. Fehlt der Name, ist er leer oder besteht er nur aus Leerzeichen, liefert die Funktion `Hallo, Welt!`. Auch Werte, die keine Zeichenkette sind (etwa `null` oder eine Zahl), werden wie ein fehlender Name behandelt, was im Auftrag nicht ausdrücklich verlangt war. Die README beschreibt das neue Verhalten in zwei deutschen Sätzen; gebaut und getestet habe ich nichts, das übernimmt die nachgelagerte Prüfung.
+continuation=The accepted state is commit 752687a4 in /Users/rainer/.local/state/taik-factory/work/probe-sitzung.
+advance=false
+end

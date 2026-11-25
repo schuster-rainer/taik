@@ -407,4 +407,14 @@ assert.equal(explained.problem, 'FAIL: kein Titel', 'the finding of the gate sta
 assert.deepEqual(ticketState({ rounds: [stood('accepted')], messages: [], analyses: { 'round': 'Verlangt: x' } }).analysis, [], 'an accepted round has no analysis in the state');
 assert.doesNotMatch(css, /#taik-live \.analysis[^{]*\{[^}]*(?:text-overflow|white-space:\s*nowrap|line-clamp)/, 'the analysis is not cut off');
 
-console.log(`PASS: host contract, offline isolation, ${shadows.length} token shadows without glow, contrast ${Math.min(...measured).toFixed(2)}–${Math.max(...measured).toFixed(2)}, lossless .run highlighting, token flow per round, one workpiece pane with live draft, animated flow, ticket board in one group at a time, crew with agents and harnesses, conversation in the ticket, one ticket with the full history, tickets opened in the viewer, the whole stock on the board, top-down state and changes, analysis of a rejection`);
+// 19. An agent session: each round shows what the agent said and did, and its own summary.
+for (const hook of ['class="round-dialog"', 'class="round-summary"', 'dialogLine(']) assert(html.includes(hook), `session hook ${hook}`);
+const { dialogLine } = new Function(threadBlock + '\nreturn { dialogLine };')();
+assert.deepEqual(dialogLine({ who: 'agent', text: 'Ich lese die Datei.' }), { who: 'Agent', text: 'Ich lese die Datei.', tool: false });
+assert.deepEqual(dialogLine({ who: 'user', text: 'Bitte kürzer.' }), { who: 'Du', text: 'Bitte kürzer.', tool: false });
+assert.deepEqual(dialogLine({ tool: 'Edit', target: 'src/main.rs' }), { who: 'Edit', text: 'src/main.rs', tool: true });
+assert.deepEqual(dialogLine({ tool: 'Glob', target: '' }), { who: 'Glob', text: '', tool: true });
+assert.equal(dialogLine(undefined), null);
+assert.doesNotMatch(css, /#taik-live \.round-(?:dialog|summary)[^{]*\{[^}]*(?:text-overflow|white-space:\s*nowrap|line-clamp)/, 'the dialog is not cut off');
+
+console.log(`PASS: host contract, offline isolation, ${shadows.length} token shadows without glow, contrast ${Math.min(...measured).toFixed(2)}–${Math.max(...measured).toFixed(2)}, lossless .run highlighting, token flow per round, one workpiece pane with live draft, animated flow, ticket board in one group at a time, crew with agents and harnesses, conversation in the ticket, one ticket with the full history, tickets opened in the viewer, the whole stock on the board, top-down state and changes, analysis of a rejection, dialog of an agent session`);

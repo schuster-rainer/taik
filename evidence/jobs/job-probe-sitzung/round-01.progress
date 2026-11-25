@@ -1,0 +1,10 @@
+119348	start	Sitzung in /Users/rainer/.local/state/taik-factory/work/probe-sitzung
+119650	worker	Beginnt die Sitzung 393bc00c
+3374851	tool	Glob **/*
+6365377	tool	Read greet.mjs
+6748112	tool	Read README.md
+11003643	tool	Write greet.mjs
+11978747	tool	Write README.md
+17052901	checks	2 Dateien geändert, Commit 752687a4
+17080561	evaluate	Gate prüft Commit 752687a4
+17202586	accepted	PASS: German greeting, fallback for missing names, README updated

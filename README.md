@@ -125,6 +125,9 @@ A job keeps its conversation in its folder: `message-NNN.user.md` and `message-N
 
 ```sh
 printf 'Bitte die Überschrift kürzen.' | taik-seed reply STATE job-NAME
+# A job done by an agent session: file tools in a private copy of REPOSITORY, judged by commit.
+# The copy lives in STATE/work/NAME. Paths listed in .taik/protected of the repository may not change.
+taik-seed queue-session STATE NAME BRIEF.md GATE.sh REPOSITORY
 # A request in plain words. The service derives a proposal that waits for approval.
 printf 'Eine Seite mit Uhrzeit' | taik-seed request STATE
 ```

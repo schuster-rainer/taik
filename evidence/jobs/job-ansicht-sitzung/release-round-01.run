@@ -1,0 +1,9 @@
+decision=rejected
+kind=release
+identity=release-round-01
+artifact=round-01.html
+artifact_sha256=babb931043727fc519442b1ffd4d0ed3c49c9ee48a3d7510bd5288904e15a89d
+released_by=tools/release-view.sh
+checks=installed: FAIL: Timed out waiting for WebKit layout, Canvas, or snapshot evidence.. The previous viewer was restored.
+rollback=rollback.round-01.html
+end

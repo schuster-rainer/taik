@@ -45,6 +45,7 @@ private struct Job: Codable {
     let messages: [Message]
     let changes: [String: Change]
     let analyses: [String: String]
+    let dialogs: [String: [[String: String]]]
     let baseline: Round
     let rounds: [Round]
     let progress: [String: [ProgressEvent]]
@@ -88,6 +89,31 @@ private struct Change: Codable {
     let more: Int
 
     private static var cache: [String: Change] = [:]
+
+    // A patch of several files, as an agent session leaves it.
+    static func fromPatch(_ patch: String, files: String, rejected: Bool, stamp: String) -> Change {
+        if let known = cache[stamp] { return known }
+        var lines: [String] = [], more = 0, added = 0, removed = 0, names: [String] = []
+        func push(_ line: String) { if lines.count < 240 { lines.append(line) } else { more += 1 } }
+        for raw in patch.split(separator: "\n", omittingEmptySubsequences: false) {
+            let line = String(raw.prefix(400))
+            if line.hasPrefix("+++ ") {
+                let name = String(line.dropFirst(4)).replacingOccurrences(of: "b/", with: "", options: .anchored)
+                if name != "/dev/null" { names.append(name); push("···"); push("  " + name) }
+            } else if line.hasPrefix("diff --git") || line.hasPrefix("index ") || line.hasPrefix("--- ") || line.hasPrefix("new file") || line.hasPrefix("deleted file") {
+                continue
+            } else if line.hasPrefix("@@") { push("···") }
+            else if line.hasPrefix("+") { added += 1; push("+ " + line.dropFirst()) }
+            else if line.hasPrefix("-") { removed += 1; push("- " + line.dropFirst()) }
+            else if line.hasPrefix(" ") { push("  " + line.dropFirst()) }
+        }
+        if lines.first == "···" { lines.removeFirst() }
+        let label = names.isEmpty ? "keine Datei" : names.count <= 3 ? names.joined(separator: ", ") : "\(names.count) Dateien"
+        let change = Change(file: label, added: added, removed: removed, fresh: false, rejected: rejected, lines: lines, more: more)
+        if cache.count > 400 { cache.removeAll() }
+        cache[stamp] = change
+        return change
+    }
 
     static func between(_ old: String?, _ new: String, file: String, rejected: Bool, stamp: String) -> Change {
         if let known = cache[stamp] { return known }
@@ -235,8 +261,30 @@ private final class FactoryMonitor {
     }
 
     // The description of a job: its brief as it was queued.
+    // The work order of a job: a document job or an agent session.
+    private func briefURL(of job: URL) -> URL {
+        let session = job.appendingPathComponent("session.brief.md")
+        return FileManager.default.fileExists(atPath: session.path) ? session : job.appendingPathComponent("submission.brief.md")
+    }
+
+    // What was said and done in the rounds of an agent session, as the Factory noted it while it happened.
+    private func roundDialogs(_ rounds: Int, in directory: URL) -> [String: [[String: String]]] {
+        var dialogs: [String: [[String: String]]] = [:]
+        for number in 1...max(1, rounds + 1) {
+            let stem = String(format: "round-%02d", number)
+            guard let data = try? Data(contentsOf: directory.appendingPathComponent(stem + ".dialog.jsonl")), data.count <= 2_000_000,
+                  let text = String(data: data, encoding: .utf8) else { continue }
+            let entries = text.split(separator: "\n").compactMap { line -> [String: String]? in
+                guard let entry = try? JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: String] else { return nil }
+                return entry.mapValues { String($0.prefix(4000)) }
+            }
+            if !entries.isEmpty { dialogs[stem] = Array(entries.suffix(300)) }
+        }
+        return dialogs
+    }
+
     private func jobBrief(in job: URL) -> String? {
-        for name in ["submission.brief.md", "round-01.brief.md"] {
+        for name in ["submission.brief.md", "session.brief.md", "round-01.brief.md"] {
             if let data = try? Data(contentsOf: job.appendingPathComponent(name)), data.count <= 8192,
                let text = String(data: data, encoding: .utf8) { return text }
         }
@@ -368,7 +416,7 @@ private final class FactoryMonitor {
                 last = round
                 rounds = number
             }
-            let brief = (try? String(contentsOf: url.appendingPathComponent("submission.brief.md"), encoding: .utf8))?
+            let brief = (try? String(contentsOf: briefURL(of: url), encoding: .utf8))?
                 .split(separator: "\n").first.map(String.init)
             let title = brief ?? last?.fields["intent"] ?? ""
             return StockEntry(id: url.lastPathComponent, title: String(title.prefix(300)), decision: last?.fields["decision"] ?? "", rounds: rounds)
@@ -406,7 +454,7 @@ private final class FactoryMonitor {
         }
         if last?.fields["decision"] == "rejected" || last?.fields["advance"] == "true" { return true }
         if jobMessages(in: url).last?.author == "agent" { return true }
-        return last == nil && FileManager.default.fileExists(atPath: url.appendingPathComponent("submission.brief.md").path)
+        return last == nil && FileManager.default.fileExists(atPath: briefURL(of: url).path)
     }
 
     private func workFiles(in url: URL) -> [URL] {
@@ -434,7 +482,7 @@ private final class FactoryMonitor {
         let next = String(format: "round-%02d", rounds.count + 1)
         let active = baseline.fields["kind"] == "software" && progress[next] != nil
             && isLocked(url.appendingPathComponent("source.lock"))
-        let submission = url.appendingPathComponent("submission.brief.md")
+        let submission = briefURL(of: url)
         let hasNextRound = rounds.isEmpty || rounds.last?.fields["advance"] == "true"
         let queued = !active && hasNextRound && FileManager.default.fileExists(atPath: submission.path)
         let startedAt = active ? (try? url.appendingPathComponent(next + ".brief.md")
@@ -462,7 +510,7 @@ private final class FactoryMonitor {
         }
         let draft = active ? readSource(at: url.appendingPathComponent(next + ".draft")) : nil
         return Job(id: url.lastPathComponent, goal: goal, preview: preview, previous: previous,
-            cost: (cost * 10000).rounded() / 10000, draft: draft, agent: jobAgent(in: url), brief: jobBrief(in: url), messages: jobMessages(in: url), changes: roundChanges(rounds, in: url), analyses: roundAnalyses(rounds, in: url), baseline: baseline, rounds: rounds, progress: progress,
+            cost: (cost * 10000).rounded() / 10000, draft: draft, agent: jobAgent(in: url), brief: jobBrief(in: url), messages: jobMessages(in: url), changes: roundChanges(rounds, in: url), analyses: roundAnalyses(rounds, in: url), dialogs: roundDialogs(rounds.count, in: url), baseline: baseline, rounds: rounds, progress: progress,
             sourceQueued: queued, sourceActive: active, sourceStartedAt: startedAt)
     }
 
@@ -496,6 +544,8 @@ private final class FactoryMonitor {
                 if base == nil { base = text("rollback." + stem + ".html") }
                 changes[stem] = Change.between(base?.0, new.0, file: artifact, rejected: false, stamp: (base?.1 ?? "") + "|" + new.1)
                 base = new
+            } else if let commit = round.fields["commit"], !commit.isEmpty, let patch = text(stem + ".diff") {
+                changes[stem] = Change.fromPatch(patch.0, files: round.fields["files"] ?? "", rejected: round.fields["decision"] == "rejected", stamp: patch.1)
             } else if round.fields["decision"] == "rejected", let new = text(stem + ".rejected.txt") {
                 changes[stem] = Change.between(base?.0, new.0, file: stem + ".rejected.txt", rejected: true, stamp: (base?.1 ?? "") + "|" + new.1)
             }

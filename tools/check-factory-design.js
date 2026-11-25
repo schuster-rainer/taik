@@ -238,6 +238,8 @@ async function runDesignGate(requireOpen) {
       last.fields.decision = 'rejected';
       last.fields.checks = 'FAIL: der Grundriss hat keine Tür';
       job.analyses = { [last.name.replace(/\.run$/, '')]: 'Verlangt: Der Grundriss braucht eine Tür.\nUrsache: Der Kandidat hat sie ausgelassen.' };
+      last.fields.summary = 'Ich habe die Tür ergänzt und die README angepasst.';
+      job.dialogs = { [last.name.replace(/\.run$/, '')]: [{ who: 'agent', text: 'Ich lese zuerst den Grundriss.' }, { tool: 'Edit', target: 'plan/grundriss.html' }] };
       job.changes = { [last.name.replace(/\.run$/, '')]: { file: 'round-99.rejected.txt', added: 2, removed: 1, fresh: false, rejected: true,
         lines: ['  <main>', '- <p>alt</p>', '+ <p>neu</p>', '+ <p>mehr</p>', '···', '  </main>'], more: 0 } };
       window.updateFactory(told);
@@ -252,6 +254,12 @@ async function runDesignGate(requireOpen) {
       await delayFrame();
       requireFact(change.querySelectorAll('.diff-add').length === 2 && change.querySelectorAll('.diff-del').length === 1, 'The changed lines are missing');
       requireFact(change.scrollWidth <= change.clientWidth + 1, 'The changed lines leave the ticket');
+      const dialog = find('#taik-ticket details.round-dialog');
+      requireFact(rendered(dialog) && find('#taik-ticket .round-summary')?.textContent.includes('Tür ergänzt'), 'A session round lacks its summary or dialog');
+      dialog.open = true;
+      await delayFrame();
+      requireFact(dialog.textContent.includes('Ich lese zuerst den Grundriss.') && dialog.textContent.includes('plan/grundriss.html'), 'The dialog does not show what the agent said and did');
+      requireFact(dialog.scrollWidth <= dialog.clientWidth + 1, 'The dialog leaves the ticket');
       window.updateFactory(snapshot);
       await delayFrame();
     }
