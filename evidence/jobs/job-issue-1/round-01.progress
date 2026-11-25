@@ -1,0 +1,7 @@
+231	start	Factory hat den Auftrag übernommen
+957	worker	Savant erhält Auftrag und akzeptierten Ausgangsstand
+20006005	worker	worker_model=subq-savant-1.4 worker_input_tokens=744 worker_output_tokens=10057 worker_cost_usd=0.005103 worker_duration_ms=20004 
+20006221	worker	Lease durch laufende Ausgabe gehalten, 1 Herzschläge, zuletzt bei 3 Zeichen
+20006332	evaluate	Unabhängiges, gespeichertes Prüfgate ausführen
+20567758	checks	PASS: run-diff erfüllt die Anforderungen
+20584516	accepted	Retain the accepted artifact. No further work was authorized by this round.

@@ -1,0 +1,11 @@
+decision=observed
+identity=reflection-issue-1
+derived_from=/Users/rainer/projects/ideas/talk/evidence/issues/1.run
+worker=savant
+worker_model=subq-savant-1.4
+worker_input_tokens=722
+worker_output_tokens=12794
+worker_cost_usd=0.006469
+worker_duration_ms=32877
+outcome=proposal /Users/rainer/.local/state/taik-factory/proposals/issue-1 waits for approval
+end

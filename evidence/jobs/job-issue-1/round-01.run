@@ -1,0 +1,25 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=Das Rust-Werkzeug run-diff soll zwei .run-Protokolle vergleichen und je abweichendem Schlüssel eine Zeile ausgeben.
+baseline=(empty)
+worker=savant
+worker_model=subq-savant-1.4
+worker_input_tokens=744
+worker_output_tokens=10057
+worker_cost_usd=0.005103
+worker_duration_ms=20004
+limits=4 rounds; worker lease 60s up to 900s; verifier 15s; 96KiB source
+gate_sha256=92f56059ad3824635497932e12411bee0d76325b7e3a82cbe247c37591449deb
+gate_ms=544
+patch_blocks=
+checks=PASS: run-diff erfüllt die Anforderungen
+artifact=round-01.html
+rejected_candidate=
+feedback=
+follow_up=
+continuation=Retain the accepted artifact. No further work was authorized by this round.
+advance=false
+end

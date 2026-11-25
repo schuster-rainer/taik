@@ -1,0 +1,104 @@
+=== main.rs ===
+use std::collections::{BTreeMap, BTreeSet};
+use std::env;
+use std::ffi::OsString;
+use std::fs;
+use std::io::{self, Write};
+use std::path::PathBuf;
+use std::process::ExitCode;
+
+fn parse_run(text: &str) -> BTreeMap<String, String> {
+    let mut entries = BTreeMap::new();
+
+    for raw_line in text.split_inclusive('\n') {
+        let line = match raw_line.strip_suffix('\n') {
+            Some(without_newline) => without_newline
+                .strip_suffix('\r')
+                .unwrap_or(without_newline),
+            None => raw_line,
+        };
+
+        if line.is_empty() {
+            continue;
+        }
+
+        if let Some(separator) = line.find('=') {
+            let key = &line[..separator];
+            let value = &line[separator + 1..];
+            entries.insert(key.to_owned(), value.to_owned());
+        }
+    }
+
+    entries
+}
+
+fn main() -> ExitCode {
+    let args: Vec<OsString> = env::args_os().collect();
+    if args.len() != 3 {
+        return ExitCode::from(2);
+    }
+
+    let paths = [PathBuf::from(&args[1]), PathBuf::from(&args[2])];
+    let mut contents: [Option<String>; 2] = [None, None];
+    let mut unreadable: Vec<&PathBuf> = Vec::new();
+
+    for (index, path) in paths.iter().enumerate() {
+        match fs::read_to_string(path) {
+            Ok(text) => contents[index] = Some(text),
+            Err(_) => unreadable.push(path),
+        }
+    }
+
+    if !unreadable.is_empty() {
+        let stderr = io::stderr();
+        let mut error_output = stderr.lock();
+        for path in unreadable {
+            let _ = writeln!(error_output, "{}", path.display());
+        }
+        let _ = error_output.flush();
+        return ExitCode::from(2);
+    }
+
+    let a = parse_run(contents[0].as_deref().unwrap());
+    let b = parse_run(contents[1].as_deref().unwrap());
+
+    let mut keys: BTreeSet<String> = a.keys().cloned().collect();
+    keys.extend(b.keys().cloned());
+
+    let mut output = String::new();
+    for key in keys {
+        match (a.get(&key), b.get(&key)) {
+            (Some(value_a), None) => {
+                output.push_str(&key);
+                output.push_str(": A=");
+                output.push_str(value_a);
+                output.push('\n');
+            }
+            (None, Some(value_b)) => {
+                output.push_str(&key);
+                output.push_str(": B=");
+                output.push_str(value_b);
+                output.push('\n');
+            }
+            (Some(value_a), Some(value_b)) if value_a != value_b => {
+                output.push_str(&key);
+                output.push_str(": A=");
+                output.push_str(value_a);
+                output.push_str(" B=");
+                output.push_str(value_b);
+                output.push('\n');
+            }
+            _ => {}
+        }
+    }
+
+    if output.is_empty() {
+        return ExitCode::from(0);
+    }
+
+    let stdout = io::stdout();
+    let mut standard_output = stdout.lock();
+    let _ = standard_output.write_all(output.as_bytes());
+    let _ = standard_output.flush();
+    ExitCode::from(1)
+}

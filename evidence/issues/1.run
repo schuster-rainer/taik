@@ -1,0 +1,6 @@
+decision=observed
+identity=issue-1
+intent=Rust-Werkzeug run-diff: zwei Entscheidungsprotokolle vergleichen 
+observation=Ich möchte zwei `.run`-Protokolle der Factory vergleichen können. Aufruf: `run-diff A.run B.run` Ausgabe: je Schlüssel, dessen Wert sich unterscheidet oder der nur in einer Datei vorkommt, eine Zeile, nach Schlüssel sortiert. Gleiche Felder erscheinen nicht. Sind beide Protokolle gleich, endet das Programm ohne Ausgabe mit Status 0, sonst mit Status 1. Nicht lesbare Dateien: Status 2 und der Pfad auf stderr. Nur die Rust-Standardbibliothek, eine Datei. 
+continuation=Derive one job that fulfils this request of the repository owner. Stop if the request is unclear or cannot be checked by a gate.
+end
