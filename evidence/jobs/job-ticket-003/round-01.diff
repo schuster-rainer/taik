@@ -1,0 +1,177 @@
+diff --git a/README.md b/README.md
+index 7e9c339..4088838 100644
+--- a/README.md
++++ b/README.md
+@@ -245,6 +245,7 @@ taik-seed experiment BASELINE.run OUTPUT_DIRECTORY
+ taik-seed queue STATE BASELINE.run
+ taik-seed queue-source STATE NAME BRIEF GATE [ACCEPTED_SOURCE]
+ taik-seed queue-self STATE
++taik-seed close STATE job-NAME
+ taik-seed drain|serve STATE
+ taik-seed serve STATE --reflect
+ ```
+diff --git a/src/main.rs b/src/main.rs
+index 4e14ac0..7901c53 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -248,6 +248,48 @@ fn assess_progress(
+     Ok(outcome)
+ }
+ 
++/// The reason a job is closed with. A closed job gets no further round.
++pub const CLOSED: &str = "closed.md";
++const MAX_CLOSE_REASON_BYTES: usize = 2000;
++
++// Closes STATE/jobs/NAME for good with the reason on standard input. The file is written once.
++fn close(state: &Path, name: &std::ffi::OsStr) -> Result<()> {
++    use std::io::{Read, Write};
++    let mut parts = Path::new(name).components();
++    if !matches!(
++        (parts.next(), parts.next()),
++        (Some(std::path::Component::Normal(_)), None)
++    ) {
++        return Err("a job is named by one folder name".into());
++    }
++    let job = state.join("jobs").join(name);
++    if !job.is_dir() {
++        return Err(format!("no such job: {}", job.display()).into());
++    }
++    let closed = job.join(CLOSED);
++    if closed.symlink_metadata().is_ok() {
++        return Err(format!("job is already closed: {}", closed.display()).into());
++    }
++    let mut reason = Vec::new();
++    std::io::stdin()
++        .take(MAX_CLOSE_REASON_BYTES as u64 + 1)
++        .read_to_end(&mut reason)?;
++    if reason.is_empty() || reason.len() > MAX_CLOSE_REASON_BYTES {
++        return Err("a closing reason is between 1 and 2000 bytes".into());
++    }
++    let mut pending = tempfile::Builder::new()
++        .prefix(".taik-")
++        .suffix(".pending")
++        .tempfile_in(&job)?;
++    pending.write_all(&reason)?;
++    pending.as_file().sync_all()?;
++    // Never replaces an existing closed.md.
++    pending
++        .persist_noclobber(&closed)
++        .map_err(|error| format!("job is already closed: {}: {}", closed.display(), error.error))?;
++    Ok(())
++}
++
+ fn emit(output: &Path, record: &str) -> Result<()> {
+     record::publish(output, record)?;
+     // The durable decision is available even when the consumer closes stdout.
+@@ -348,6 +390,10 @@ fn run() -> Result<bool> {
+             })?.accepted)
+         }
+         "evolve" if rest.len() == 1 => Ok(evolve(first, Path::new(&rest[0]))?.accepted),
++        "close" if rest.len() == 1 => {
++            close(first, &rest[0])?;
++            Ok(true)
++        }
+         "experiment" if rest.len() == 1 => {
+             experiment::run(first, Path::new(&rest[0]))?;
+             Ok(true)
+diff --git a/src/service.rs b/src/service.rs
+index 7c3c2a2..c6d606d 100644
+--- a/src/service.rs
++++ b/src/service.rs
+@@ -381,7 +381,8 @@ fn drain(
+             .is_some_and(|history| history.iter().all(RecordStamp::matches));
+         if !verified {
+             completed.remove(&job);
+-            if job.join("baseline.run").is_file() {
++            // A closed job gets no further round.
++            if job.join("baseline.run").is_file() && !job.join(crate::CLOSED).exists() {
+                 match run_job(&job, search, table, *first_use) {
+                     Ok((accepted, history)) => {
+                         succeeded &= accepted;
+@@ -499,6 +500,10 @@ fn drain(
+ 
+ #[cfg(target_os = "macos")]
+ fn run_source_job(home: &Path, jobs: &Path, job: &Path) -> Result<bool> {
++    // A closed job gets no further round, not even after a reply.
++    if job.join(crate::CLOSED).exists() {
++        return Ok(true);
++    }
+     // The agent of this job, if it names one. Read before every pass, so the viewer can change it.
+     let agent = crate::crew::for_job(home, job);
+     let agent = match agent {
+diff --git a/tests/close.rs b/tests/close.rs
+new file mode 100644
+index 0000000..711e069
+--- /dev/null
++++ b/tests/close.rs
+@@ -0,0 +1,70 @@
++use std::fs;
++use std::io::Write;
++use std::path::Path;
++use std::process::{Command, Stdio};
++
++fn close(state: &Path, job: &str, reason: &[u8]) -> std::process::Output {
++    let mut child = Command::new(env!("CARGO_BIN_EXE_taik-seed"))
++        .arg("close")
++        .arg(state)
++        .arg(job)
++        .stdin(Stdio::piped())
++        .stdout(Stdio::piped())
++        .stderr(Stdio::piped())
++        .spawn()
++        .unwrap();
++    // The command may refuse before it reads; a closed pipe is then expected.
++    let _ = child.stdin.take().unwrap().write_all(reason);
++    child.wait_with_output().unwrap()
++}
++
++#[test]
++fn a_job_is_closed_once_with_exactly_the_given_reason() {
++    let state = tempfile::tempdir().unwrap();
++    let job = state.path().join("jobs").join("job-demo");
++    fs::create_dir_all(&job).unwrap();
++    let closed = job.join("closed.md");
++
++    let reason = "Erledigt: nicht mehr nötig.\n".as_bytes();
++    let output = close(state.path(), "job-demo", reason);
++    assert_eq!(output.status.code(), Some(0), "{output:?}");
++    assert!(output.stdout.is_empty());
++    assert!(output.stderr.is_empty());
++    assert_eq!(fs::read(&closed).unwrap(), reason);
++
++    let again = close(state.path(), "job-demo", b"anders");
++    assert_eq!(again.status.code(), Some(2));
++    assert_eq!(fs::read(&closed).unwrap(), reason);
++}
++
++#[test]
++fn the_reason_is_between_1_and_2000_bytes() {
++    let state = tempfile::tempdir().unwrap();
++    let job = state.path().join("jobs").join("job-demo");
++    fs::create_dir_all(&job).unwrap();
++    let closed = job.join("closed.md");
++
++    assert_eq!(close(state.path(), "job-demo", b"").status.code(), Some(2));
++    assert!(!closed.exists());
++    assert_eq!(
++        close(state.path(), "job-demo", &[b'x'; 2001]).status.code(),
++        Some(2)
++    );
++    assert!(!closed.exists());
++    assert_eq!(fs::read_dir(&job).unwrap().count(), 0);
++
++    assert_eq!(
++        close(state.path(), "job-demo", &[b'x'; 2000]).status.code(),
++        Some(0)
++    );
++    assert_eq!(fs::read(&closed).unwrap(), vec![b'x'; 2000]);
++}
++
++#[test]
++fn an_unknown_job_is_refused() {
++    let state = tempfile::tempdir().unwrap();
++    fs::create_dir_all(state.path().join("jobs")).unwrap();
++    let output = close(state.path(), "job-missing", b"Grund");
++    assert_eq!(output.status.code(), Some(2));
++    assert!(!state.path().join("jobs").join("job-missing").exists());
++}

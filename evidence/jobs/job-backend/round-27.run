@@ -1,0 +1,20 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-27
+intent=Einen Auftrag mit Begründung schließen: `taik-seed close STATE job-NAME`.
+baseline=taik-seed 14b5e66cdc1282c9ef67cad2505d1d5807307dcb28fea414f992025e13fb5fd0
+worker=opus-session-ticket-003
+decided_by=the installed taik-seed 14b5e66cdc1282c9ef67cad2505d1d5807307dcb28fea414f992025e13fb5fd0 at /Users/rainer/.local/state/taik-factory/taik-seed
+limits=99 rounds; gate 900s; candidate checks 10s each
+gate_sha256=76b41170f51fa7e1a5424ba01f903bcf2276b8f8f19e4d87f952e88d18b6b0ce
+gate_ms=28028
+checks=PASS: Rust tests, Clippy with warnings denied, release build; candidate seeded, rejected an invalid procedure without touching the accepted record, and extended it
+evidence=round-27.checks.log
+artifact=round-27-taik-seed
+artifact_sha256=860e6bf533433bac044657ef427a2f9ba716fbeb87243d0af2c507d352b12549
+rollback=round-27.rollback-taik-seed
+continuation=Restart the service so that it runs the accepted binary.
+advance=false
+end

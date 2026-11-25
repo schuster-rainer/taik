@@ -284,7 +284,9 @@ fn close(state: &Path, name: &std::ffi::OsStr) -> Result<()> {
     pending.write_all(&reason)?;
     pending.as_file().sync_all()?;
     // Never replaces an existing closed.md.
-    pending.persist_noclobber(&closed).map_err(|error| error.error)?;
+    pending
+        .persist_noclobber(&closed)
+        .map_err(|error| error.error)?;
     Ok(())
 }
 

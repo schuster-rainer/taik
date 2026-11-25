@@ -1,0 +1,15 @@
+diff --git a/src/main.rs b/src/main.rs
+index 7901c53..c995a5c 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -284,9 +284,7 @@ fn close(state: &Path, name: &std::ffi::OsStr) -> Result<()> {
+     pending.write_all(&reason)?;
+     pending.as_file().sync_all()?;
+     // Never replaces an existing closed.md.
+-    pending
+-        .persist_noclobber(&closed)
+-        .map_err(|error| format!("job is already closed: {}: {}", closed.display(), error.error))?;
++    pending.persist_noclobber(&closed).map_err(|error| error.error)?;
+     Ok(())
+ }
+ 

@@ -1,0 +1,26 @@
+decision=rejected
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=Der Auftrag ergänzt im Repo taik den Befehl taik-seed close STATE job-NAME, der einen Auftrag mit einer Begründung dauerhaft schließt.
+baseline=97bfc2bfd00f3ddf86df8d0cac1ac5e322aa6725
+worker=claude-session
+worker_model=claude-opus-5-5
+worker_output_tokens=5989
+worker_cache_read_tokens=398414
+session_listed_usd=0.5454708
+worker_failure=
+worker_duration_ms=73526
+session=29557d37-fa80-4a5f-a1dd-a676f01cdd04
+limits=6 rounds and one per reply; lease 600s without ceiling; file tools only
+gate_sha256=84f18806323c213e26483db9cb0e3e030804e33b7affd3cceef07ffc896bfc83
+gate_ms=877
+checks=gate failed (exit status: 1): FAIL: temporäres Verzeichnis konnte nicht angelegt werden
+artifact=
+commit=1cf1263a97a24f52320a55083ec5b76a4985659f
+files=README.md +1 -0; src/main.rs +46 -0; src/service.rs +6 -1; tests/close.rs +70 -0
+summary=Ich habe den Befehl `taik-seed close STATE job-NAME` in `src/main.rs` eingebaut; gebaut und getestet habe ich nichts, das Ergebnis des Gates steht noch aus. Der Befehl prüft nur, ob `STATE/jobs/job-NAME` existiert, liest 1 bis 2000 Bytes Begründung von der Standardeingabe und legt `closed.md` mit genau diesen Bytes ohne Ausgabe an, einmalig und ohne Überschreiben (`persist_noclobber`). Unbekannter Auftrag, leere oder zu lange Begründung und zweites Schließen enden mit Status 2, und es entsteht keine Datei. In `src/service.rs` bekommt ein Auftrag mit `closed.md` keine Runde mehr, egal ob Software-, Session- oder Tag-Auftrag, auch nicht nach einer Antwort. Den Test `tests/close.rs` habe ich neu geschrieben, weil er im Repo fehlte; er prüft nur den Befehl, nicht die Sperre im Dienst, und in `README.md` steht jetzt die Zeile `taik-seed close STATE job-NAME`. Die Usage-Meldung habe ich bewusst nicht ergänzt, damit bestehende Ausgaben gleich bleiben, und die Ansicht ist unverändert.
+continuation=The copy keeps the rejected state. The next round continues the session with this finding.
+advance=false
+end

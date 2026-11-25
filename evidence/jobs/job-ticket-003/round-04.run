@@ -1,0 +1,26 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-04
+intent=Der Auftrag ergänzt im Repo taik den Befehl taik-seed close STATE job-NAME, der einen Auftrag mit einer Begründung dauerhaft schließt.
+baseline=97bfc2bfd00f3ddf86df8d0cac1ac5e322aa6725
+worker=claude-session
+worker_model=claude-opus-5-5
+worker_output_tokens=175
+worker_cache_read_tokens=58158
+session_listed_usd=0.9248488
+worker_failure=
+worker_duration_ms=27791
+session=29557d37-fa80-4a5f-a1dd-a676f01cdd04
+limits=6 rounds and one per reply; lease 600s without ceiling; file tools only
+gate_sha256=84f18806323c213e26483db9cb0e3e030804e33b7affd3cceef07ffc896bfc83
+gate_ms=22794
+checks=PASS: close schließt Aufträge und weist unbekannte, leere, zu lange und zweite Begründungen mit Status 2 ab
+artifact=cc12e026e29499dc55ef847b8b0765d02b8fd7d5
+commit=cc12e026e29499dc55ef847b8b0765d02b8fd7d5
+files=src/main.rs +1 -3
+summary=Ich ändere wie gewünscht nichts. Der Stand in der Kopie enthält `close` mit `closed.md`, die Sperre im Dienst für geschlossene Aufträge, `tests/close.rs` und die README-Zeile. Bisher hat das Gate keinen der Bauversuche wirklich ausgeführt, also ist dieser Stand weder gebaut noch getestet. Zeigt der neue Lauf einen Fehler, behebe ich ihn anhand dieser Meldung.
+continuation=The accepted state is commit cc12e026 in /Users/rainer/.local/state/taik-factory/work/ticket-003.
+advance=false
+end

@@ -1,0 +1,8 @@
+15324	start	Sitzung in /Users/rainer/.local/state/taik-factory/work/ticket-003
+15567	worker	Setzt fort: die Sitzung 29557d37
+8749100	ask	Kannst du das Gate mit einem beschreibbaren temporären Verzeichnis erneut starten, zum Beispiel mit `TMPDIR` auf einem erlaubten Pfad, oder soll ich etwas anderes tun?
+17084	start	Sitzung in /Users/rainer/.local/state/taik-factory/work/ticket-003
+17342	worker	Setzt fort: die Sitzung 29557d37
+4826598	checks	0 Dateien geändert, Commit 1cf1263a
+4856205	evaluate	Gate prüft Commit 1cf1263a
+5942382	rejected	gate failed (exit status: 1): FAIL: cargo build ist fehlgeschlagen
