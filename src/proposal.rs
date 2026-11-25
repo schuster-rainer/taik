@@ -335,6 +335,8 @@ pub fn approve(state: &Path, name: &str) -> Result<PathBuf> {
             .filter(|seed| seed.is_file())
             .as_deref(),
         None,
+        // What the user said about the proposal starts the conversation of the job.
+        &crate::talk::read(&proposal),
     )?;
     record::publish_text(
         &proposal.join("approved.txt"),

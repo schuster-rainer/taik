@@ -62,10 +62,17 @@ pub fn reply(state: &Path, name: &str, text: &str) -> Result<PathBuf> {
                 .bytes()
                 .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
     });
-    if !plain {
-        return Err("a reply names a job".into());
-    }
     let jobs = jobs_in(state)?;
+    // A comment on a proposal is kept with the proposal and moves into the job on approval.
+    if !plain {
+        let proposal = crate::worker_name(name)
+            .map(|name| state.join("proposals").join(name))
+            .filter(|proposal| {
+                proposal.join("brief.md").is_file() && !proposal.join("approved.txt").exists()
+            })
+            .ok_or("a reply names a job or a waiting proposal")?;
+        return crate::talk::write(&proposal, crate::talk::Author::User, 0, text);
+    }
     let job = jobs.join(name);
     if !job.join("submission.brief.md").is_file() {
         return Err("replies go to queued software jobs".into());
@@ -83,6 +90,77 @@ pub fn reply(state: &Path, name: &str, text: &str) -> Result<PathBuf> {
     Ok(message)
 }
 
+/// A request of the user in plain words. The service derives a proposal from it.
+#[cfg(target_os = "macos")]
+pub fn request(state: &Path, text: &str) -> Result<String> {
+    let text = text.trim();
+    if text.is_empty() || text.len() > crate::talk::MAX_MESSAGE_BYTES / 2 {
+        return Err("a request is between 1 and 4096 bytes".into());
+    }
+    let (title, rest) = text.split_once('\n').unwrap_or((text, ""));
+    let jobs = jobs_in(state)?;
+    let requests = state.join("requests");
+    fs::create_dir_all(&requests)?;
+    let name = (1..=999)
+        .map(|number| format!("ticket-{number:03}"))
+        .find(|name| {
+            !requests.join(format!("{name}.run")).exists()
+                && !state.join("proposals").join(name).exists()
+                && !jobs.join(format!("job-{name}")).exists()
+        })
+        .ok_or("too many requests")?;
+    record::publish_text(
+        &requests.join(format!("{name}.run")),
+        &format!(
+            "decision=observed\nidentity={name}\nintent={}\nobservation={}\ncontinuation=Derive one job that fulfils this request of the user. Stop if the request is unclear or cannot be checked by a gate.\nend\n",
+            crate::source::single_line(title),
+            crate::source::single_line(rest.trim()),
+        ),
+        MAX_RECORD_BYTES,
+    )?;
+    let wake = tempfile::Builder::new()
+        .prefix(".wake-")
+        .tempdir_in(&jobs)?;
+    drop(wake);
+    Ok(name)
+}
+
+// Requests that have neither a proposal nor an answer yet. Each is derived once.
+#[cfg(target_os = "macos")]
+fn derive_requests(home: &Path) {
+    let requests = home.join("requests");
+    let Ok(entries) = fs::read_dir(&requests) else {
+        return;
+    };
+    let mut names: Vec<String> = entries
+        .flatten()
+        .filter_map(|entry| {
+            let name = entry.file_name().to_string_lossy().into_owned();
+            name.strip_suffix(".run")
+                .filter(|stem| stem.starts_with("ticket-"))
+                .map(str::to_owned)
+        })
+        .collect();
+    names.sort_unstable();
+    for name in names {
+        if requests.join(format!("reflection-{name}.run")).exists()
+            || requests.join(format!("{name}.failed")).exists()
+            || home.join("proposals").join(&name).exists()
+        {
+            continue;
+        }
+        if let Err(error) =
+            crate::proposal::propose(home, &name, &requests.join(format!("{name}.run")))
+        {
+            eprintln!("request {name}: {error}");
+            let _ = fs::write(
+                requests.join(format!("{name}.failed")),
+                format!("{}\n", crate::source::single_line(&error.to_string())),
+            );
+        }
+    }
+}
+
 pub fn queue_self(state: &Path) -> Result<PathBuf> {
     let jobs = jobs_in(state)?;
     let job = stage(&jobs)?;
@@ -98,6 +176,7 @@ pub fn queue_source(
     gate: &Path,
     seed: Option<&Path>,
     agent: Option<&str>,
+    conversation: &[crate::talk::Message],
 ) -> Result<PathBuf> {
     if name.is_empty()
         || name.len() > 48
@@ -148,6 +227,10 @@ pub fn queue_source(
             &source,
             crate::source::LIMIT,
         )?;
+    }
+    // What was said before the job existed is in place before the service can see the job.
+    for message in conversation {
+        crate::talk::write(job.path(), message.author, 0, &message.text)?;
     }
     record::publish(&job.path().join("request.run"), crate::source::REQUEST)?;
     publish_job(job, jobs.join(destination))
@@ -346,6 +429,7 @@ fn drain(
             found
         };
         std::thread::scope(|scope| {
+            scope.spawn(|| derive_requests(home));
             for _ in 0..width {
                 scope.spawn(|| {
                     loop {

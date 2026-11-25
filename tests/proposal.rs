@@ -190,3 +190,121 @@ fn a_proposed_job_waits_until_it_is_approved() {
         "approval queues the job and does not run it"
     );
 }
+
+#[test]
+fn a_request_of_the_user_becomes_a_proposal_and_keeps_what_was_said() {
+    use std::io::Write;
+    use std::process::Stdio;
+    let root = tempfile::Builder::new()
+        .prefix("taik-request-")
+        .tempdir_in("/tmp")
+        .unwrap();
+    let factory = || Command::new(env!("CARGO_BIN_EXE_taik-seed"));
+    let state = root.path().join("state");
+    fs::create_dir_all(state.join("jobs")).unwrap();
+    let worker = root.path().join("lead");
+    let answer = |text: &str| {
+        let body = serde_json::json!({"type": "result", "is_error": false, "result": text,
+            "usage": {"output_tokens": 1}, "total_cost_usd": 0.01, "modelUsage": {"m": {}}});
+        fs::write(root.path().join("answer.json"), body.to_string()).unwrap();
+        fs::write(
+            &worker,
+            format!(
+                "#!/bin/sh\ncat '{}'\n",
+                root.path().join("answer.json").display()
+            ),
+        )
+        .unwrap();
+        fs::set_permissions(&worker, fs::Permissions::from_mode(0o700)).unwrap();
+    };
+    let say = |arguments: &[&str], text: &str| {
+        let mut child = factory()
+            .args(arguments)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap();
+        child
+            .stdin
+            .take()
+            .unwrap()
+            .write_all(text.as_bytes())
+            .unwrap();
+        child.wait_with_output().unwrap()
+    };
+    let serve = || {
+        factory()
+            .arg("drain")
+            .arg(&state)
+            .env("TAIK_LEAD_WORKER", &worker)
+            .env_remove("TAIK_SECOND_WORKER")
+            .env_remove("TAIK_AUTO_PROPOSE")
+            .output()
+            .unwrap()
+    };
+    let home = state.to_str().unwrap();
+
+    assert_eq!(say(&["request", home], "  \n").status.code(), Some(2));
+    let asked = say(
+        &["request", home],
+        "Eine Seite mit Titel\n\nSie soll blau sein.\n",
+    );
+    assert_eq!(asked.status.code(), Some(0), "{asked:?}");
+    assert_eq!(String::from_utf8_lossy(&asked.stdout).trim(), "ticket-001");
+    let record = fs::read_to_string(state.join("requests/ticket-001.run")).unwrap();
+    assert!(
+        record.contains("intent=Eine Seite mit Titel\n")
+            && record.contains("observation=Sie soll blau sein.\n"),
+        "{record}"
+    );
+    assert!(
+        !state.join("proposals").exists(),
+        "a request alone starts nothing"
+    );
+
+    // The service derives the proposal with its own worker.
+    answer(
+        "=== brief.md ===\nEine blaue Seite mit Titel bauen\n\n=== verify.mjs ===\nconsole.log('PASS');\n",
+    );
+    let served = serve();
+    let proposal = state.join("proposals/ticket-001");
+    assert!(proposal.join("brief.md").is_file(), "{served:?}");
+    assert!(state.join("requests/reflection-ticket-001.run").is_file());
+    // A second pass derives nothing again.
+    answer("STOP: nothing");
+    serve();
+    assert!(!state.join("requests/ticket-001.failed").exists());
+
+    // A request the worker declines is answered, not repeated.
+    assert_eq!(
+        String::from_utf8_lossy(&say(&["request", home], "Unklar").stdout).trim(),
+        "ticket-002"
+    );
+    serve();
+    let declined = fs::read_to_string(state.join("requests/reflection-ticket-002.run")).unwrap();
+    assert!(declined.contains("outcome=stop: nothing"), "{declined}");
+    assert!(!state.join("proposals/ticket-002").exists());
+
+    // A comment on the waiting proposal stays with it and opens the conversation of the job.
+    let comment = say(&["reply", home, "ticket-001"], "Bitte dunkelblau.");
+    assert_eq!(comment.status.code(), Some(0), "{comment:?}");
+    assert!(proposal.join("message-001.user.md").is_file());
+    assert_eq!(
+        say(&["reply", home, "ticket-002"], "x").status.code(),
+        Some(2)
+    );
+    let approved = factory()
+        .args(["approve", home, "ticket-001"])
+        .output()
+        .unwrap();
+    assert_eq!(approved.status.code(), Some(0), "{approved:?}");
+    assert_eq!(
+        fs::read_to_string(state.join("jobs/job-ticket-001/message-001.user.md")).unwrap(),
+        "round=0\n\nBitte dunkelblau.\n"
+    );
+    assert_eq!(
+        say(&["reply", home, "ticket-001"], "zu spät").status.code(),
+        Some(2)
+    );
+}

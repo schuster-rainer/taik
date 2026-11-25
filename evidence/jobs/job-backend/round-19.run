@@ -1,0 +1,20 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-19
+intent=Einen Wunsch des Nutzers in eigenen Worten als Ticket annehmen und Kommentare an Vorschlägen in die Unterhaltung führen.
+baseline=taik-seed 78187b3b1db4b6f9da32bee1b1996b82a3a9b864e7d18391bdfad0a5c4a8c0ad
+worker=claude-fable
+decided_by=the installed taik-seed 78187b3b1db4b6f9da32bee1b1996b82a3a9b864e7d18391bdfad0a5c4a8c0ad at /Users/rainer/.local/state/taik-factory/taik-seed
+limits=99 rounds; gate 900s; candidate checks 10s each
+gate_sha256=76b41170f51fa7e1a5424ba01f903bcf2276b8f8f19e4d87f952e88d18b6b0ce
+gate_ms=23608
+checks=PASS: Rust tests, Clippy with warnings denied, release build; candidate seeded, rejected an invalid procedure without touching the accepted record, and extended it
+evidence=round-19.checks.log
+artifact=round-19-taik-seed
+artifact_sha256=7fe60926823f7b1ed26073d10358d28169fdab905bd635d91a42f073ca299c19
+rollback=round-19.rollback-taik-seed
+continuation=Restart the service so that it runs the accepted binary.
+advance=false
+end

@@ -49,6 +49,7 @@ const USAGE: &str = "usage: taik-seed seed OUTPUT.run
        taik-seed promote JOB BRIEF GATE INSTALLED_BINARY WORKER
        taik-seed crew STATE
        taik-seed reply STATE JOB < MESSAGE
+       taik-seed request STATE < REQUEST
        taik-seed propose STATE NAME RECORD.run
        taik-seed approve STATE NAME
        taik-seed experiment BASELINE.run OUTPUT_DIRECTORY
@@ -367,6 +368,16 @@ fn run() -> Result<bool> {
             Ok(true)
         }
         #[cfg(target_os = "macos")]
+        "request" if rest.is_empty() => {
+            use std::io::Read;
+            let mut text = String::new();
+            std::io::stdin()
+                .take(talk::MAX_MESSAGE_BYTES as u64)
+                .read_to_string(&mut text)?;
+            println!("{}", service::request(first, &text)?);
+            Ok(true)
+        }
+        #[cfg(target_os = "macos")]
         "crew" if rest.is_empty() => {
             println!("{}", crew::publish_overview(first)?);
             Ok(true)
@@ -441,6 +452,7 @@ fn run() -> Result<bool> {
                     Path::new(&plain[2]),
                     plain.get(3).map(Path::new),
                     agent,
+                    &[],
                 )?
                 .display()
             );
