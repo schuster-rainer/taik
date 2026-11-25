@@ -17,7 +17,8 @@ This is a running seed, not a product. What the evidence supports today:
 | A bounded round runs real work and an independent gate decides it | Shown for tag procedures and for HTML software jobs |
 | A rejected candidate leaves the accepted result intact | Shown |
 | Accepted work survives a restart and is reused by later rounds | Shown |
-| Unattended rounds build software that is not HTML | Shown once: a Rust command-line tool, compiled and run by its gate, accepted in round 3. See [job-taik-stats](evidence/jobs/job-taik-stats/observation.run) |
+| Unattended rounds build software that is not HTML | Shown twice: a Rust tool as one file and as a Cargo project of four files, compiled and run by their gates. See [job-taik-stats](evidence/jobs/job-taik-stats/observation.run) |
+| The Factory writes its next job itself | Shown once, with the user's approval: brief and gate derived from an observation, accepted in round 1. See [the observation](evidence/jobs/job-mehrdatei-programm/observation.run) |
 | The Factory changes its own procedures and viewer through its own gate | Shown for the search procedure and the viewer |
 | The Factory judges and installs its own backend | Shown once. The installed binary ran the pinned gate, checked the candidate itself and replaced itself in [job-backend](evidence/jobs/job-backend/round-01.run). The thirteen rounds before were decided by their authors |
 | Reusing a result across jobs lowers cost (G-03, I-03) | Not supported on software jobs. See [the experiment](evidence/jobs/job-galaxy-quellcode/summary.run) |

@@ -1,0 +1,24 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=Ein Rust-Kommandozeilenwerkzeug `taik-stats` als Cargo-Projekt aus mehreren Quelldateien bauen, das Entscheidungsprotokolle der Factory zusammenfasst.
+baseline=(empty)
+worker=claude-cli
+worker_model=claude-opus-5-5
+worker_output_tokens=2698
+worker_cost_usd=0.074888
+worker_duration_ms=24344
+worker_account_usage=seven_day allowed_warning 0.96
+limits=4 rounds; worker 150s; verifier 15s; 96KiB source
+gate_sha256=91a771a7a0bf8ad70c90e2d62a184a2539d45968fc1043ed46da745333a1df52
+gate_ms=2067
+checks=PASS: taik-stats aus 4 Dateien übersetzt, alle Module nötig, Zusammenfassungen und Fehlerausgänge korrekt (cargo build ok)
+artifact=round-01.html
+rejected_candidate=
+feedback=
+follow_up=
+continuation=Retain the accepted artifact. No further work was authorized by this round.
+advance=false
+end

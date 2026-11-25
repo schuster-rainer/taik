@@ -80,7 +80,7 @@
 ## Vorschläge der Factory
 
 - [Vorschlagsweg eingeführt](jobs/job-backend/round-04.run)
-- Wartet auf Freigabe: [Auftrag](proposals/mehrdatei-programm/brief.md) und [Gate](proposals/mehrdatei-programm/verify.mjs) für ein Cargo-Projekt aus mehreren Dateien, abgeleitet aus [dieser Beobachtung](jobs/job-taik-stats/observation.run)
+- Freigegeben und angenommen: [Cargo-Projekt aus vier Dateien](jobs/job-mehrdatei-programm/round-01.run), [vorgeschlagener Auftrag](proposals/mehrdatei-programm/brief.md) und [Gate](proposals/mehrdatei-programm/verify.mjs), abgeleitet aus [dieser Beobachtung](jobs/job-taik-stats/observation.run), mit [Auswertung](jobs/job-mehrdatei-programm/observation.run)
 
 ## Snap als Kategorisierer
 

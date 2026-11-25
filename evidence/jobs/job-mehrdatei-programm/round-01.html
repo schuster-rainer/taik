@@ -1,0 +1,184 @@
+=== Cargo.toml ===
+[package]
+name = "taik-stats"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+
+=== src/main.rs ===
+mod record;
+mod summary;
+
+use std::ffi::OsString;
+use std::io::Write;
+use std::process::ExitCode;
+
+use record::Record;
+use summary::Summary;
+
+fn main() -> ExitCode {
+    let args: Vec<OsString> = std::env::args_os().skip(1).collect();
+    if args.is_empty() {
+        let _ = writeln!(std::io::stderr(), "usage: taik-stats DATEI.run [DATEI.run ...]");
+        return ExitCode::from(2);
+    }
+
+    let mut records: Vec<Record> = Vec::with_capacity(args.len());
+    let mut failed = false;
+    for arg in &args {
+        match std::fs::read(arg) {
+            Ok(bytes) => {
+                let text = String::from_utf8_lossy(&bytes);
+                records.push(Record::parse(&text));
+            }
+            Err(err) => {
+                failed = true;
+                let _ = writeln!(
+                    std::io::stderr(),
+                    "taik-stats: cannot read {}: {}",
+                    arg.to_string_lossy(),
+                    err
+                );
+            }
+        }
+    }
+    if failed {
+        return ExitCode::from(2);
+    }
+
+    let summary = Summary::from_records(&records);
+    let out = summary.render();
+    let mut stdout = std::io::stdout();
+    if stdout.write_all(out.as_bytes()).is_err() || stdout.flush().is_err() {
+        return ExitCode::from(1);
+    }
+    ExitCode::SUCCESS
+}
+
+=== src/record.rs ===
+/// One parsed decision protocol.
+#[derive(Debug, Default, Clone)]
+pub struct Record {
+    pub decision: Option<String>,
+    pub worker: Option<String>,
+    pub cost_usd: f64,
+    pub gate_ms: u64,
+}
+
+impl Record {
+    /// Parses `key=value` lines up to the terminating `end` line.
+    pub fn parse(text: &str) -> Record {
+        let mut decision: Option<String> = None;
+        let mut worker: Option<String> = None;
+        let mut cost: Option<String> = None;
+        let mut gate: Option<String> = None;
+
+        for raw in text.split('\n') {
+            let line = raw.strip_suffix('\r').unwrap_or(raw);
+            if line.trim() == "end" {
+                break;
+            }
+            let Some((key, value)) = line.split_once('=') else {
+                continue;
+            };
+            let key = key.trim();
+            let value = value.trim();
+            match key {
+                "decision" => decision = Some(value.to_string()),
+                "worker" => worker = Some(value.to_string()),
+                "worker_cost_usd" => cost = Some(value.to_string()),
+                "gate_ms" => gate = Some(value.to_string()),
+                _ => {}
+            }
+        }
+
+        Record {
+            decision,
+            worker: worker.filter(|w| !w.is_empty()),
+            cost_usd: cost.as_deref().map(parse_cost).unwrap_or(0.0),
+            gate_ms: gate.as_deref().map(parse_gate).unwrap_or(0),
+        }
+    }
+}
+
+fn parse_cost(value: &str) -> f64 {
+    match value.parse::<f64>() {
+        Ok(v) if v.is_finite() => v,
+        _ => 0.0,
+    }
+}
+
+fn parse_gate(value: &str) -> u64 {
+    if value.is_empty() || !value.bytes().all(|b| b.is_ascii_digit()) {
+        return 0;
+    }
+    value.parse::<u64>().unwrap_or(0)
+}
+
+=== src/summary.rs ===
+use std::collections::BTreeMap;
+
+use crate::record::Record;
+
+/// Aggregated statistics over all protocols.
+#[derive(Debug, Default)]
+pub struct Summary {
+    pub records: usize,
+    pub accepted: usize,
+    pub rejected: usize,
+    pub other: usize,
+    pub cost_usd: f64,
+    pub gate_ms_max: u64,
+    pub workers: BTreeMap<String, u64>,
+}
+
+impl Summary {
+    pub fn from_records(records: &[Record]) -> Summary {
+        let mut s = Summary {
+            records: records.len(),
+            ..Summary::default()
+        };
+        for r in records {
+            match r.decision.as_deref() {
+                Some("accepted") => s.accepted += 1,
+                Some("rejected") => s.rejected += 1,
+                _ => s.other += 1,
+            }
+            s.cost_usd += r.cost_usd;
+            if r.gate_ms > s.gate_ms_max {
+                s.gate_ms_max = r.gate_ms;
+            }
+            if let Some(w) = &r.worker {
+                *s.workers.entry(w.clone()).or_insert(0) += 1;
+            }
+        }
+        s
+    }
+
+    pub fn render(&self) -> String {
+        let mut cost = self.cost_usd;
+        if cost == 0.0 {
+            cost = 0.0;
+        }
+        let mut cost_text = format!("{:.3}", cost);
+        if cost_text == "-0.000" {
+            cost_text = "0.000".to_string();
+        }
+        let workers: Vec<String> = self
+            .workers
+            .iter()
+            .map(|(name, count)| format!("{}:{}", name, count))
+            .collect();
+        format!(
+            "records={}\naccepted={}\nrejected={}\nother={}\ncost_usd={}\ngate_ms_max={}\nworkers={}\n",
+            self.records,
+            self.accepted,
+            self.rejected,
+            self.other,
+            cost_text,
+            self.gate_ms_max,
+            workers.join(",")
+        )
+    }
+}

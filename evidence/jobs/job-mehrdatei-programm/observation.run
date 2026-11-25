@@ -1,0 +1,11 @@
+decision=observed
+identity=mehrdatei-programm-beobachtung-01
+intent=Festhalten, was der erste von der Factory vorgeschlagene und vom Nutzer freigegebene Auftrag gezeigt hat.
+scope=One job. Brief and gate were written by one call of the worker (claude-opus-5-5) from ../job-taik-stats/observation.run. The user approved it on 2026-11-25. A separate call of the same model wrote the candidate from the brief alone.
+result=Accepted in round 1: a Cargo project of four files, compiled by rustc and by cargo build inside the gate, every extra module shown to be needed, summaries and error exits correct. 0.075 USD at list price, 24 s of worker time, gate 2067 ms.
+comparison=The hand-written job for the same tool as one file took three rounds, 0.199 USD and 65 s, with two rejections caused by a contradiction in its gate. The proposed gate replaced the text rule by the compiler flag -F unsafe_code and by behaviour checks.
+what_this_supports=A retained observation became the input of a later job that the Factory wrote itself, and that job needed fewer rounds. This is a causal chain across compositions (G-02) with a lower cost for an equivalent outcome.
+what_it_does_not_support=No controlled comparison. The second job differs in brief, gate and file layout, and it is one run. The cost of the proposing call was not recorded, because propose writes no round record. The learning step, reading the observation and writing a better gate, was done by an external model inside the worker call, not by a retained procedure of the seed. I-01 stays not shown.
+gate_independence=Brief and gate come from one author and the candidate from the same model in a separate call without the gate. This is weaker than a gate by a different author.
+continuation=Record the cost of a proposal. Then test whether proposals from the Factory's own observations keep needing fewer rounds than hand-written jobs, with several jobs per side.
+end
