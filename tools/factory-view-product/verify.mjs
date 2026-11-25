@@ -375,9 +375,9 @@ assert.equal(stock.decision.length, 4, 'searching leaves the groups untouched');
 for (const hook of ['class="ticket-state"', 'class="round-change"', 'ticketState(', 'changeLine(']) assert(html.includes(hook), `state hook ${hook}`);
 const { ticketState, changeLine } = new Function(threadBlock + '\nreturn { ticketState, changeLine };')();
 const stood = (decision, more = {}) => ({ name: 'round.run', fields: { decision, intent: 'Eine Seite bauen', advance: 'false', ...more } });
-assert.deepEqual(ticketState({ rounds: [], messages: [] }), { done: 'Noch keine Runde gelaufen.', problem: '', question: '', next: 'Wartet auf die erste Runde.' });
+assert.deepEqual(ticketState({ rounds: [], messages: [] }), { done: 'Noch keine Runde gelaufen.', problem: '', question: '', next: 'Wartet auf die erste Runde.', analysis: [] });
 assert.deepEqual(ticketState({ rounds: [stood('accepted')], messages: [] }),
-  { done: 'Runde 1 angenommen: Eine Seite bauen', problem: '', question: '', next: 'Fertig. Eine Antwort von dir gibt eine weitere Runde.' });
+  { done: 'Runde 1 angenommen: Eine Seite bauen', problem: '', question: '', next: 'Fertig. Eine Antwort von dir gibt eine weitere Runde.', analysis: [] });
 const failed = ticketState({ rounds: [stood('accepted'), stood('rejected', { checks: 'FAIL: kein Titel', worker_failure: '' })], messages: [] });
 assert.equal(failed.done, 'Runde 2 abgelehnt. Der Stand aus Runde 1 gilt weiter.');
 assert.equal(failed.problem, 'FAIL: kein Titel');
@@ -394,4 +394,17 @@ assert.equal(changeLine({ file: 'round-03.rejected.txt', added: 0, removed: 0 })
 assert.equal(changeLine(undefined), '');
 assert.doesNotMatch(css, /#taik-live \.ticket-state[^{]*\{[^}]*(?:text-overflow|white-space:\s*nowrap|line-clamp)/, 'the state is not cut off');
 
-console.log(`PASS: host contract, offline isolation, ${shadows.length} token shadows without glow, contrast ${Math.min(...measured).toFixed(2)}–${Math.max(...measured).toFixed(2)}, lossless .run highlighting, token flow per round, one workpiece pane with live draft, animated flow, ticket board in one group at a time, crew with agents and harnesses, conversation in the ticket, one ticket with the full history, tickets opened in the viewer, the whole stock on the board, top-down state and changes`);
+// 18. A rejected round is explained: the analysis is read into labelled lines and stands in the state.
+for (const hook of ['class="analysis"', 'analysisLines(']) assert(html.includes(hook), `analysis hook ${hook}`);
+const { analysisLines } = new Function(threadBlock + '\nreturn { analysisLines };')();
+assert.deepEqual(analysisLines('Verlangt: ein Titel.\nGescheitert an: keiner da.\n\nUrsache: Kandidat: zu kurz.\nNächster Schritt: Agent.\n'),
+  [['Verlangt', 'ein Titel.'], ['Gescheitert an', 'keiner da.'], ['Ursache', 'Kandidat: zu kurz.'], ['Nächster Schritt', 'Agent.']], 'an analysis is read as labelled lines');
+assert.deepEqual(analysisLines('ohne Aufbau'), [['', 'ohne Aufbau']], 'a line without a label is kept as it is');
+assert.deepEqual(analysisLines(undefined), []);
+const explained = ticketState({ rounds: [stood('rejected', { checks: 'FAIL: kein Titel' })], messages: [], analyses: { 'round': 'Verlangt: ein Titel.\nUrsache: fehlt.' } });
+assert.deepEqual(explained.analysis, [['Verlangt', 'ein Titel.'], ['Ursache', 'fehlt.']], 'the state carries the analysis of the last round');
+assert.equal(explained.problem, 'FAIL: kein Titel', 'the finding of the gate stays beside the analysis');
+assert.deepEqual(ticketState({ rounds: [stood('accepted')], messages: [], analyses: { 'round': 'Verlangt: x' } }).analysis, [], 'an accepted round has no analysis in the state');
+assert.doesNotMatch(css, /#taik-live \.analysis[^{]*\{[^}]*(?:text-overflow|white-space:\s*nowrap|line-clamp)/, 'the analysis is not cut off');
+
+console.log(`PASS: host contract, offline isolation, ${shadows.length} token shadows without glow, contrast ${Math.min(...measured).toFixed(2)}–${Math.max(...measured).toFixed(2)}, lossless .run highlighting, token flow per round, one workpiece pane with live draft, animated flow, ticket board in one group at a time, crew with agents and harnesses, conversation in the ticket, one ticket with the full history, tickets opened in the viewer, the whole stock on the board, top-down state and changes, analysis of a rejection`);

@@ -44,6 +44,7 @@ private struct Job: Codable {
     let brief: String?
     let messages: [Message]
     let changes: [String: Change]
+    let analyses: [String: String]
     let baseline: Round
     let rounds: [Round]
     let progress: [String: [ProgressEvent]]
@@ -461,8 +462,19 @@ private final class FactoryMonitor {
         }
         let draft = active ? readSource(at: url.appendingPathComponent(next + ".draft")) : nil
         return Job(id: url.lastPathComponent, goal: goal, preview: preview, previous: previous,
-            cost: (cost * 10000).rounded() / 10000, draft: draft, agent: jobAgent(in: url), brief: jobBrief(in: url), messages: jobMessages(in: url), changes: roundChanges(rounds, in: url), baseline: baseline, rounds: rounds, progress: progress,
+            cost: (cost * 10000).rounded() / 10000, draft: draft, agent: jobAgent(in: url), brief: jobBrief(in: url), messages: jobMessages(in: url), changes: roundChanges(rounds, in: url), analyses: roundAnalyses(rounds, in: url), baseline: baseline, rounds: rounds, progress: progress,
             sourceQueued: queued, sourceActive: active, sourceStartedAt: startedAt)
+    }
+
+    // The short analysis the Factory wrote for a rejected round.
+    private func roundAnalyses(_ rounds: [Round], in directory: URL) -> [String: String] {
+        var analyses: [String: String] = [:]
+        for round in rounds where round.fields["decision"] == "rejected" {
+            let stem = String(round.name.dropLast(4))
+            if let data = try? Data(contentsOf: directory.appendingPathComponent(stem + ".analysis.md")), data.count <= 1600,
+               let text = String(data: data, encoding: .utf8) { analyses[stem] = text }
+        }
+        return analyses
     }
 
     // What each round changed: its artifact, or its rejected candidate, against the state accepted before it.

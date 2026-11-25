@@ -245,6 +245,8 @@
   #taik-live .ticket-state dt { font-size: .68rem; font-weight: 640; letter-spacing: .12em; text-transform: uppercase; color: var(--quiet); }
   #taik-live .ticket-state dd { margin: 0; font-size: .86rem; line-height: 1.45; overflow-wrap: anywhere; }
   #taik-live .ticket-state .problem dd { color: var(--bad); }
+  #taik-live .analysis strong { font-weight: 620; color: var(--ink); }
+  #taik-live .round.rejected .round-checks.analysis { color: var(--quiet); }
   #taik-live .ticket-state .question dd { color: var(--active); }
   #taik-live .round-change { margin-top: 6px; font-size: .8rem; color: var(--quiet); overflow-wrap: anywhere; }
   #taik-live .round-change pre { margin-top: 6px; max-height: 18rem; overflow: auto; padding: 9px 12px; border-radius: 11px; box-shadow: var(--nm-inset-sm); font: .72rem/1.5 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -805,13 +807,21 @@
       return told;
     }
 
+    // An analysis is a few lines "Label: text". Read them for display.
+    function analysisLines(text) {
+      return String(text ?? '').split('\n').map(line => line.trim()).filter(Boolean).map(line => {
+        const at = line.indexOf(': ');
+        return at > 0 && at < 24 ? [line.slice(0, at), line.slice(at + 2)] : ['', line];
+      });
+    }
+
     // Where a job stands, top down: what happened last, what the problem is, what is asked, what comes next.
     function ticketState(job) {
       const rounds = job?.rounds ?? [];
       const messages = job?.messages ?? [];
       const last = rounds.at(-1)?.fields;
       const said = messages.at(-1);
-      const state = { done: 'Noch keine Runde gelaufen.', problem: '', question: '', next: 'Wartet auf die erste Runde.' };
+      const state = { done: 'Noch keine Runde gelaufen.', problem: '', question: '', next: 'Wartet auf die erste Runde.', analysis: [] };
       if (last?.decision === 'accepted') {
         state.done = `Runde ${rounds.length} angenommen: ${last.intent ?? ''}`.trim();
         state.next = 'Fertig. Eine Antwort von dir gibt eine weitere Runde.';
@@ -821,6 +831,7 @@
         state.done = `Runde ${rounds.length} abgelehnt. ` + (kept ? `Der Stand aus Runde ${kept} gilt weiter.` : 'Es gibt noch keinen angenommenen Stand.');
         state.problem = last.checks || (last.worker_failure ? 'Der Agent hat nichts geliefert: ' + last.worker_failure : '') || last.feedback || '';
         state.next = 'Eine Antwort von dir gibt eine weitere Runde.';
+        state.analysis = analysisLines(job.analyses?.[rounds.at(-1).name.replace(/\.run$/, '')]);
       }
       if (said?.author === 'agent') { state.question = said.text; state.next = 'Deine Antwort im Feld unten.'; }
       else if (said?.author === 'user' && said.round >= rounds.length) state.next = 'Deine Antwort wartet auf ihre Runde.';
@@ -1039,6 +1050,8 @@
         <p class="sub">${tokenLine(flow)}</p>` : ''}
         <h3>${escape(ticketTitle(description))}</h3>
         ${fields.checks ? `<p class="round-checks">${escape(fields.checks)}</p>` : ''}
+        ${rejected && !latest ? analysisLines(job.analyses?.[round.name.replace(/\.run$/, '')]).map(([label, text]) =>
+          `<p class="round-checks analysis">${label ? `<strong>${escape(label)}:</strong> ` : ''}${escape(text)}</p>`).join('') : ''}
         ${roundChange(job, round, name)}
         ${events.length ? `<details data-round="${escape(eventKey)}" data-initial-open="${eventsOpen}"${eventsOpen ? ' open' : ''}>
           <summary>Arbeitsschritte (${events.length})</summary>${eventList(events)}</details>` : ''}
@@ -1142,6 +1155,7 @@
         : `<li class="thread-message ${item.author === 'user' ? 'user' : 'agent'}"><span class="who">${item.author === 'user' ? 'Du' : 'Agent'}</span>${escape(item.text)}</li>`).join('');
       const stateBlock = state => `<dl class="ticket-state"><div><dt>Stand</dt><dd>${escape(state.done)}</dd></div>
           ${state.problem ? `<div class="problem"><dt>Problem</dt><dd>${escape(state.problem)}</dd></div>` : ''}
+          ${state.analysis.map(([label, text]) => `<div class="analysis"><dt>${escape(label || 'Analyse')}</dt><dd>${escape(text)}</dd></div>`).join('')}
           ${state.question ? `<div class="question"><dt>Offene Frage</dt><dd>${escape(state.question)}</dd></div>` : ''}
           <div><dt>Als Nächstes</dt><dd>${escape(state.next)}</dd></div></dl>`;
       const briefKey = `${job.id}/brief`;

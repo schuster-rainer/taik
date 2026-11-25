@@ -237,11 +237,13 @@ async function runDesignGate(requireOpen) {
       const last = job.rounds.at(-1);
       last.fields.decision = 'rejected';
       last.fields.checks = 'FAIL: der Grundriss hat keine Tür';
+      job.analyses = { [last.name.replace(/\.run$/, '')]: 'Verlangt: Der Grundriss braucht eine Tür.\nUrsache: Der Kandidat hat sie ausgelassen.' };
       job.changes = { [last.name.replace(/\.run$/, '')]: { file: 'round-99.rejected.txt', added: 2, removed: 1, fresh: false, rejected: true,
         lines: ['  <main>', '- <p>alt</p>', '+ <p>neu</p>', '+ <p>mehr</p>', '···', '  </main>'], more: 0 } };
       window.updateFactory(told);
       await delayFrame();
       const state = find('#taik-ticket .ticket-state');
+      requireFact(state.querySelectorAll('.analysis').length === 2 && state.textContent.includes('Der Kandidat hat sie ausgelassen.'), 'The ticket does not explain the rejection');
       requireFact(rendered(state) && state.textContent.includes('FAIL: der Grundriss hat keine Tür') && state.textContent.includes('abgelehnt'), 'The ticket does not say where the job stands');
       requireFact(state.getBoundingClientRect().top < find('#taik-ticket .rounds').getBoundingClientRect().top, 'The state is not above the history');
       const change = find('#taik-ticket details.round-change');
