@@ -76,10 +76,9 @@ pub fn queue(
     brief: &Path,
     gate: &Path,
     repo: Option<&Path>,
-    agent: Option<&str>,
-    said: &[talk::Message],
-    plan: Option<&Path>,
+    handover: crate::service::Handover<'_>,
 ) -> Result<PathBuf> {
+    let crate::service::Handover { agent, said, plan } = handover;
     let name = crate::worker_name(name).ok_or("invalid job name")?;
     let brief = record::read_regular(brief, record::MAX_RECORD_BYTES)?;
     source::intent(&brief)?;

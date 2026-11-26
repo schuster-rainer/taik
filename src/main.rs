@@ -454,9 +454,7 @@ fn run() -> Result<bool> {
                 Path::new(&rest[1]),
                 Path::new(&rest[2]),
                 rest.get(3).map(Path::new),
-                None,
-                &[],
-                None,
+                service::Handover::default(),
             )?;
             println!("{}", job.display());
             Ok(true)
@@ -550,9 +548,10 @@ fn run() -> Result<bool> {
                     Path::new(&plain[1]),
                     Path::new(&plain[2]),
                     plain.get(3).map(Path::new),
-                    agent,
-                    &[],
-                    None,
+                    service::Handover {
+                        agent,
+                        ..Default::default()
+                    },
                 )?
                 .display()
             );

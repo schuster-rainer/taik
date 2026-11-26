@@ -185,6 +185,16 @@ pub fn queue_self(state: &Path) -> Result<PathBuf> {
     publish_job(job, jobs.join(self_improve::JOB))
 }
 
+/// What a queued job takes along besides its brief and gate: the agent that works it, what was
+/// said before it existed, and the plan of its proposal.
+#[cfg(target_os = "macos")]
+#[derive(Default)]
+pub struct Handover<'a> {
+    pub agent: Option<&'a str>,
+    pub said: &'a [crate::talk::Message],
+    pub plan: Option<&'a Path>,
+}
+
 #[cfg(target_os = "macos")]
 pub fn queue_source(
     state: &Path,
@@ -192,10 +202,13 @@ pub fn queue_source(
     brief: &Path,
     gate: &Path,
     seed: Option<&Path>,
-    agent: Option<&str>,
-    conversation: &[crate::talk::Message],
-    plan: Option<&Path>,
+    handover: Handover<'_>,
 ) -> Result<PathBuf> {
+    let Handover {
+        agent,
+        said: conversation,
+        plan,
+    } = handover;
     if name.is_empty()
         || name.len() > 48
         || !name
