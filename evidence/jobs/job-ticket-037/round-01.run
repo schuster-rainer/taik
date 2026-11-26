@@ -1,0 +1,26 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=Das Programm auftragsbericht soll mit `--hilfe` einen Hilfetext ausgeben.
+baseline=d949c3edaa2c99d650bae83f12e7236f7a656ade
+worker=claude-session
+worker_model=claude-opus-5-5
+worker_output_tokens=4346
+worker_cache_read_tokens=92048
+session_listed_usd=0.2410016
+worker_failure=
+worker_duration_ms=47412
+session=63ed278b-f80a-4601-852a-bdc9d84cf9ee
+limits=6 rounds and one per reply; lease 600s without ceiling; file tools only
+gate_sha256=df67db8ad1c7edadd89756baf09425f8de1483804cf79d4e12a17195eb2620a5
+gate_ms=1395
+checks=PASS: --hilfe gibt die Hilfe aus, Fehlerfall unverändert, Tests vorhanden
+artifact=75c4e8956a3f0cc09cc1d8b4956fa8dfa279685c
+commit=75c4e8956a3f0cc09cc1d8b4956fa8dfa279685c
+files=README.md +8 -0; src/main.rs +20 -0; tests/cli.rs +56 -0
+summary=Ich habe in `src/main.rs` die Option `--hilfe` eingebaut: Bevor irgendein anderes Argument ausgewertet wird, prüft das Programm, ob `--hilfe` vorkommt; dann gibt es den vierzeiligen Hilfetext auf der Standardausgabe aus und endet mit Status 0, auch wenn zusätzlich andere Optionen, Ordner oder unbekannte Optionen angegeben sind. Die Fehlermeldung `Aufruf: auftragsbericht ORDNER` bei falschem Aufruf ist unverändert. In `tests/cli.rs` gibt es zwei neue Tests (`hilfe_allein`, `hilfe_mit_anderen_argumenten`), die den genauen Text, Status 0, die leere Fehlerausgabe und viele Kombinationen von Argumenten prüfen; gebaut und ausgeführt habe ich sie nicht, das übernimmt die Prüfung. Im README sind `--hilfe` im Abschnitt Aufruf und eine kurze Beschreibung ergänzt, der Abschnitt „Fehler und Rückgabewerte“ ist unberührt. Bitte beachten: Ein `--hilfe` nach `--` gilt wie bisher üblich als Ordnername und löst die Hilfe nicht aus.
+continuation=The accepted state is commit 75c4e895 in /Users/rainer/.local/state/taik-factory/work/ticket-037.
+advance=false
+end

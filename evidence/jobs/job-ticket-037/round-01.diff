@@ -1,0 +1,120 @@
+diff --git a/README.md b/README.md
+index e62b444..adee3f4 100644
+--- a/README.md
++++ b/README.md
+@@ -11,8 +11,16 @@ auftragsbericht ORDNER
+ auftragsbericht --offen ORDNER
+ auftragsbericht --json ORDNER
+ auftragsbericht --json --offen ORDNER
++auftragsbericht --hilfe
+ ```
+ 
++Mit `--hilfe` gibt das Programm einen kurzen Hilfetext auf der
++Standardausgabe aus (die Aufrufzeile
++`Aufruf: auftragsbericht [--offen] [--json] ORDNER` und je eine Zeile zu
++`--offen`, `--json` und `--hilfe`) und endet mit Rückgabewert `0`. `--hilfe`
++hat Vorrang vor allen anderen Argumenten: Steht es irgendwo im Aufruf, wird nur
++die Hilfe ausgegeben, kein Ordner gelesen und kein Bericht erzeugt.
++
+ Mit `--offen` erscheinen nur die Aufträge, deren letzte Entscheidung nicht
+ `accepted` ist (also auch Aufträge ohne Runde, `-`); die Zeile `gesamt` zählt
+ dann nur diese Aufträge. Ohne die Option werden alle Aufträge ausgegeben.
+diff --git a/src/main.rs b/src/main.rs
+index 60056bc..694827e 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -4,7 +4,27 @@ use std::io::{self, Write};
+ use std::path::PathBuf;
+ use std::process::ExitCode;
+ 
++const HILFE: &str = concat!(
++    "Aufruf: auftragsbericht [--offen] [--json] ORDNER\n",
++    "  --offen  nur Aufträge zeigen, deren letzte Entscheidung nicht accepted ist\n",
++    "  --json   den Bericht als JSON-Objekt ausgeben\n",
++    "  --hilfe  diesen Hilfetext ausgeben und beenden\n",
++);
++
+ fn main() -> ExitCode {
++    // --hilfe hat Vorrang vor allem anderen (bis zu einem etwaigen "--").
++    let hilfe = env::args_os()
++        .skip(1)
++        .take_while(|a| a != "--")
++        .any(|a| a == "--hilfe");
++    if hilfe {
++        let mut aus = io::stdout().lock();
++        if aus.write_all(HILFE.as_bytes()).and_then(|_| aus.flush()).is_err() {
++            return ExitCode::from(1);
++        }
++        return ExitCode::SUCCESS;
++    }
++
+     let mut offen = false;
+     let mut json = false;
+     let mut ordner_args = Vec::new();
+diff --git a/tests/cli.rs b/tests/cli.rs
+index 0cfbeaf..49ee40b 100644
+--- a/tests/cli.rs
++++ b/tests/cli.rs
+@@ -308,6 +308,62 @@ fn json_fehler() {
+     assert!(!aus.stderr.is_empty());
+ }
+ 
++const HILFE: &str = "Aufruf: auftragsbericht [--offen] [--json] ORDNER\n\
++  \x20 --offen  nur Aufträge zeigen, deren letzte Entscheidung nicht accepted ist\n\
++  \x20 --json   den Bericht als JSON-Objekt ausgeben\n\
++  \x20 --hilfe  diesen Hilfetext ausgeben und beenden\n";
++
++fn pruefe_hilfe(args: &[&std::ffi::OsStr]) {
++    let aus = starte(args);
++    assert_eq!(aus.status.code(), Some(0), "{:?} {:?}", args, aus);
++    assert!(aus.stderr.is_empty(), "{:?} {:?}", args, aus);
++    assert_eq!(String::from_utf8(aus.stdout).unwrap(), HILFE, "{:?}", args);
++}
++
++#[test]
++fn hilfe_allein() {
++    let aus = starte(&[os("--hilfe")]);
++    let stdout = String::from_utf8(aus.stdout.clone()).unwrap();
++    let zeilen: Vec<&str> = stdout.split_inclusive('\n').collect();
++    assert_eq!(zeilen.len(), 4);
++    assert!(zeilen.iter().all(|z| z.ends_with('\n')));
++    assert_eq!(zeilen[0], "Aufruf: auftragsbericht [--offen] [--json] ORDNER\n");
++    assert!(zeilen[1].contains("--offen"));
++    assert!(zeilen[2].contains("--json"));
++    assert!(zeilen[3].contains("--hilfe"));
++    pruefe_hilfe(&[os("--hilfe")]);
++}
++
++#[test]
++fn hilfe_mit_anderen_argumenten() {
++    let t = TempOrdner::neu();
++    let w = &t.0;
++    json_beispiel(w);
++    let fehlt = w.join("gibt-es-nicht");
++    let datei = w.join("datei");
++    fs::write(&datei, "x").unwrap();
++
++    pruefe_hilfe(&[os("--hilfe"), w.as_os_str()]);
++    pruefe_hilfe(&[w.as_os_str(), os("--hilfe")]);
++    pruefe_hilfe(&[os("--offen"), os("--hilfe"), w.as_os_str()]);
++    pruefe_hilfe(&[os("--json"), os("--offen"), w.as_os_str(), os("--hilfe")]);
++    pruefe_hilfe(&[os("--hilfe"), w.as_os_str(), fehlt.as_os_str()]);
++    pruefe_hilfe(&[fehlt.as_os_str(), os("--hilfe")]);
++    pruefe_hilfe(&[datei.as_os_str(), os("--hilfe")]);
++    pruefe_hilfe(&[os("--zu"), os("--hilfe")]);
++    pruefe_hilfe(&[os("--hilfe"), os("-x"), os("--offen=ja")]);
++    pruefe_hilfe(&[os("--hilfe"), os("--hilfe")]);
++
++    // ohne --hilfe unverändert
++    let aus = starte(&[os("--zu")]);
++    assert_eq!(aus.status.code(), Some(2));
++    assert!(aus.stdout.is_empty());
++    assert_eq!(
++        String::from_utf8_lossy(&aus.stderr),
++        "Aufruf: auftragsbericht ORDNER\n"
++    );
++}
++
+ #[test]
+ fn kein_ordner() {
+     let t = TempOrdner::neu();
