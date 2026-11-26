@@ -1,0 +1,23 @@
+978911	start	Sitzung in /Users/rainer/.local/state/taik-factory/work/ticket-029
+979590	worker	Beginnt die Sitzung 446f11e0
+4526217	tool	Read README.md
+5043264	tool	Read src/orchestrator.rs
+5076758	tool	Read .taik/land.sh
+5675445	tool	Read .taik/protected
+5819910	tool	Glob tools/factory/**
+9162545	tool	Read src/proposal.rs
+9612092	tool	Read src/adopt.rs
+10128720	tool	Read tools/factory/land.sh
+10612574	tool	Read tools/factory/wish.sh
+11045541	tool	Read tools/factory/watch.sh
+15376250	tool	Grep ^(pub )?fn |^//!|settle|adopt|close|shell|Bash|protected|sandbox
+16350197	tool	Grep ^(pub )?fn |^//!|settle|adopt|fn close|reflect|request_with|fn request
+19492132	tool	Read src/service.rs
+19994151	tool	Read src/service.rs
+20887451	tool	Grep "close"|fn close|closed
+23978301	tool	Read src/main.rs
+52208844	tool	Edit README.md
+58583767	tool	Edit README.md
+64990843	checks	1 Dateien geändert, Commit 344554d2
+65042887	evaluate	Gate prüft Commit 344554d2
+66557734	accepted	PASS: README-Abschnitt 'Working through the orchestrator' ist vorhanden, kurz genug, an der richtigen Stelle und nennt alle Befehle und Grenzen

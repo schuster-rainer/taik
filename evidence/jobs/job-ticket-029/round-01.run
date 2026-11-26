@@ -1,0 +1,26 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=Die README bekommt einen neuen englischen Abschnitt `## Working through the orchestrator`, der beschreibt, wie ein Wunsch heute durch die Factory läuft.
+baseline=834a80ee102319cd6e707018b6c5558ab714e661
+worker=claude-session
+worker_model=claude-opus-5-5
+worker_output_tokens=5643
+worker_cache_read_tokens=337838
+session_listed_usd=0.6832676
+worker_failure=
+worker_duration_ms=66542
+session=446f11e0-6d09-4d37-9c2d-1423d23e68aa
+limits=6 rounds and one per reply; lease 600s without ceiling; file tools only
+gate_sha256=d21c8644519e4eb2519b1eaaf73ce4a9e07fc86aaab53d8c969e1ccd507d673d
+gate_ms=1484
+checks=PASS: README-Abschnitt 'Working through the orchestrator' ist vorhanden, kurz genug, an der richtigen Stelle und nennt alle Befehle und Grenzen
+artifact=344554d205521c6b146624b222510b9acb211c79
+commit=344554d205521c6b146624b222510b9acb211c79
+files=README.md +33 -0
+summary=Ich habe in `README.md` direkt vor `## Status` den englischen Abschnitt `## Working through the orchestrator` eingefügt; er ist rund 35 Zeilen lang. Er beschreibt in der vorgegebenen Reihenfolge den Weg eines Wunsches, die beiden Auftragsarten, die Übernahme mit `taik/NAME` und `.taik/land.sh`, die vier Befehle und die beiden Grenzen zu sandbox und shell. Vor dem Schreiben habe ich die genannten Quelldateien und Skripte gelesen und dazu `src/main.rs` für `close`, `adopt` und `settle`, damit jede Aussage zum Code passt. Zwei Feinheiten sind ehrlich benannt: Die Zusatzprüfung bei einem Produkt bleibt nur, wenn sie auf dem alten Stand scheitert, sonst gilt allein das Gate des Produkts. Und `taik-seed adopt` macht dasselbe wie `settle`, schreibt aber kein `adopted.txt`. Die übrige README und alle anderen Dateien habe ich nicht angefasst, und gebaut oder geprüft habe ich nichts.
+continuation=The accepted state is commit 344554d2 in /Users/rainer/.local/state/taik-factory/work/ticket-029.
+advance=false
+end

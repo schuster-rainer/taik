@@ -1,0 +1,20 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-47
+intent=Die README bekommt einen neuen englischen Abschnitt `## Working through the orchestrator`, der beschreibt, wie ein Wunsch heute durch die Factory läuft.
+baseline=taik-seed ace53935e4ada363827b7847f79a7c2ea82d72cdf15e2cd57e552a17b9701701
+worker=opus-session-ticket-029
+decided_by=the installed taik-seed ace53935e4ada363827b7847f79a7c2ea82d72cdf15e2cd57e552a17b9701701 at /Users/rainer/.local/state/taik-factory/taik-seed
+limits=99 rounds; gate 900s; candidate checks 10s each
+gate_sha256=76b41170f51fa7e1a5424ba01f903bcf2276b8f8f19e4d87f952e88d18b6b0ce
+gate_ms=38244
+checks=PASS: Rust tests, Clippy with warnings denied, release build; candidate seeded, rejected an invalid procedure without touching the accepted record, and extended it
+evidence=round-47.checks.log
+artifact=round-47-taik-seed
+artifact_sha256=ace53935e4ada363827b7847f79a7c2ea82d72cdf15e2cd57e552a17b9701701
+rollback=round-47.rollback-taik-seed
+continuation=Restart the service so that it runs the accepted binary.
+advance=false
+end

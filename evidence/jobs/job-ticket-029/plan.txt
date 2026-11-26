@@ -1,0 +1,6 @@
+kind=sitzung
+repo=taik
+repo_path=/Users/rainer/projects/ideas/talk
+gate=pruefer
+work=standard
+reason=Die README im Repo taik muss nach Lesen des Codes geändert werden; pruefer liest als Claude-Agent zuerst den Code, standard arbeitet getrennt davon.

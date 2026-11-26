@@ -1,0 +1,44 @@
+diff --git a/README.md b/README.md
+index 8d22260..691b186 100644
+--- a/README.md
++++ b/README.md
+@@ -8,6 +8,39 @@ The name is a visual pun on *talk*, as in Smalltalk but not small. It also sound
+ 
+ The specification is [TAIK-FACTORY-SEED-v0.4.md](TAIK-FACTORY-SEED-v0.4.md). It is frozen. [AGENTS.md](AGENTS.md) holds the working rules for agents.
+ 
++## Working through the orchestrator
++
++### The path of a wish
++
++1. `printf 'A page with the time' | taik-seed request STATE` writes the wish as `STATE/requests/ticket-NNN.run`, prints the ticket name and wakes the service. `tools/factory/wish.sh FILE` does the same and waits for the proposal.
++2. The orchestrator plans the request in one worker call. The plan names the kind (one document or a session on a repository listed in `STATE/repos/NAME.repo`), the agent that writes the gate, the agent that does the work and a reason in one sentence. The core corrects the plan: gate and work go to two different agents when two exist, a session works on the Claude harness or the standard worker, and a gate author that failed in the last six hours gives way. An answer that is no plan makes the request a document for the standard worker.
++3. Instead of a plan the orchestrator may ask one question, at most three per request. The request then waits until `taik-seed reply STATE ticket-NNN` answers it, and the orchestrator plans again.
++4. The agent named for the gate writes the proposal into `STATE/proposals/NAME`: the brief as work order, the gate, and the plan. If its call fails, the other agents that do not do the work try in turn. A reply to the waiting proposal is kept with it and moves into the job.
++5. `taik-seed approve STATE NAME` queues the job with the planned worker. `taik-seed decline STATE NAME` keeps the reason and no job starts.
++
++### Two kinds of work orders
++
++- **Document.** The worker returns one text document, an HTML page or a bundle of source files, and a Node.js gate judges it. A change to a product starts from the product's accepted source under its own pinned gate. The gate author adds a check for what is new. It is kept only if the product's gate alone passes on the old source and the extended gate fails there. Otherwise the product's gate alone applies.
++- **Session.** The agent works with file tools in its own copy of the repository, `STATE/work/NAME`. The Factory commits what the agent left, and the gate, a shell script, judges a clean checkout of that commit. A commit that touches a path listed in `.taik/protected` of the repository, or that file itself, is rejected before the gate runs.
++
++### After acceptance
++
++When a session round is accepted, the service runs `taik-seed settle STATE job-NAME`. It brings the commit into the repository it came from as branch `taik/NAME` and records the branch in `adopted.txt` or the failure in `adopt-failed.txt`. Nothing is checked out or merged there, and an existing branch only moves forward. `taik-seed adopt STATE job-NAME` does the same without the record and prints the branch.
++
++For this repository `.taik/land.sh NAME` takes the work in. It merges the job's commit into the checkout, runs `cargo fmt`, and lets the installed binary judge and install the result through `promote` in `job-backend`. A rejected attempt goes back to the session agent as a reply, at most three attempts. Then it commits, pushes and writes `landed.txt`. The app runs it from the ticket, `tools/factory/land.sh` from a terminal.
++
++### Four commands
++
++- `taik-seed close STATE job-NAME` closes a job for good with the reason from standard input, and no reply gives it another round.
++- `taik-seed decline STATE NAME` declines a waiting proposal, or withdraws a request that has none, with the reason from standard input.
++- `taik-seed orchestrator-prompt STATE REQUEST.run` prints the text the orchestrator would send for a request and calls no worker.
++- `taik-seed reflect STATE job-NAME` turns the oldest open intent of the Factory into a request that goes through the orchestrator like a wish of the user.
++
++### Two limits
++
++- The gate of a session runs inside a sandbox and cannot start another sandbox. It runs only the tests the job adds or names, never the whole suite. `.taik/land.sh` runs the whole suite in the core.
++- A session agent has no shell. The sign-in of its harness needs the keychain, and a shell in the same sandbox could read other secrets. It cannot build or test its own work; the gate does that after it stops.
++
+ ## Status
+ 
+ This is a running seed, not a product. What the evidence supports today:
