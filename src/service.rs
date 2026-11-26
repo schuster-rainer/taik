@@ -158,9 +158,11 @@ fn derive_requests(home: &Path) {
         let derived = crate::orchestrator::plan(home, &name, &request).and_then(|plan| {
             let mut outcome = crate::proposal::propose_planned(home, &name, &request, Some(&plan));
             // An agent that cannot be reached does not end the request: another one writes the gate.
+            let mut tried = plan.gate.clone();
             for substitute in crate::orchestrator::substitutes(home, &plan) {
                 let Err(error) = &outcome else { break };
-                eprintln!("request {name}: gate by {}: {error}", plan.gate);
+                eprintln!("request {name}: gate by {tried}: {error}");
+                tried.clone_from(&substitute.gate);
                 outcome =
                     crate::proposal::propose_planned(home, &name, &request, Some(&substitute));
             }

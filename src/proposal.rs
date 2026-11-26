@@ -489,8 +489,40 @@ pub fn approve(state: &Path, name: &str) -> Result<PathBuf> {
     Ok(job)
 }
 
+// The two files of an answer. An agent that read a repository first tends to open with a sentence
+// and to close a code fence: what stands before the first marker and a closing fence are dropped.
 fn split(answer: &str, gate: &str) -> Option<(String, String)> {
-    let rest = answer.trim_start().strip_prefix("=== brief.md ===\n")?;
+    const BRIEF: &str = "=== brief.md ===\n";
+    let rest = &answer[answer.find(BRIEF)? + BRIEF.len()..];
     let (brief, gate) = rest.split_once(&format!("\n=== {gate} ===\n"))?;
-    Some((format!("{}\n", brief.trim()), format!("{}\n", gate.trim())))
+    let gate = gate.trim().trim_end_matches("```").trim();
+    if gate.is_empty() {
+        return None;
+    }
+    Some((format!("{}\n", brief.trim()), format!("{gate}\n")))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::split;
+
+    #[test]
+    fn an_answer_with_a_preface_or_a_fence_is_still_two_files() {
+        let plain = "=== brief.md ===\nTitel\n\n=== gate.sh ===\nexit 0\n";
+        assert_eq!(
+            split(plain, "gate.sh"),
+            Some(("Titel\n".into(), "exit 0\n".into()))
+        );
+        let wordy = format!("Ich habe den Code gelesen.\n\n{plain}```\n");
+        assert_eq!(
+            split(&wordy, "gate.sh"),
+            Some(("Titel\n".into(), "exit 0\n".into()))
+        );
+        assert_eq!(split("=== brief.md ===\nTitel\n", "gate.sh"), None);
+        assert_eq!(
+            split("=== brief.md ===\nTitel\n=== gate.sh ===\n```\n", "gate.sh"),
+            None
+        );
+        assert_eq!(split(plain, "verify.mjs"), None);
+    }
 }

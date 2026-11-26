@@ -1,0 +1,20 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-32
+intent=Die Antwort eines Gate-Autors wird auch mit Vorsatz oder schließendem Codezaun gelesen.
+baseline=taik-seed 0399adbb5151e087039a17d2b2fe4ea7fc28fcc1d6e38300f9c51647af284215
+worker=claude-fable
+decided_by=the installed taik-seed 0399adbb5151e087039a17d2b2fe4ea7fc28fcc1d6e38300f9c51647af284215 at /Users/rainer/.local/state/taik-factory/taik-seed
+limits=99 rounds; gate 900s; candidate checks 10s each
+gate_sha256=76b41170f51fa7e1a5424ba01f903bcf2276b8f8f19e4d87f952e88d18b6b0ce
+gate_ms=33252
+checks=PASS: Rust tests, Clippy with warnings denied, release build; candidate seeded, rejected an invalid procedure without touching the accepted record, and extended it
+evidence=round-32.checks.log
+artifact=round-32-taik-seed
+artifact_sha256=6f2cdf1150f43fd418d538ec77576a7c1ff765c042014a3e4e1fae259a2a9b10
+rollback=round-32.rollback-taik-seed
+continuation=Restart the service so that it runs the accepted binary.
+advance=false
+end
