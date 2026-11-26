@@ -1,0 +1,6 @@
+kind=dokument
+repo=
+repo_path=
+gate=pruefer
+work=standard
+reason=Gewünscht ist eine neue eigenständige HTML-Datei ohne Repository. Pruefer ist auf Gates spezialisiert, und standard übernimmt die Arbeit, damit niemand die eigene Arbeit beurteilt.
