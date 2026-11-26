@@ -260,7 +260,11 @@ say '{{"type":"result","is_error":false,"result":"'"$text"'","usage":{{"output_t
 
     // 7. A session job without a repository has nothing to settle.
     let bare_brief = root.join("bare.md");
-    fs::write(&bare_brief, "Eine Datei hello.txt anlegen\n\nOhne Repository.\n").unwrap();
+    fs::write(
+        &bare_brief,
+        "Eine Datei hello.txt anlegen\n\nOhne Repository.\n",
+    )
+    .unwrap();
     let bare = factory()
         .args(["queue-session", state.to_str().unwrap(), "leer"])
         .arg(&bare_brief)

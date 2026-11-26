@@ -1,0 +1,26 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=Der Befehl `taik-seed settle STATE job-NAME` übernimmt die angenommene Sitzung über dieselbe Funktion wie `adopt` und hält das Ergebnis im Auftragsordner fest.
+baseline=cf27253e14765de7c697c5dcd0ba502d162e7636
+worker=claude-session
+worker_model=claude-opus-5-5
+worker_output_tokens=13941
+worker_cache_read_tokens=604304
+session_listed_usd=0.8490808000000002
+worker_failure=
+worker_duration_ms=151356
+session=596ba62e-cb97-493e-b6f0-80a5ae6ab4fa
+limits=6 rounds and one per reply; lease 600s without ceiling; file tools only
+gate_sha256=8071e1ca516dd8b33938a3ac404862db3a617e82e9f6646855069a81bea4d55e
+gate_ms=15670
+checks=PASS: settle verhaelt sich wie verlangt und tests/settle.rs besteht
+artifact=6b4ebb5f60008829af22b484cc9d32e47df50bfb
+commit=6b4ebb5f60008829af22b484cc9d32e47df50bfb
+files=README.md +1 -0; src/adopt.rs +83 -0; src/main.rs +8 -0; src/service.rs +8 -0; tests/session.rs +44 -0; tests/settle.rs +217 -0
+summary=Ich habe `adopt::settle(state, job_name)` in `src/adopt.rs` angelegt. Die Funktion übernimmt über `adopt::adopt` und schreibt `adopted.txt` nur einmal; scheitert die Übernahme, schreibt sie den Fehler als eine Zeile in `adopt-failed.txt`. Ohne `session.repo` schreibt sie nichts, und bei einem unbekannten Auftrag endet sie mit einem Fehler, ohne etwas anzulegen. `taik-seed settle` steht jetzt in `src/main.rs` (mit Eintrag in `USAGE`) und in `README.md` direkt unter `adopt`. Der Dienst ruft `settle` nur nach einer angenommenen Runde eines Sitzungsauftrags auf und gibt einen Fehler nur auf stderr aus, sodass Entscheidung und Rundenzahl gleich bleiben. `tests/settle.rs` deckt alle Fälle aus Teil 1 ab, und `tests/session.rs` prüft den Dienst mit dem vorhandenen Stellvertreter für den Harness: übernommener Zweig, besetzter Zweig mit `adopt-failed.txt` ohne zweite Runde, Auftrag ohne Repository. Ich konnte ohne Shell nichts bauen oder testen; außerdem legt der bestehende Sitzungstest jetzt den Zweig `taik/gruss` im 
+continuation=The accepted state is commit 6b4ebb5f in /Users/rainer/.local/state/taik-factory/work/ticket-012.
+advance=false
+end

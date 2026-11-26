@@ -159,13 +159,20 @@ fn a_failed_adoption_is_recorded_in_one_line() {
         format!("decision=rejected\ncommit={}\nend\n", s.commit),
     )
     .unwrap();
-    fs::write(s.job.join("adopt-failed.txt"), "an older failure\nin two lines\n").unwrap();
+    fs::write(
+        s.job.join("adopt-failed.txt"),
+        "an older failure\nin two lines\n",
+    )
+    .unwrap();
     let output = settle(&s.state, "job-demo");
     assert_eq!(output.status.code(), Some(2), "{output:?}");
     assert!(output.stdout.is_empty(), "{output:?}");
     let failed = fs::read_to_string(s.job.join("adopt-failed.txt")).unwrap();
     let line = failed.strip_suffix('\n').expect("one line with its end");
-    assert!(!line.trim().is_empty() && !line.contains('\n'), "{failed:?}");
+    assert!(
+        !line.trim().is_empty() && !line.contains('\n'),
+        "{failed:?}"
+    );
     assert!(line.contains("not accepted"), "{failed:?}");
     assert!(!s.job.join("adopted.txt").exists());
     assert_eq!(git(&s.origin, &["branch", "--list", "taik/*"]), "");

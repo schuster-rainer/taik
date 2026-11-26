@@ -1,0 +1,29 @@
+700235	start	Sitzung in /Users/rainer/.local/state/taik-factory/work/ticket-012
+700961	worker	Beginnt die Sitzung 596ba62e
+3703929	tool	Read src/adopt.rs
+4484652	tool	Read src/main.rs
+4590707	tool	Read tests/adopt.rs
+13626438	tool	Grep session|accepted|fn |mod tests
+14052292	tool	Read src/session.rs
+17409312	tool	Read src/service.rs
+17800393	tool	Read tests/session.rs
+26769120	tool	Read src/service.rs
+27431297	tool	Read src/service.rs
+56086444	tool	Edit src/adopt.rs
+63901081	tool	Edit src/adopt.rs
+65839928	tool	Edit src/adopt.rs
+70354451	tool	Edit src/adopt.rs
+71952612	tool	Edit src/main.rs
+72886211	tool	Edit src/main.rs
+75134497	tool	Edit src/service.rs
+75914769	tool	Grep adopt
+78752346	tool	Read README.md
+81666725	tool	Edit README.md
+84508738	tool	Grep README|usage:
+107319131	tool	Write tests/settle.rs
+110952714	tool	Grep \[\[test\]\]|autotests|tempfile
+115986666	tool	Edit tests/session.rs
+121970178	tool	Edit tests/session.rs
+135612198	checks	6 Dateien geändert, Commit 6b4ebb5f
+135675399	evaluate	Gate prüft Commit 6b4ebb5f
+151368463	accepted	PASS: settle verhaelt sich wie verlangt und tests/settle.rs besteht
