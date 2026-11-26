@@ -301,6 +301,20 @@
   #taik-live .agent-form .actions button { min-height: 28px; padding: 4px 12px; font-size: .78rem; }
   #taik-live .agent-form .actions .save { color: var(--active); font-weight: 620; }
   #taik-live .agent-form .problem { color: var(--bad); font-size: .78rem; }
+  #taik-live .repo-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 9px; }
+  #taik-live .repo { display: grid; gap: 3px; min-width: 0; padding: 9px 13px; border-radius: 12px; box-shadow: var(--nm-inset-sm);
+    overflow: visible; overflow-wrap: anywhere; word-break: break-word; white-space: normal; }
+  #taik-live .repo-name { font-size: .88rem; font-weight: 600; overflow-wrap: anywhere; }
+  #taik-live .repo code { overflow-wrap: anywhere; white-space: normal; }
+  #taik-live .repo-protected { font-size: .78rem; color: var(--quiet); overflow-wrap: anywhere; }
+  #taik-live .repo-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; margin-top: 10px; padding: 12px 13px 13px;
+    border-radius: 13px; box-shadow: var(--nm-inset-sm); }
+  #taik-live .repo-form label { display: grid; gap: 5px; min-width: 0; font-size: .68rem; font-weight: 640; letter-spacing: .14em; text-transform: uppercase; color: var(--quiet); }
+  #taik-live .repo-form input { font: inherit; font-size: .84rem; letter-spacing: 0; text-transform: none; font-weight: 400; color: var(--ink);
+    width: 100%; min-width: 0; border: 0; border-radius: 10px; padding: 7px 11px; background: var(--nm-base); box-shadow: var(--nm-inset-sm); }
+  #taik-live .repo-form .actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; align-items: center; gap: 8px 12px; flex-wrap: wrap; }
+  #taik-live .repo-form .actions button { min-height: 28px; padding: 4px 12px; font-size: .78rem; color: var(--active); font-weight: 620; }
+  #taik-live .repo-form .problem { color: var(--bad); font-size: .78rem; margin-right: auto; overflow-wrap: anywhere; }
   #taik-live .ticket-agent { display: flex; align-items: center; gap: 10px; font-size: .78rem; color: var(--quiet); }
   #taik-live .ticket-agent select { flex: 1; min-width: 0; font-size: .8rem; padding: 5px 30px 5px 11px; }
 
@@ -482,6 +496,9 @@
     let agentDraft = null;
     let agentProblem = '';
     let crewHarnessesOpen = false;
+    let crewReposOpen = false;
+    let repoDraft = { name: '', path: '' };
+    let repoProblem = '';
     let ticketDrafts = new Map();
     const appearances = { system: 'System', light: 'Hell', dark: 'Dunkel' };
     const systemAppearance = matchMedia('(prefers-color-scheme: dark)');
@@ -1000,6 +1017,16 @@
       if ((draft.persona ?? '').length > 600) return 'Die Persona ist länger als 600 Zeichen.';
       return '';
     }
+
+    // Says what is wrong with a repository to make known, or nothing when it can be sent.
+    function validRepo(name, path, repos) {
+      if (typeof name !== 'string' || !/^[a-z0-9-]{1,32}$/.test(name)) return 'Name: Kleinbuchstaben, Ziffern und Bindestrich, höchstens 32 Zeichen';
+      const known = Array.isArray(repos) ? repos : [];
+      if (known.some(repo => repo && repo.name === name)) return 'Diesen Namen gibt es schon';
+      const trimmed = String(path ?? '').trim();
+      if (!trimmed || !(trimmed.startsWith('/') || trimmed.startsWith('~'))) return 'Pfad: absolut oder mit ~ beginnend';
+      return '';
+    }
     /*CREW_END*/
 
     function renderCrew() {
@@ -1026,7 +1053,24 @@
         <div class="crew"><ul class="crew-list">${usable.length || crew.agents.length ? crew.agents.map(agentRow).join('') : '<li class="board-empty">Noch kein Agent. Ohne Agent arbeitet der Standard-Worker des Dienstes.</li>'}</ul>
         ${agentDraft ? agentForm(crew) : '<div class="board-tabs"><button type="button" data-agent-new>Neuer Agent</button><button type="button" data-crew-refresh>Abos neu prüfen</button></div>'}
         <details data-crew-part="harnesses"${crewHarnessesOpen ? ' open' : ''}><summary>Harnesse und Abos</summary><ul class="crew-list">${crew.harnesses.map(harnessRow).join('')}</ul></details>
+        ${repoSection()}
         </div></section>`;
+    }
+
+    function repoSection() {
+      const repos = Array.isArray(snapshot?.repos) ? snapshot.repos : [];
+      const item = repo => {
+        const guarded = Array.isArray(repo?.protected) ? repo.protected.map(entry => String(entry ?? '')) : [];
+        return `<li class="repo"><span class="repo-name">${escape(repo?.name)}</span><code>${escape(repo?.path)}</code>
+          <span class="repo-protected">${escape('geschützt: ' + (guarded.length ? guarded.join(', ') : 'nichts'))}</span></li>`;
+      };
+      return `<details data-crew-part="repos"${crewReposOpen ? ' open' : ''}><summary>Repositories (${repos.length})</summary>
+        ${repos.length ? `<ul class="repo-list">${repos.map(item).join('')}</ul>` : ''}
+        <div class="repo-form">
+          <label>Name<input id="taik-repo-name" value="${escape(repoDraft.name)}" autocomplete="off" spellcheck="false"></label>
+          <label>Pfad<input id="taik-repo-path" value="${escape(repoDraft.path)}" autocomplete="off" spellcheck="false"></label>
+          <div class="actions">${repoProblem ? `<span class="problem" role="alert">${escape(repoProblem)}</span>` : ''}<button type="button" data-repo-add>Bekannt machen</button></div>
+        </div></details>`;
     }
 
     function agentForm(crew) {
@@ -1355,7 +1399,7 @@
       if (html === lastHTML) return;
       lastHTML = html;
       const focusId = document.activeElement?.id;
-      const kept = focusId?.startsWith('taik-agent-') || focusId === 'taik-board-search';
+      const kept = focusId?.startsWith('taik-agent-') || focusId?.startsWith('taik-repo-') || focusId === 'taik-board-search';
       const fieldCaret = kept && document.activeElement.setSelectionRange
         ? [document.activeElement.selectionStart, document.activeElement.selectionEnd] : null;
       // A reply is typed while the snapshot refreshes. Keep its field and caret.
@@ -1436,6 +1480,21 @@
         approve.disabled = true;
         approve.textContent = 'Eingereiht';
         window.webkit?.messageHandlers?.approveProposal?.postMessage(approve.dataset.proposal);
+        return;
+      }
+      if (event.target.closest('button[data-repo-add]')) {
+        const name = document.getElementById('taik-repo-name')?.value ?? repoDraft.name;
+        const rawPath = document.getElementById('taik-repo-path')?.value ?? repoDraft.path;
+        repoDraft = { name, path: rawPath };
+        const problem = validRepo(name, rawPath, Array.isArray(snapshot?.repos) ? snapshot.repos : []);
+        if (problem) {
+          repoProblem = problem;
+        } else {
+          window.webkit?.messageHandlers?.addRepo?.postMessage({ name, path: rawPath.trim() });
+          repoDraft = { name: '', path: '' };
+          repoProblem = '';
+        }
+        render();
         return;
       }
       if (event.target.closest('button[data-crew-refresh]')) {
@@ -1549,6 +1608,8 @@
     root.addEventListener('input', event => {
       const part = { 'taik-agent-name': 'name', 'taik-agent-model': 'model', 'taik-agent-persona': 'persona' }[event.target.id];
       if (part && agentDraft) { agentDraft[part] = event.target.value; return; }
+      if (event.target.id === 'taik-repo-name') { repoDraft.name = event.target.value; return; }
+      if (event.target.id === 'taik-repo-path') { repoDraft.path = event.target.value; return; }
       if (event.target.id === 'taik-board-search') { boardSearch = event.target.value; render(); return; }
       const field = event.target.closest('.ticket-detail textarea');
       const key = field?.closest('.ticket-detail')?.dataset.detail;
@@ -1556,6 +1617,7 @@
     });
     root.addEventListener('toggle', event => {
       if (event.target.dataset?.crewPart === 'harnesses') { crewHarnessesOpen = event.target.open; return; }
+      if (event.target.dataset?.crewPart === 'repos') { crewReposOpen = event.target.open; return; }
       const id = event.target.dataset?.round;
       if (!id || !event.target.isConnected || event.target.dataset.initialOpen === String(event.target.open)) return;
       openRounds.set(id, event.target.open);

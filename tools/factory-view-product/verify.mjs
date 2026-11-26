@@ -579,3 +579,42 @@ const a = f({});
 a.push('x');
 assert.deepEqual(f({}), waiting, 'Jeder Aufruf soll eine neue Liste liefern, ohne gemeinsamen Zustand.');
 })();
+// TAIK: check added by job ticket-024
+await (async () => {
+  const { default: assert } = await import('node:assert/strict');
+  const { readFileSync } = await import('node:fs');
+  const html = readFileSync(process.argv[2], 'utf8');
+  void readFileSync;
+const m = html.match(/\/\*CREW_BEGIN\*\/([\s\S]*?)\/\*CREW_END\*\//);
+assert.ok(m, 'The CREW block between /*CREW_BEGIN*/ and /*CREW_END*/ is missing.');
+const api = new Function(m[1] + '\nreturn { validRepo: typeof validRepo === "function" ? validRepo : null };')();
+assert.ok(api.validRepo, 'The CREW block does not define a function validRepo(name, path, repos).');
+const v = api.validRepo;
+const NAME = 'Name: Kleinbuchstaben, Ziffern und Bindestrich, höchstens 32 Zeichen';
+const DUP = 'Diesen Namen gibt es schon';
+const PATH = 'Pfad: absolut oder mit ~ beginnend';
+
+assert.equal(v('mein-repo', '/srv/x', []), '', 'A valid name and absolute path should give an empty string.');
+assert.equal(v('mein-repo', '  ~/x  ', []), '', 'A path starting with ~ after trimming should be valid.');
+assert.equal(v('mein-repo', '/srv/x'), '', 'Missing repos should mean no name conflict.');
+assert.equal(v('a1-b', '~', undefined), '', 'A path that is just ~ should be valid.');
+assert.equal(v('Mein', '/x', []), NAME, 'An uppercase name should give the exact name message.');
+assert.equal(v('', '/x', []), NAME, 'An empty name should give the name message.');
+assert.equal(v(' a', '/x', []), NAME, 'A name with a leading space should be invalid (name is not trimmed).');
+assert.equal(v('a ', '/x', []), NAME, 'A name with a trailing space should be invalid.');
+assert.equal(v('a_b', '/x', []), NAME, 'An underscore in the name should be invalid.');
+assert.equal(v('a'.repeat(32), '/x', []), '', 'A name of 32 characters should be valid.');
+assert.equal(v('a'.repeat(33), '/x', []), NAME, 'A name of 33 characters should be invalid.');
+assert.equal(v('a', 'x', [{ name: 'a' }]), DUP, 'An existing name should give the duplicate message.');
+assert.equal(v('a', '/x', [{ name: 'b' }]), '', 'A different existing name should not conflict.');
+assert.equal(v('a', 'rel/pfad', []), PATH, 'A relative path should give the path message.');
+assert.equal(v('a', '', []), PATH, 'An empty path should give the path message.');
+assert.equal(v('a', '   ', []), PATH, 'A blank path should give the path message.');
+assert.equal(v('A', 'x', [{ name: 'A' }]), NAME, 'The name rule should win over the duplicate rule.');
+assert.equal(v('a', 'x', [{ name: 'a' }]), DUP, 'The duplicate rule should win over the path rule.');
+
+const repos = [{ name: 'q', path: '/q', protected: [] }];
+const copy = JSON.stringify(repos);
+v('z', '/z', repos);
+assert.equal(JSON.stringify(repos), copy, 'validRepo must not change repos.');
+})();
