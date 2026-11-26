@@ -618,3 +618,51 @@ const copy = JSON.stringify(repos);
 v('z', '/z', repos);
 assert.equal(JSON.stringify(repos), copy, 'validRepo must not change repos.');
 })();
+// TAIK: check added by job ticket-025
+await (async () => {
+  const { default: assert } = await import('node:assert/strict');
+  const { readFileSync } = await import('node:fs');
+  const html = readFileSync(process.argv[2], 'utf8');
+  void readFileSync;
+const m = html.match(/\/\*WORKPIECE_BEGIN\*\/([\s\S]*?)\/\*WORKPIECE_END\*\//);
+assert.ok(m, 'The WORKPIECE_BEGIN/WORKPIECE_END block is missing.');
+const api = new Function(m[1] + '\nreturn { workpieceState, sessionChange: typeof sessionChange === "function" ? sessionChange : null };')();
+const { workpieceState, sessionChange } = api;
+
+const mk = (rounds, changes, extra = {}) => ({ id: 'job-x', rounds, changes, ...extra });
+const sessRound = (n, commit = 'abc123') => ({ name: n, fields: { commit } });
+const session = mk([sessRound('round-01.run')], {}, { preview: '<!doctype html><p>fremd</p>', draft: '<html></html>', previous: 'a' });
+
+for (const mode of ['view', 'source', 'diff']) {
+  assert.deepEqual(workpieceState(session, mode), { show: 'session', unverified: false },
+    `workpieceState must return { show: 'session', unverified: false } for a session job in mode ${mode}, even with draft and preview set.`);
+}
+const sessPreviewOnly = mk([sessRound('round-01.run')], {}, { preview: '<!doctype html><p>x</p>' });
+assert.deepEqual(workpieceState(sessPreviewOnly, 'view'), { show: 'session', unverified: false }, 'A session job with only a preview must show "session".');
+const sessNothing = mk([sessRound('round-01.run')], {});
+assert.deepEqual(workpieceState(sessNothing, 'view'), { show: 'session', unverified: false }, 'A session job without preview or draft must show "session".');
+const sessLater = mk([{ name: 'round-01.run', fields: { commit: '' } }, sessRound('round-02.run')], {}, { preview: '<p>x</p>' });
+assert.equal(workpieceState(sessLater, 'view').show, 'session', 'A job is a session job when any round has a non-empty commit.');
+
+// Non-session behaviour unchanged
+const plain = mk([{ name: 'round-01.run', fields: { commit: '' } }], {}, { preview: '<!doctype html><p>a</p>', previous: 'b' });
+assert.deepEqual(workpieceState(plain, 'view'), { show: 'accepted', unverified: false }, 'A job with empty commit must keep showing its accepted document.');
+assert.deepEqual(workpieceState(plain, 'diff'), { show: 'diff', unverified: false }, 'Diff mode of a normal job must stay unchanged.');
+assert.deepEqual(workpieceState(plain, 'source'), { show: 'source', unverified: false }, 'Source mode of a normal job must stay unchanged.');
+const draftJob = mk([{ name: 'round-01.run', fields: {} }], {}, { draft: '<html></html>' });
+assert.deepEqual(workpieceState(draftJob, 'view'), { show: 'draft', unverified: true }, 'A normal draft job must stay a draft.');
+assert.deepEqual(workpieceState(mk([], {}), 'view'), { show: 'empty', unverified: false }, 'A job without output must stay empty.');
+assert.deepEqual(workpieceState(null, 'view'), { show: 'empty', unverified: false }, 'No job must stay empty.');
+
+// sessionChange
+assert.equal(typeof sessionChange, 'function', 'The pure function sessionChange(job) is missing in the WORKPIECE block.');
+const c1 = { file: 'a.js', added: 1, removed: 0, rejected: false, lines: ['+x'], more: 0 };
+const c2 = { file: 'b.js', added: 2, removed: 1, rejected: false, lines: ['-y', '+z'], more: 0 };
+const job3 = mk([sessRound('round-01.run'), sessRound('round-02.run'), sessRound('round-03.run')], { 'round-01': c1, 'round-02': c2 });
+const got = sessionChange(job3);
+assert.ok(got, 'sessionChange must return an object when a round has a change.');
+assert.equal(got.round, 'round-02', 'sessionChange must name the last round that has a change, without ".run".');
+assert.deepEqual(got.change, c2, 'sessionChange must return the change of the last round that has one.');
+assert.equal(sessionChange(mk([sessRound('round-01.run')], {})), null, 'sessionChange must return null when no round has a change.');
+assert.equal(sessionChange(mk([sessRound('round-01.run')], undefined)), null, 'sessionChange must return null when job.changes is missing.');
+})();

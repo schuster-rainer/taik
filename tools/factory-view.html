@@ -224,6 +224,7 @@
   #taik-live .agents h3 .sub { display: inline; font-weight: 400; font-family: var(--mono); }
 
   #taik-live .modes { display: inline-flex; gap: 8px; margin-right: auto; margin-left: 6px; }
+  #taik-live .modes[hidden] { display: none; }
   #taik-live .modes button { padding: 3px 11px; font-size: .74rem; border-radius: 9px; min-height: 28px; }
   #taik-live .diff { flex: 1; min-height: 0; overflow: auto; padding: 12px 14px; border-radius: 15px; box-shadow: var(--nm-inset); }
   #taik-live .diff[hidden] { display: none; }
@@ -390,6 +391,7 @@
         <taik-artifact-preview id="taik-draft-viewport" draft hidden></taik-artifact-preview>
         <div id="taik-result-source" class="diff" hidden></div>
         <div id="taik-result-diff" class="diff" hidden></div>
+        <div id="taik-result-session" class="diff" hidden></div>
       </section>
     </aside>
   </div>
@@ -472,6 +474,7 @@
     const draftViewport = document.getElementById('taik-draft-viewport');
     const resultSource = document.getElementById('taik-result-source');
     const resultDiff = document.getElementById('taik-result-diff');
+    const resultSession = document.getElementById('taik-result-session');
     const labels = { lower: 'Kleinschreiben', trim: 'Ränder trimmen', sort: 'Sortieren', dedup: 'Duplikate entfernen', 'drop-blank': 'Leere Tags entfernen' };
     const aliases = { 'lower-then-trim': 'lower,trim,sort,dedup,drop-blank', 'trim-then-lower': 'trim,lower,sort,dedup,drop-blank' };
     const openRounds = new Map();
@@ -529,6 +532,9 @@
     /*WORKPIECE_BEGIN*/
     function workpieceState(job, mode) {
       const isDocument = text => /^\s*<(?:!doctype|html)/i.test(text ?? '');
+      const isSession = !!job && Array.isArray(job.rounds)
+        && job.rounds.some(round => String(round?.fields?.commit ?? '').trim() !== '');
+      if (isSession) return { show: 'session', unverified: false };
       if (!job || (!job.draft && !job.preview)) return { show: 'empty', unverified: false };
       if (job.draft) {
         const show = mode === 'source' ? 'source'
@@ -541,6 +547,18 @@
         : isDocument(job.preview) ? 'accepted' : 'source';
       return { show, unverified: false };
     }
+
+    // The change of the last round of a session job that has one, or null.
+    function sessionChange(job) {
+      const rounds = Array.isArray(job?.rounds) ? job.rounds : [];
+      const changes = job?.changes;
+      if (!changes || typeof changes !== 'object') return null;
+      for (let index = rounds.length - 1; index >= 0; index -= 1) {
+        const round = String(rounds[index]?.name ?? '').replace(/\.run$/, '');
+        if (Object.hasOwn(changes, round) && changes[round] != null) return { round, change: changes[round] };
+      }
+      return null;
+    }
     /*WORKPIECE_END*/
 
     function setWorkpieceModes(mode) {
@@ -550,17 +568,33 @@
     }
 
     function renderPreview(selectedJob, ticketProposal) {
-      const shown = selectedJob && (selectedJob.draft || selectedJob.preview) ? selectedJob
+      const session = workpieceState(selectedJob, workpieceMode).show === 'session';
+      const shown = session ? selectedJob : selectedJob && (selectedJob.draft || selectedJob.preview) ? selectedJob
         : snapshot.jobs.find(job => workpieceState(job, 'view').show === 'accepted') ?? selectedJob;
       const state = workpieceState(shown, workpieceMode);
+      modes.hidden = session;
       setWorkpieceModes(workpieceMode);
-      const key = JSON.stringify([shown?.id, state.show, state.unverified, workpieceMode, shown?.draft, shown?.preview, shown?.previous]);
+      const latest = session ? sessionChange(shown) : null;
+      const key = JSON.stringify([shown?.id, state.show, state.unverified, workpieceMode, shown?.draft, shown?.preview, shown?.previous, latest]);
       if (key === workpieceKey) { renderFlow(selectedJob, ticketProposal); return; }
       workpieceKey = key;
       resultViewport.hidden = state.show !== 'accepted';
       draftViewport.hidden = state.show !== 'draft';
       resultSource.hidden = state.show !== 'source';
       resultDiff.hidden = state.show !== 'diff';
+      resultSession.hidden = state.show !== 'session';
+      if (state.show === 'session') {
+        if (latest) {
+          const change = latest.change;
+          const lines = (change.lines ?? []).map(line => line === '···' ? '<span class="diff-gap">···</span>'
+            : `<span class="diff-${line[0] === '+' ? 'add' : line[0] === '-' ? 'del' : 'same'}">${escape(line)}</span>`).join('\n');
+          const more = change.more ? `\n<span class="diff-gap">··· ${escape(change.more)} weitere Zeilen</span>` : '';
+          resultSession.innerHTML = lines || more ? `<pre>${lines}${more}</pre>` : '<p class="sub">Kein Patch zu dieser Änderung.</p>';
+        } else {
+          resultSession.innerHTML = '<p class="sub">Diese Sitzung hat noch nichts geändert.</p>';
+        }
+        resultSession.scrollTop = 0;
+      }
       if (state.show === 'accepted') {
         const accepted = latestAccepted(shown);
         resultViewport.show(`${shown.id}/${accepted.name}`, shown.preview);
@@ -582,7 +616,10 @@
         resultDiff.innerHTML = diff.markup ? `<pre>${diff.markup}</pre>` : '<p class="sub">Kein Unterschied zum vorherigen Stand.</p>';
         resultDiff.scrollTop = 0;
       }
-      if (state.show === 'empty') {
+      if (state.show === 'session') {
+        const name = String(shown.id ?? '').replace(/^job-/, '');
+        resultLabel.textContent = latest ? `${name} · ${latest.round} · ${changeLine(latest.change)}` : name;
+      } else if (state.show === 'empty') {
         resultLabel.textContent = 'Der erste geprüfte Stand steht aus.';
       } else if (state.unverified) {
         resultLabel.innerHTML = '<span class="unverified">Entwurf · ungeprüft</span>';
@@ -1328,7 +1365,8 @@
       const software = job.baseline.fields.kind === 'software';
       const search = job.baseline.fields.kind === 'search';
       const policy = escape(searchPolicies[accepted.fields.policy ?? accepted.fields.procedure]);
-      const artifactButton = software && artifact
+      const sessionJob = workpieceState(job, 'view').show === 'session';
+      const artifactButton = software && artifact && !sessionJob
         ? `<button type="button" data-artifact="${escape(artifact)}" data-job="${escape(job.id)}">${artifact.endsWith('-taik-seed') ? 'Im Finder zeigen' : 'Ergebnis öffnen'}</button>` : '';
       const results = software ? '' : search ? `<section><h2>Akzeptierte Suchprozedur</h2><p class="lead">${policy}</p></section>` : `<section><h2>Akzeptierte Prozedur</h2><ol class="steps">${steps}</ol>
         <div class="tags"><span class="sub">Ergebnis</span>${tags || '<span class="sub">Leere Tag-Liste</span>'}</div></section>`;
