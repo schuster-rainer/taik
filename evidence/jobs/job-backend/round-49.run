@@ -1,0 +1,20 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-49
+intent=Der Durchgang endet sofort, wenn der letzte Auftrag fertig ist.
+baseline=taik-seed ace53935e4ada363827b7847f79a7c2ea82d72cdf15e2cd57e552a17b9701701
+worker=claude-fable
+decided_by=the installed taik-seed ace53935e4ada363827b7847f79a7c2ea82d72cdf15e2cd57e552a17b9701701 at /Users/rainer/.local/state/taik-factory/taik-seed
+limits=99 rounds; gate 900s; candidate checks 10s each
+gate_sha256=76b41170f51fa7e1a5424ba01f903bcf2276b8f8f19e4d87f952e88d18b6b0ce
+gate_ms=54304
+checks=PASS: Rust tests, Clippy with warnings denied, release build; candidate seeded, rejected an invalid procedure without touching the accepted record, and extended it
+evidence=round-49.checks.log
+artifact=round-49-taik-seed
+artifact_sha256=41a05f4c1cb12bdddd5dad9d2a7c6937fd1e74fe88ba0c6215c69fc1309152af
+rollback=round-49.rollback-taik-seed
+continuation=Restart the service so that it runs the accepted binary.
+advance=false
+end

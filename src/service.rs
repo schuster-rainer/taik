@@ -523,29 +523,38 @@ fn drain(
             found
         };
         let working = std::sync::atomic::AtomicUsize::new(width);
+        // The thread that looks for requests. A worker thread wakes it when it ends.
+        let waker = std::sync::OnceLock::<std::thread::Thread>::new();
         std::thread::scope(|scope| {
             // Requests are derived while jobs run, not only between passes: a wish of the user does
             // not wait for a long session to end.
-            scope.spawn(|| {
+            let deriver = scope.spawn(|| {
                 loop {
                     derive_requests(home);
                     if working.load(std::sync::atomic::Ordering::Relaxed) == 0 {
                         break;
                     }
-                    // Short enough that the pass ends at once when the last job is done.
-                    std::thread::sleep(std::time::Duration::from_millis(100));
+                    // Looks again ten times a second, and at once when a worker thread ends.
+                    std::thread::park_timeout(std::time::Duration::from_millis(100));
                 }
             });
+            let _ = waker.set(deriver.thread().clone());
             for _ in 0..width {
                 scope.spawn(|| {
                     // Counted down however the worker thread ends.
-                    struct Done<'a>(&'a std::sync::atomic::AtomicUsize);
+                    struct Done<'a>(
+                        &'a std::sync::atomic::AtomicUsize,
+                        &'a std::sync::OnceLock<std::thread::Thread>,
+                    );
                     impl Drop for Done<'_> {
                         fn drop(&mut self) {
                             self.0.fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
+                            if let Some(thread) = self.1.get() {
+                                thread.unpark();
+                            }
                         }
                     }
-                    let _done = Done(&working);
+                    let _done = Done(&working, &waker);
                     loop {
                         let job = {
                             let Ok(mut pool) = pool.lock() else { break };

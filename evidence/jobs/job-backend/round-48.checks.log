@@ -1,0 +1,32 @@
+   Compiling taik-seed v0.1.0 (/Users/rainer/projects/ideas/talk)
+error[E0373]: closure may outlive the current function, but it borrows `waker`, which is owned by the current function
+   --> src/service.rs:541:29
+    |
+526 |         std::thread::scope(|scope| {
+    |                             ----- has type `&'1 Scope<'1, '_>`
+...
+541 |                 scope.spawn(|| {
+    |                             ^^ may outlive borrowed value `waker`
+...
+550 |                     let _done = Done(&working, waker.clone());
+    |                                                ----- `waker` is borrowed here
+    |
+note: function requires argument type to outlive `'1`
+   --> src/service.rs:541:17
+    |
+541 | /                 scope.spawn(|| {
+542 | |                     // Counted down however the worker thread ends.
+543 | |                     struct Done<'a>(&'a std::sync::atomic::AtomicUsize, std::thread::Thread);
+544 | |                     impl Drop for Done<'_> {
+...   |
+594 | |                 });
+    | |__________________^
+help: to force the closure to take ownership of `waker` (and any other referenced variables), use the `move` keyword
+    |
+541 |                 scope.spawn(move || {
+    |                             ++++
+
+For more information about this error, try `rustc --explain E0373`.
+error: could not compile `taik-seed` (bin "taik-seed" test) due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `taik-seed` (bin "taik-seed") due to 1 previous error
