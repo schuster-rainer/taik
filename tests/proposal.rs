@@ -640,3 +640,102 @@ fn a_planned_product_change_gets_a_check_that_is_red_on_the_current_source() {
         );
     }
 }
+
+#[test]
+fn a_request_is_derived_while_a_job_runs() {
+    use std::io::Write;
+    use std::process::Stdio;
+    let root = tempfile::Builder::new()
+        .prefix("taik-during-")
+        .tempdir_in("/tmp")
+        .unwrap();
+    let root = root.path().canonicalize().unwrap();
+    let factory = || Command::new(env!("CARGO_BIN_EXE_taik-seed"));
+    let state = root.join("state");
+    fs::create_dir_all(state.join("jobs")).unwrap();
+    let reply = |text: &str| {
+        serde_json::json!({"type": "result", "is_error": false, "result": text,
+            "usage": {"output_tokens": 1}, "total_cost_usd": 0.0, "modelUsage": {"m": {}}})
+        .to_string()
+    };
+    fs::write(
+        root.join("plan.json"),
+        reply("Art: dokument\nRepo: -\nGate: standard\nArbeit: standard\nGrund: Neu."),
+    )
+    .unwrap();
+    fs::write(
+        root.join("files.json"),
+        reply("=== brief.md ===\nEine Seite\n\n=== verify.mjs ===\nconsole.log('PASS');\n"),
+    )
+    .unwrap();
+    fs::write(root.join("page.json"), reply("<!doctype html><p>ok</p>")).unwrap();
+    // The worker of the job takes four seconds. Planning and deriving answer at once.
+    let worker = root.join("lead");
+    fs::write(
+        &worker,
+        format!(
+            "#!/bin/sh\ncase \"$*\" in *'orchestrator of a software factory'*) cat '{0}/plan.json';; *'You derive the next job'*) cat '{0}/files.json';; *) sleep 4; cat '{0}/page.json';; esac\n",
+            root.display()
+        ),
+    )
+    .unwrap();
+    fs::set_permissions(&worker, fs::Permissions::from_mode(0o700)).unwrap();
+    let brief = root.join("brief.md");
+    fs::write(&brief, "Eine Seite liefern\n").unwrap();
+    let gate = root.join("verify.mjs");
+    fs::write(&gate, "console.log('PASS: any');\n").unwrap();
+    let home = state.to_str().unwrap();
+    assert!(
+        factory()
+            .args(["queue-source", home, "lang"])
+            .arg(&brief)
+            .arg(&gate)
+            .status()
+            .unwrap()
+            .success()
+    );
+    let service = factory()
+        .arg("drain")
+        .arg(&state)
+        .env("TAIK_LEAD_WORKER", &worker)
+        .env_remove("TAIK_SECOND_WORKER")
+        .env_remove("TAIK_AUTO_PROPOSE")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .unwrap();
+    // The wish arrives while the job is at work.
+    std::thread::sleep(std::time::Duration::from_millis(1200));
+    let mut asked = factory()
+        .args(["request", home])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .spawn()
+        .unwrap();
+    asked
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(b"Noch eine Seite")
+        .unwrap();
+    assert!(asked.wait().unwrap().success());
+    assert!(
+        !state.join("jobs/job-lang/round-01.run").exists(),
+        "the job must still be running when the wish arrives"
+    );
+    let waited = std::time::Instant::now();
+    while !state.join("proposals/ticket-001/brief.md").exists() {
+        assert!(
+            !state.join("jobs/job-lang/round-01.run").exists(),
+            "the proposal came only after the job had ended"
+        );
+        assert!(
+            waited.elapsed().as_secs() < 3,
+            "the wish was not derived during the job"
+        );
+        std::thread::sleep(std::time::Duration::from_millis(50));
+    }
+    let mut service = service;
+    assert_eq!(service.wait().unwrap().code(), Some(0));
+    assert!(state.join("jobs/job-lang/round-01.run").exists());
+}

@@ -468,10 +468,30 @@ fn drain(
             found.sort_unstable();
             found
         };
+        let working = std::sync::atomic::AtomicUsize::new(width);
         std::thread::scope(|scope| {
-            scope.spawn(|| derive_requests(home));
+            // Requests are derived while jobs run, not only between passes: a wish of the user does
+            // not wait for a long session to end.
+            scope.spawn(|| {
+                loop {
+                    derive_requests(home);
+                    if working.load(std::sync::atomic::Ordering::Relaxed) == 0 {
+                        break;
+                    }
+                    // Short enough that the pass ends at once when the last job is done.
+                    std::thread::sleep(std::time::Duration::from_millis(100));
+                }
+            });
             for _ in 0..width {
                 scope.spawn(|| {
+                    // Counted down however the worker thread ends.
+                    struct Done<'a>(&'a std::sync::atomic::AtomicUsize);
+                    impl Drop for Done<'_> {
+                        fn drop(&mut self) {
+                            self.0.fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
+                        }
+                    }
+                    let _done = Done(&working);
                     loop {
                         let job = {
                             let Ok(mut pool) = pool.lock() else { break };

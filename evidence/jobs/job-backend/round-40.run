@@ -1,0 +1,20 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-40
+intent=Ein Wunsch wird abgeleitet, während Aufträge laufen.
+baseline=taik-seed ba4355a9af95458d22a741fa5bf80ae65846b3d0cca4cddd4e1fafcc68aab584
+worker=claude-fable
+decided_by=the installed taik-seed ba4355a9af95458d22a741fa5bf80ae65846b3d0cca4cddd4e1fafcc68aab584 at /Users/rainer/.local/state/taik-factory/taik-seed
+limits=99 rounds; gate 900s; candidate checks 10s each
+gate_sha256=76b41170f51fa7e1a5424ba01f903bcf2276b8f8f19e4d87f952e88d18b6b0ce
+gate_ms=35900
+checks=PASS: Rust tests, Clippy with warnings denied, release build; candidate seeded, rejected an invalid procedure without touching the accepted record, and extended it
+evidence=round-40.checks.log
+artifact=round-40-taik-seed
+artifact_sha256=a83e697254362e79250db534714f01de04bbd740f7d1cc56edb0f15c1b87f165
+rollback=round-40.rollback-taik-seed
+continuation=Restart the service so that it runs the accepted binary.
+advance=false
+end
