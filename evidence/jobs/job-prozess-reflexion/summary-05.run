@@ -1,0 +1,9 @@
+decision=observed
+identity=prozess-reflexion-05
+intent=Drei Zahlen aus prozess-reflexion-04 berichtigen.
+scope=The field state_after_the_night of prozess-reflexion-04 was written from memory by the agent claude-fable. Counted from the files on 2026-11-26 at 03:52 it reads differently. The measured pairs in that record were read from the job records and stand.
+corrected_state=35 requests went through the orchestrator. 28 jobs started from them: 27 ended accepted and 1 was closed. 11 changes of the core were landed from session jobs (landed.txt), two of them by the repository's own procedure .taik/land.sh, nine by its predecessor tools/factory/land.sh or by hand. 12 jobs changed the viewer, with 13 accepted releases by the service. The gate of the product ansicht holds 8 checks that jobs added.
+wrong_in_04=28 accepted jobs (27), 9 landed changes of the core (11), 9 added checks (8).
+cause=The numbers were stated without counting. The evidence index and the user were given the same sentence only through this record.
+continuation=State counts only after counting them from the files.
+end
