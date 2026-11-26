@@ -1,0 +1,6 @@
+kind=dokument
+repo=
+repo_path=
+gate=pruefer
+work=standard
+reason=Änderung am Produkt ansicht ist ein Dokumentauftrag; pruefer schreibt verhaltensbezogene Gates, standard erledigt die Arbeit, grok-schnell fiel kürzlich aus.

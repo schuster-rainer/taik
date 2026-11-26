@@ -463,3 +463,47 @@ assert.deepEqual(orchestratorFeed({ jobs: [] }), []);
 assert.doesNotMatch(css, /#taik-live \.plans[^{]*\{[^}]*(?:text-overflow|white-space:\s*nowrap|line-clamp)/, 'a plan is not cut off');
 
 console.log(`PASS: host contract, offline isolation, ${shadows.length} token shadows without glow, contrast ${Math.min(...measured).toFixed(2)}–${Math.max(...measured).toFixed(2)}, lossless .run highlighting, token flow per round, one workpiece pane with live draft, animated flow, ticket board in one group at a time, crew with agents and harnesses, conversation in the ticket, one ticket with the full history, tickets opened in the viewer, the whole stock on the board, top-down state and changes, analysis of a rejection, dialog of an agent session, a reason for every waiting ticket, the orchestrator and its plans`);
+// TAIK: check added by job ticket-018
+await (async () => {
+  const { default: assert } = await import('node:assert/strict');
+  const { readFileSync } = await import('node:fs');
+  const html = readFileSync(process.argv[2], 'utf8');
+  void readFileSync;
+const m = html.match(/\/\*BOARD_BEGIN\*\/([\s\S]*?)\/\*BOARD_END\*\//);
+assert.ok(m, 'The BOARD block between /*BOARD_BEGIN*/ and /*BOARD_END*/ is missing.');
+const { orchestratorFeed, planLine } = new Function(m[1] + '\nreturn { orchestratorFeed, planLine };')();
+
+const plan = { kind: 'dokument', gate: 'g', work: 'w', reason: 'weil' };
+const pl = planLine(plan);
+const data = { proposals: [
+  { name: 'a', intent: 'Alpha', state: 'declined', note: 'zu vage' },
+  { name: 'b', intent: 'Beta', state: 'failed', note: '   ' },
+  { name: 'c', intent: 'Gamma', state: 'declined', note: 'nein', plan },
+  { name: 'd', intent: 'Delta', state: 'failed', plan },
+  { name: 'e', intent: 'Eps', plan },
+  { name: 'f', intent: 'Phi', state: 'deriving' },
+  { name: 'g', intent: 'Gamma2' },
+  { name: 'h', intent: 'Eta', state: 'declined' },
+] };
+const feed = orchestratorFeed(data);
+assert.deepEqual(feed.map(e => e.key), ['proposal:h', 'proposal:f', 'proposal:e', 'proposal:d', 'proposal:c', 'proposal:b', 'proposal:a'],
+  'Declined and failed requests must appear in the feed, in the same newest-first order as the other entries, without a separate group.');
+const by = k => feed.find(e => e.key === 'proposal:' + k);
+assert.equal(by('a').line, 'Abgelehnt', 'A declined request must have the line "Abgelehnt".');
+assert.equal(by('a').reason, 'zu vage', 'The reason of a declined request must be the text of its note.');
+assert.equal(by('a').title, 'Alpha', 'The title of the entry must stay the intent.');
+assert.equal(by('b').line, 'Fehlgeschlagen', 'A failed request must have the line "Fehlgeschlagen".');
+assert.equal(by('b').reason, 'ohne Begründung', 'A whitespace-only note must give the reason "ohne Begründung".');
+assert.equal(by('h').reason, 'ohne Begründung', 'A missing note must give the reason "ohne Begründung".');
+assert.equal(by('c').line, 'Abgelehnt', 'A declined request with a plan must keep the line "Abgelehnt".');
+assert.equal(by('c').reason, pl + ' · nein', 'A declined request with a plan must have reason = plan line + " · " + note.');
+assert.equal(by('d').line, 'Fehlgeschlagen', 'A failed request with a plan must keep the line "Fehlgeschlagen".');
+assert.equal(by('d').reason, pl + ' · ohne Begründung', 'A failed planned request without note must have reason = plan line + " · ohne Begründung".');
+assert.equal(by('e').line, pl, 'A planned request in another state must keep the plan line as its line.');
+assert.equal(by('e').reason, 'weil', 'A planned request in another state must keep the plan reason.');
+assert.equal(by('f').line, 'Der Orchestrator plant.', 'A deriving request must stay unchanged.');
+assert.equal(by('f').reason, '', 'A deriving request without plan must keep an empty reason.');
+const derivingPlanned = orchestratorFeed({ proposals: [{ name: 'x', intent: 'X', state: 'deriving', plan }] })[0];
+assert.equal(derivingPlanned.reason, 'weil Das Gate wird gerade geschrieben.', 'A deriving request with a plan must keep its reason unchanged.');
+assert.equal(derivingPlanned.line, pl, 'A deriving request with a plan must keep its plan line.');
+})();
