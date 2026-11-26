@@ -359,11 +359,20 @@ private final class FactoryMonitor {
             let origin = (try? String(contentsOf: url.appendingPathComponent("origin.txt"), encoding: .utf8))?
                 .split(separator: "\n").first { $0.hasPrefix("derived_from=") }
                 .map { URL(fileURLWithPath: String($0.dropFirst("derived_from=".count))).deletingLastPathComponent().lastPathComponent } ?? ""
-            return Proposal(name: url.lastPathComponent, intent: String(intent.prefix(300)), origin: origin,
+            var proposal = Proposal(name: url.lastPathComponent, intent: String(intent.prefix(300)), origin: origin,
                 brief: String(brief.prefix(8192)), messages: jobMessages(in: url), plan: plan(at: url.appendingPathComponent("plan.txt")),
                 gate: ["gate.sh", "verify.mjs"].compactMap { name in
                     (try? Data(contentsOf: url.appendingPathComponent(name))).flatMap { $0.count <= 65_536 ? String(data: $0, encoding: .utf8) : nil }
                 }.first)
+            // The user declined it. It stays visible for a day, with the reason.
+            let declined = url.appendingPathComponent("declined.md")
+            if let reason = try? String(contentsOf: declined, encoding: .utf8) {
+                let changed = (try? declined.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate ?? .distantPast
+                if Date().timeIntervalSince(changed) > 86_400 { return nil }
+                proposal.state = "declined"
+                proposal.note = "Von dir abgelehnt: " + String(reason.prefix(600))
+            }
+            return proposal
         } + openRequests()
     }
 
@@ -400,12 +409,15 @@ private final class FactoryMonitor {
             if request.messages.last?.author == "agent" { request.state = "asks" }
             let answer = directory.appendingPathComponent("reflection-" + name + ".run")
             let failure = directory.appendingPathComponent(name + ".failed")
-            for (file, state) in [(answer, "declined"), (failure, "failed")] {
+            let withdrawn = directory.appendingPathComponent(name + ".withdrawn")
+            for (file, state) in [(answer, "declined"), (failure, "failed"), (withdrawn, "withdrawn")] {
                 guard let told = try? String(contentsOf: file, encoding: .utf8) else { continue }
                 let changed = (try? file.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate ?? .distantPast
                 if Date().timeIntervalSince(changed) > 86_400 { return nil }
                 request.state = state
-                request.note = state == "declined" ? String(field(told, "outcome").prefix(600)) : String(told.prefix(600))
+                request.note = state == "declined" ? String(field(told, "outcome").prefix(600))
+                    : state == "withdrawn" ? "Von dir zurückgezogen: " + String(told.prefix(600)) : String(told.prefix(600))
+                if state == "withdrawn" { request.state = "declined" }
             }
             return request
         }
@@ -731,6 +743,7 @@ private final class FactoryWindow: NSObject, NSApplicationDelegate, WKNavigation
         configuration.userContentController.add(self, name: "newTicket")
         configuration.userContentController.add(self, name: "showJob")
         configuration.userContentController.add(self, name: "closeTicket")
+        configuration.userContentController.add(self, name: "declineTicket")
         configuration.userContentController.add(self, name: "setParallel")
         for name in ["saveAgent", "deleteAgent", "setJobAgent", "refreshCrew", "attention"] {
             configuration.userContentController.add(self, name: name)
@@ -856,6 +869,25 @@ private final class FactoryWindow: NSObject, NSApplicationDelegate, WKNavigation
             approval.executableURL = state.appendingPathComponent("taik-seed")
             approval.arguments = ["approve", state.path, name]
             try? approval.run()
+            return
+        }
+        if message.name == "declineTicket", let body = message.body as? [String: String],
+           let name = body["name"], name.range(of: #"^[a-z0-9-]{1,32}$"#, options: .regularExpression) != nil,
+           let text = body["text"], !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, text.utf8.count <= 2000 {
+            // The user declines a proposal or withdraws a request. The installed Factory records the reason.
+            let call = Process()
+            call.executableURL = state.appendingPathComponent("taik-seed")
+            call.arguments = ["decline", state.path, name]
+            let input = Pipe()
+            call.standardInput = input
+            call.standardOutput = FileHandle.nullDevice
+            call.standardError = FileHandle.nullDevice
+            if (try? call.run()) != nil {
+                input.fileHandleForWriting.write(Data(text.utf8))
+                try? input.fileHandleForWriting.close()
+                call.waitUntilExit()
+            }
+            monitor.refresh(watch: true)
             return
         }
         if message.name == "closeTicket", let body = message.body as? [String: String],
