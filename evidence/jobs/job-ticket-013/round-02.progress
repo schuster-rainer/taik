@@ -1,0 +1,15 @@
+14723	start	Sitzung in /Users/rainer/.local/state/taik-factory/work/ticket-013
+15145	worker	Setzt fort: die Sitzung 8c06094b
+4988330	tool	Grep mod (session|service|talk|proposal)
+11441533	tool	Edit src/service.rs
+12963125	tool	Edit src/session.rs
+16300238	tool	Edit src/main.rs
+17409325	tool	Edit src/main.rs
+18657833	tool	Edit src/proposal.rs
+20018631	tool	Edit src/proposal.rs
+23270766	tool	Grep queue_source\(|session::queue\(|Handover
+27207000	tool	Edit src/service.rs
+28041998	tool	Edit src/session.rs
+32974419	checks	4 Dateien geändert, Commit 48c5b018
+33003878	evaluate	Gate prüft Commit 48c5b018
+40516936	accepted	PASS: approve übernimmt plan.txt in beide Auftragsarten, ohne Plan bleibt sie aus, plan_job hat 3 Tests

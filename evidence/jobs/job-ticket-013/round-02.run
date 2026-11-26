@@ -1,0 +1,26 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-02
+intent=Bei der Freigabe eines Vorschlags wird dessen plan.txt unverändert in den Auftragsordner übernommen.
+baseline=0b61bfef9ceb8659828ab5e865523b095641429c
+worker=claude-session
+worker_model=claude-opus-5-5
+worker_output_tokens=3019
+worker_cache_read_tokens=207500
+session_listed_usd=0.5363266000000001
+worker_failure=
+worker_duration_ms=40498
+session=8c06094b-f593-4ea3-8e87-ac032266933d
+limits=6 rounds and one per reply; lease 600s without ceiling; file tools only
+gate_sha256=0c0c140e3a3c44c9586a04851ae47dd8f7dedc53b207216f50aadfb092c91e1b
+gate_ms=7494
+checks=PASS: approve übernimmt plan.txt in beide Auftragsarten, ohne Plan bleibt sie aus, plan_job hat 3 Tests
+artifact=48c5b01843ca38d03d37523a888fae90694ca19b
+commit=48c5b01843ca38d03d37523a888fae90694ca19b
+files=src/main.rs +5 -6; src/proposal.rs +11 -7; src/service.rs +16 -3; src/session.rs +2 -3
+summary=`queue_source` in `src/service.rs` und `queue` in `src/session.rs` haben jetzt höchstens sieben Parameter, ohne allow-Attribut. Ich habe weder `cargo build` noch `cargo clippy` laufen lassen, weil ich keine Shell habe. Ob die Warnung weg ist, zeigt also erst das Gate. Dafür fasst eine neue kleine Struktur `service::Handover` die zusammengehörigen Angaben Agent, Gesprächsverlauf und Plan zusammen. Alle Aufrufer in `src/main.rs` und `src/proposal.rs` habe ich mitgezogen, und laut Grep rufen die Tests diese Funktionen nicht direkt auf. Das Verhalten ist unverändert, auch `tests/plan_job.rs` bleibt, wie es war.
+continuation=The accepted state is commit 48c5b018 in /Users/rainer/.local/state/taik-factory/work/ticket-013.
+advance=false
+end

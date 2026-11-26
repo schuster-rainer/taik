@@ -39,6 +39,8 @@ A brief names its intent in the first line and the observation that justifies it
 - The repository is public (`origin` is `taik` on GitHub). Nothing secret and nothing from outside this folder goes into a commit. The dialog of an agent session stays local (`*.dialog.jsonl` is ignored).
 - A published record in `evidence/jobs/` cannot be rewritten; the core refuses it. A wrong record is answered by a new one.
 - A gate is fixed for a job once its first round ran (`gate.sha256`). A different check needs a new job.
+- The promotion of the core runs Clippy with warnings denied and the whole test suite. A gate for a session that changes `src/` should run `cargo clippy --offline --locked --all-targets -- -D warnings` too; one that did not let a change through that the promotion then refused (`job-ticket-013`, round 34 of `job-backend`).
+- The gate of a session runs in a sandbox that cannot start another sandbox. It can test commands and its own test targets, not a round of the service.
 - The Mac app is rebuilt by `tools/open-factory-view.sh`. Unlike core and viewer it passes no gate yet.
 - Work done by an agent is attributed to that agent, not to the Factory (specification, section 7.2).
 

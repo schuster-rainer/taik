@@ -48,6 +48,9 @@ private struct Job: Codable {
     let dialogs: [String: [[String: String]]]
     // The reason the user closed the job with. A closed job gets no further round.
     let closed: String?
+    // What the orchestrator planned for this job, and the branch its accepted result was put on.
+    let plan: [String: String]?
+    let adopted: String?
     let baseline: Round
     let rounds: [Round]
     let progress: [String: [ProgressEvent]]
@@ -529,7 +532,7 @@ private final class FactoryMonitor {
         }
         let draft = active ? readSource(at: url.appendingPathComponent(next + ".draft")) : nil
         return Job(id: url.lastPathComponent, goal: goal, preview: preview, previous: previous,
-            cost: (cost * 10000).rounded() / 10000, draft: draft, agent: jobAgent(in: url), brief: jobBrief(in: url), messages: jobMessages(in: url), changes: roundChanges(rounds, in: url), analyses: roundAnalyses(rounds, in: url), dialogs: roundDialogs(rounds.count, in: url), closed: closedReason(in: url), baseline: baseline, rounds: rounds, progress: progress,
+            cost: (cost * 10000).rounded() / 10000, draft: draft, agent: jobAgent(in: url), brief: jobBrief(in: url), messages: jobMessages(in: url), changes: roundChanges(rounds, in: url), analyses: roundAnalyses(rounds, in: url), dialogs: roundDialogs(rounds.count, in: url), closed: closedReason(in: url), plan: plan(at: url.appendingPathComponent("plan.txt")), adopted: (try? String(contentsOf: url.appendingPathComponent("adopted.txt"), encoding: .utf8))?.trimmingCharacters(in: .whitespacesAndNewlines), baseline: baseline, rounds: rounds, progress: progress,
             sourceQueued: queued, sourceActive: active, sourceStartedAt: startedAt)
     }
 
