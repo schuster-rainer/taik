@@ -1,0 +1,20 @@
+decision=rejected
+kind=software
+procedure=
+tags=
+identity=round-41
+intent=Der Orchestrator kann zu einem Wunsch zurückfragen.
+baseline=taik-seed a83e697254362e79250db534714f01de04bbd740f7d1cc56edb0f15c1b87f165
+worker=opus-session-ticket-019
+decided_by=the installed taik-seed a83e697254362e79250db534714f01de04bbd740f7d1cc56edb0f15c1b87f165 at /Users/rainer/.local/state/taik-factory/taik-seed
+limits=99 rounds; gate 900s; candidate checks 10s each
+gate_sha256=76b41170f51fa7e1a5424ba01f903bcf2276b8f8f19e4d87f952e88d18b6b0ce
+gate_ms=
+checks=gate failed (exit status: 101): error: test failed, to rerun pass `--test request_question`
+evidence=round-41.checks.log
+artifact=
+artifact_sha256=
+rollback=
+continuation=The installed binary stays in place.
+advance=false
+end

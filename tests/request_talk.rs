@@ -92,7 +92,10 @@ fn an_answer_to_a_question_of_the_orchestrator_goes_into_the_conversation_of_the
         message.to_str().unwrap()
     );
     // The wake-up leaves nothing behind in the job directory.
-    assert_eq!(fs::read_dir(state.join("jobs")).unwrap().count(), jobs_before);
+    assert_eq!(
+        fs::read_dir(state.join("jobs")).unwrap().count(),
+        jobs_before
+    );
     assert!(!state.join("proposals/ticket-001").exists());
 
     // The user wrote last: a second reply is refused and written nowhere.
@@ -120,7 +123,11 @@ fn without_a_request_or_with_a_proposal_reply_behaves_as_before() {
     wish(&state, "ticket-002");
     let talk = state.join("requests/ticket-002.talk");
     fs::create_dir(&talk).unwrap();
-    fs::write(talk.join("message-001.agent.md"), "round=0\n\nWelches Repo?\n").unwrap();
+    fs::write(
+        talk.join("message-001.agent.md"),
+        "round=0\n\nWelches Repo?\n",
+    )
+    .unwrap();
     let proposal = state.join("proposals/ticket-002");
     fs::create_dir_all(&proposal).unwrap();
     fs::write(proposal.join("brief.md"), "Eine Seite mit Titel\n").unwrap();
@@ -136,7 +143,11 @@ fn without_a_request_or_with_a_proposal_reply_behaves_as_before() {
     wish(&state, "ticket-003");
     let talk = state.join("requests/ticket-003.talk");
     fs::create_dir(&talk).unwrap();
-    fs::write(talk.join("message-001.agent.md"), "round=0\n\nWelches Repo?\n").unwrap();
+    fs::write(
+        talk.join("message-001.agent.md"),
+        "round=0\n\nWelches Repo?\n",
+    )
+    .unwrap();
     fs::create_dir_all(state.join("proposals/ticket-003")).unwrap();
     assert_eq!(reply(&state, "ticket-003", "x").status.code(), Some(2));
     assert!(!talk.join("message-002.user.md").exists());

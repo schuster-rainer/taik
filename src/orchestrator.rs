@@ -357,7 +357,10 @@ fn questions(said: &[talk::Message]) -> usize {
 
 // An answer of exactly one line 'Frage: ...' is a question to the user.
 fn question(answer: &str) -> Option<String> {
-    let mut lines = answer.lines().map(str::trim).filter(|line| !line.is_empty());
+    let mut lines = answer
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty());
     let line = lines.next()?;
     if lines.next().is_some() {
         return None;
@@ -438,7 +441,9 @@ pub fn plan(home: &Path, name: &str, request: &Path) -> Result<Option<Plan>> {
             repo: None,
             gate: STANDARD.to_owned(),
             work: STANDARD.to_owned(),
-            reason: format!("Der Orchestrator gab keinen gültigen Plan ({error}). Der Auftrag läuft als Dokument beim Standard."),
+            reason: format!(
+                "Der Orchestrator gab keinen gültigen Plan ({error}). Der Auftrag läuft als Dokument beim Standard."
+            ),
         },
     };
     record::publish_text(&target, &plan.text(), MAX_PLAN_BYTES)?;
@@ -637,7 +642,10 @@ mod tests {
         assert_eq!(question("Ich frage: Welche Farbe?"), None);
         assert_eq!(question(""), None);
         assert_eq!(
-            question(&format!("Frage: {}", "x".repeat(talk::MAX_MESSAGE_BYTES + 1))),
+            question(&format!(
+                "Frage: {}",
+                "x".repeat(talk::MAX_MESSAGE_BYTES + 1)
+            )),
             None
         );
 
@@ -693,7 +701,10 @@ mod tests {
         for number in 1..=MAX_QUESTIONS {
             talk::write(&chat, talk::Author::Agent, 0, &format!("Frage {number}?")).unwrap();
             let asked = prompt(home.path(), &request).unwrap();
-            assert!(asked.contains(&format!("[you] Frage {number}?\n")), "{asked}");
+            assert!(
+                asked.contains(&format!("[you] Frage {number}?\n")),
+                "{asked}"
+            );
             assert_eq!(
                 asked.contains("Do not ask again"),
                 number == MAX_QUESTIONS,

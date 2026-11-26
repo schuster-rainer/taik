@@ -1,0 +1,20 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-42
+intent=Der Orchestrator kann zu einem Wunsch zurückfragen.
+baseline=taik-seed a83e697254362e79250db534714f01de04bbd740f7d1cc56edb0f15c1b87f165
+worker=opus-session-ticket-019
+decided_by=the installed taik-seed a83e697254362e79250db534714f01de04bbd740f7d1cc56edb0f15c1b87f165 at /Users/rainer/.local/state/taik-factory/taik-seed
+limits=99 rounds; gate 900s; candidate checks 10s each
+gate_sha256=76b41170f51fa7e1a5424ba01f903bcf2276b8f8f19e4d87f952e88d18b6b0ce
+gate_ms=38921
+checks=PASS: Rust tests, Clippy with warnings denied, release build; candidate seeded, rejected an invalid procedure without touching the accepted record, and extended it
+evidence=round-42.checks.log
+artifact=round-42-taik-seed
+artifact_sha256=8e904046521dab887300a8bc306253cdc0a8f926a93f3ceb6784c0093c616143
+rollback=round-42.rollback-taik-seed
+continuation=Restart the service so that it runs the accepted binary.
+advance=false
+end

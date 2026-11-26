@@ -1,0 +1,6 @@
+kind=sitzung
+repo=taik
+repo_path=/Users/rainer/projects/ideas/talk
+gate=pruefer
+work=standard
+reason=Bestehende Dateien im Repo taik (src/orchestrator.rs, src/talk.rs, Tests) müssen geändert werden; pruefer liest als Claude-Agent den Code vor dem Gate, standard arbeitet.

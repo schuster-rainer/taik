@@ -97,7 +97,8 @@ fn an_unclear_request_waits_for_the_answer_of_the_user() {
     let served = serve();
     let talk = state.join("requests/ticket-001.talk");
     assert_eq!(
-        fs::read_to_string(talk.join("message-001.agent.md")).unwrap_or_else(|_| panic!("{served:?}")),
+        fs::read_to_string(talk.join("message-001.agent.md"))
+            .unwrap_or_else(|_| panic!("{served:?}")),
         "round=0\n\nWelche Farbe soll der Titel haben?\n"
     );
     assert!(!state.join("requests/ticket-001.plan").exists());
@@ -119,7 +120,10 @@ fn an_unclear_request_waits_for_the_answer_of_the_user() {
     let served = serve();
     let plan = fs::read_to_string(state.join("requests/ticket-001.plan"))
         .unwrap_or_else(|_| panic!("{served:?}"));
-    assert!(plan.contains("reason=Die Farbe ist jetzt klar.\n"), "{plan}");
+    assert!(
+        plan.contains("reason=Die Farbe ist jetzt klar.\n"),
+        "{plan}"
+    );
     assert!(
         state.join("proposals/ticket-001/brief.md").is_file(),
         "{served:?}"

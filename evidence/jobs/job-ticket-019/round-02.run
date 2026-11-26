@@ -1,0 +1,26 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-02
+intent=Der Orchestrator darf bei einem unklaren Wunsch zurückfragen und plant erst weiter, wenn der Nutzer geantwortet hat.
+baseline=e75cfd0b25b1d3364b4e7eaf3bcb84695d9265e1
+worker=claude-session
+worker_model=claude-opus-5-5
+worker_output_tokens=2253
+worker_cache_read_tokens=233497
+session_listed_usd=1.3954719999999998
+worker_failure=
+worker_duration_ms=33743
+session=f7a455d0-c5ab-41a3-9d49-eafe69dbaddb
+limits=6 rounds and one per reply; lease 600s without ceiling; file tools only
+gate_sha256=5b64c41c59bbbbc671c3171dfc391aa4a878381de4242844cf104bf37e2d8304
+gate_ms=9171
+checks=PASS: reply und orchestrator-prompt verhalten sich wie gefordert, request_talk und clippy sind sauber
+artifact=73f0a6eaccb9aaf923f458f86ef48529d59e5fda
+commit=73f0a6eaccb9aaf923f458f86ef48529d59e5fda
+files=tests/request_question.rs +17 -11
+summary=In `tests/request_question.rs` zähle ich die Aufrufe des Workers nicht mehr über eine Datei, weil die Sandbox diese Datei nie entstehen ließ. Der Stellvertreter schreibt jetzt nichts mehr außerhalb seines Arbeitsverzeichnisses. Dass bei offener Frage nichts geschieht, zeigt der Test jetzt am Zustand: kein `NAME.plan`, kein `NAME.failed`, kein Vorschlag und keine zweite Nachricht des Agenten im Gespräch. Die Zahl der Fragen zählt er als Nachrichten des Agenten in `NAME.talk`, beim zweiten Wunsch müssen es am Ende drei sein, weil die vierte Frage nicht abgelegt wird. Sonst habe ich nichts geändert, und ausgeführt habe ich den Test nicht, das kann nur der Kern mit seiner Sandbox.
+continuation=The accepted state is commit 73f0a6ea in /Users/rainer/.local/state/taik-factory/work/ticket-019.
+advance=false
+end

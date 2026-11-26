@@ -1,0 +1,26 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=Der Orchestrator darf bei einem unklaren Wunsch zurückfragen und plant erst weiter, wenn der Nutzer geantwortet hat.
+baseline=e75cfd0b25b1d3364b4e7eaf3bcb84695d9265e1
+worker=claude-session
+worker_model=claude-opus-5-5
+worker_output_tokens=23545
+worker_cache_read_tokens=1116503
+session_listed_usd=1.2734966
+worker_failure=
+worker_duration_ms=253117
+session=f7a455d0-c5ab-41a3-9d49-eafe69dbaddb
+limits=6 rounds and one per reply; lease 600s without ceiling; file tools only
+gate_sha256=5b64c41c59bbbbc671c3171dfc391aa4a878381de4242844cf104bf37e2d8304
+gate_ms=9006
+checks=PASS: reply und orchestrator-prompt verhalten sich wie gefordert, request_talk und clippy sind sauber
+artifact=13036e28598f407adbeddca4dffa45b04aa24bcc
+commit=13036e28598f407adbeddca4dffa45b04aa24bcc
+files=src/orchestrator.rs +180 -13; src/proposal.rs +7 -0; src/service.rs +26 -0; tests/request_question.rs +151 -0; tests/request_talk.rs +149 -0
+summary=Ein unklarer Wunsch kann jetzt zu einer Rückfrage führen: Antwortet der Worker mit genau einer Zeile `Frage: …`, landet die Frage als Nachricht des Agenten in `STATE/requests/NAME.talk/`. Es entsteht dann kein Plan, und der Dienst lässt den Wunsch liegen, bis der Nutzer geantwortet hat. Gebaut, getestet und mit clippy geprüft habe ich nichts, das macht erst das Gate. `taik-seed reply` schreibt die Antwort nur dann ins Gespräch und weckt den Dienst, wenn der Wunsch existiert, es keinen Vorschlag gibt und die letzte Nachricht vom Agenten stammt; sonst verhält sich `reply` wie bisher, auch für `job-…`-Namen und Vorschläge. Beim nächsten Planen bekommt der Auftragssatz das Gespräch (`talk::prompt`), nach drei Fragen den Hinweis, nicht mehr zu fragen, und eine vierte Frage führt zum einfachen Rückfallplan; `orchestrator-prompt` zeigt das Gespräch ebenfalls mit an. Über den Auftrag hinaus gehen das Gespräch auch in den Auftragssatz für den Vorschlag (`src/proposal.rs`), damit die Antworten des Nutzers im Brief anko
+continuation=The accepted state is commit 13036e28 in /Users/rainer/.local/state/taik-factory/work/ticket-019.
+advance=false
+end

@@ -1,0 +1,3 @@
+round=1
+
+Die Übernahme in den Kern ist an deinem eigenen Test gescheitert: tests/request_question.rs, Zeile 104, `assert_eq!(calls(&root), 1)` liefert 0. Der Stellvertreter des Workers läuft in der Sandbox des Kerns und darf nur in sein eigenes Arbeitsverzeichnis schreiben; eine Zähldatei unter dem Testordner entsteht deshalb nie. Bitte zähle die Aufrufe nicht über eine Datei. Zeige stattdessen an den Dateien im Zustand, dass während einer offenen Frage nichts geschieht: kein NAME.plan, kein Vorschlag, keine zweite Nachricht des Agenten im Gespräch. Wo du die Zahl der Fragen brauchst, zähle die Nachrichten des Agenten im Ordner NAME.talk. Sonst nichts ändern.
