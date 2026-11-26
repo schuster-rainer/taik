@@ -507,3 +507,47 @@ const derivingPlanned = orchestratorFeed({ proposals: [{ name: 'x', intent: 'X',
 assert.equal(derivingPlanned.reason, 'weil Das Gate wird gerade geschrieben.', 'A deriving request with a plan must keep its reason unchanged.');
 assert.equal(derivingPlanned.line, pl, 'A deriving request with a plan must keep its plan line.');
 })();
+// TAIK: check added by job ticket-020
+await (async () => {
+  const { default: assert } = await import('node:assert/strict');
+  const { readFileSync } = await import('node:fs');
+  const html = readFileSync(process.argv[2], 'utf8');
+  void readFileSync;
+const grab = (name) => {
+  const m = html.match(new RegExp('/\\*' + name + '_BEGIN\\*/([\\s\\S]*?)/\\*' + name + '_END\\*/'));
+  assert.ok(m, 'Block ' + name + ' fehlt im Dokument.');
+  return m[1];
+};
+const { boardTickets, orchestratorFeed } = new Function(grab('BOARD') + '\nreturn { boardTickets, orchestratorFeed };')();
+const { flowStations } = new Function(grab('FLOW') + '\nreturn { flowStations };')();
+
+const proposal = {
+  name: 'farbe', intent: 'Mach etwas Buntes', state: 'asks',
+  messages: [
+    { author: 'user', round: 0, text: 'Mach etwas Buntes' },
+    { author: 'agent', round: 1, text: 'Welche Farbe?' },
+  ],
+};
+const data = { jobs: [], proposals: [proposal] };
+
+const board = boardTickets(data);
+const hit = board.open.find(t => t.key === 'proposal:farbe');
+assert.ok(hit, 'Ein Vorschlag mit state "asks" fehlt in der Gruppe open (Wartet) von boardTickets, Schlüssel "proposal:farbe".');
+assert.equal(hit.flag, 'Frage', 'Das Kennzeichen des Vorschlags mit Rückfrage muss „Frage" sein.');
+assert.equal(hit.why, 'Der Orchestrator fragt: Welche Farbe?', 'Der Grund muss „Der Orchestrator fragt: " plus Text der letzten Agent-Nachricht sein.');
+assert.ok(!board.run.some(t => t.key === 'proposal:farbe') && !board.decision.some(t => t.key === 'proposal:farbe'),
+  'Der Vorschlag mit Rückfrage darf nur unter Wartet stehen.');
+
+const feed = orchestratorFeed(data);
+const row = feed.find(e => e.key === 'proposal:farbe');
+assert.ok(row, 'orchestratorFeed listet den Vorschlag mit state "asks" nicht.');
+assert.equal(row.line, 'Der Orchestrator fragt.', 'Die Zeile (line) muss „Der Orchestrator fragt." sein.');
+assert.equal(row.reason, 'Welche Farbe?', 'Der Grund (reason) muss der Text der letzten Agent-Nachricht sein.');
+
+const st = flowStations(null, proposal);
+assert.equal(st.length, 6, 'flowStations muss sechs Stationen liefern.');
+assert.equal(st[0].state, 'erledigt', 'Bei einer Rückfrage muss „Wunsch" erledigt sein.');
+assert.equal(st[1].name, 'Plan des Orchestrators', 'Station 2 muss „Plan des Orchestrators" heißen.');
+assert.equal(st[1].state, 'aktiv', 'Bei einer Rückfrage muss „Plan des Orchestrators" aktiv sein.');
+for (let i = 2; i < 6; i++) assert.equal(st[i].state, 'offen', 'Bei einer Rückfrage müssen alle späteren Stationen offen sein (Station ' + (i + 1) + ').');
+})();
