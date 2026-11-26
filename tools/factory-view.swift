@@ -434,8 +434,9 @@ private final class FactoryMonitor {
                 guard let modified = try? file.resourceValues(forKeys: Set(keys)).contentModificationDate,
                       modified.timeIntervalSinceNow > -86400,
                       let text = try? String(contentsOf: file, encoding: .utf8) else { continue }
-                for line in text.split(separator: "\n") where line.hasPrefix("worker_cost_usd=") {
-                    total += Double(line.dropFirst("worker_cost_usd=".count)) ?? 0
+                // A session tells its price at the list as session_listed_usd. It counts like any other call.
+                for line in text.split(separator: "\n") where line.hasPrefix("worker_cost_usd=") || line.hasPrefix("session_listed_usd=") {
+                    total += Double(line.split(separator: "=", maxSplits: 1).last ?? "") ?? 0
                 }
             }
         }
@@ -546,8 +547,8 @@ private final class FactoryMonitor {
         for file in (try? FileManager.default.contentsOfDirectory(at: url, includingPropertiesForKeys: nil)) ?? []
         where file.pathExtension == "run" {
             guard let text = try? String(contentsOf: file, encoding: .utf8) else { continue }
-            for line in text.split(separator: "\n") where line.hasPrefix("worker_cost_usd=") {
-                cost += Double(line.dropFirst("worker_cost_usd=".count)) ?? 0
+            for line in text.split(separator: "\n") where line.hasPrefix("worker_cost_usd=") || line.hasPrefix("session_listed_usd=") {
+                cost += Double(line.split(separator: "=", maxSplits: 1).last ?? "") ?? 0
             }
         }
         let draft = active ? readSource(at: url.appendingPathComponent(next + ".draft")) : nil
