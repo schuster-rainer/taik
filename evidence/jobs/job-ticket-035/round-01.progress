@@ -1,0 +1,26 @@
+107749	start	Sitzung in /Users/rainer/.local/state/taik-factory/work/ticket-035
+107970	worker	Beginnt die Sitzung e3371358
+3072551	tool	Glob **/*
+5614712	tool	Read src/lib.rs
+6161630	tool	Read src/main.rs
+6510737	tool	Read tests/cli.rs
+6905303	tool	Read README.md
+18723806	tool	Edit src/lib.rs
+26752086	tool	Edit src/lib.rs
+32323801	tool	Edit src/lib.rs
+37178448	tool	Edit src/lib.rs
+38185225	tool	Edit src/lib.rs
+40735728	tool	Edit src/lib.rs
+42820669	tool	Edit src/lib.rs
+46099501	tool	Edit src/main.rs
+46849941	tool	Edit src/main.rs
+48000732	tool	Edit src/main.rs
+67800665	tool	Edit tests/cli.rs
+75787201	tool	Edit tests/cli.rs
+76651314	tool	Edit tests/cli.rs
+82926805	tool	Edit README.md
+88410351	tool	Edit README.md
+89785285	tool	Edit README.md
+96987240	checks	4 Dateien geändert, Commit d949c3ed
+97011452	evaluate	Gate prüft Commit d949c3ed
+97795725	accepted	PASS: --json funktioniert, auch mit --offen, Maskierung und unverändertem Standardverhalten

@@ -1,0 +1,26 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=Das Programm auftragsbericht soll die Option `--json` bekommen, die den Bericht als ein JSON-Objekt ausgibt.
+baseline=fa0600665a608e8efd30c8cf306bdcce45279663
+worker=claude-session
+worker_model=claude-opus-5-5
+worker_output_tokens=10796
+worker_cache_read_tokens=202912
+session_listed_usd=0.4634864
+worker_failure=
+worker_duration_ms=97798
+session=e3371358-e13c-48a8-b54c-db7d9b6d9411
+limits=6 rounds and one per reply; lease 600s without ceiling; file tools only
+gate_sha256=4bb5e4487f0ffe8655e4436bfdd152a8c69c54b491f6106189fcc06f29984344
+gate_ms=772
+checks=PASS: --json funktioniert, auch mit --offen, Maskierung und unverändertem Standardverhalten
+artifact=d949c3edaa2c99d650bae83f12e7236f7a656ade
+commit=d949c3edaa2c99d650bae83f12e7236f7a656ade
+files=README.md +31 -1; src/lib.rs +119 -0; src/main.rs +8 -1; tests/cli.rs +137 -0
+summary=Ich habe `--json` eingebaut. Gebaut oder getestet habe ich nichts, das übernimmt die Prüfung. In `src/lib.rs` gibt es neue Funktionen, die das JSON von Hand ohne fremde Pakete erzeugen und dabei Anführungszeichen, Rückstrich und Steuerzeichen unter U+0020 maskieren. In `src/main.rs` lässt sich `--json` in beliebiger Reihenfolge mit `--offen` verbinden, und ohne `--json` bleibt die Ausgabe wie bisher. Beträge werden auf zwei Nachkommastellen gerundet und ohne Nullen am Ende ausgegeben, also `0.3` statt `0.30` und `1` statt `1.00`. Neue Tests stehen in `src/lib.rs` und `tests/cli.rs`, der Test für Sonderzeichen in Ordnernamen läuft nur unter Unix, und `README.md` beschreibt jetzt Aufruf, Ausgabeform, die Kombination mit `--offen` und die Maskierung.
+continuation=The accepted state is commit d949c3ed in /Users/rainer/.local/state/taik-factory/work/ticket-035.
+advance=false
+end

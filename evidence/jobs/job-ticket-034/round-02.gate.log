@@ -1,0 +1,3 @@
+   Compiling auftragsbericht v0.1.0 (/private/var/folders/42/3b6rh6r518dgtk80pkb7bp540000gn/T/.tmp0zyQJO/checkout)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.32s
+PASS: JSON-Ausgabe und bisherige Textausgabe geprüft

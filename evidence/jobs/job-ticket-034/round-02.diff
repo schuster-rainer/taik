@@ -1,0 +1,30 @@
+diff --git a/README.md b/README.md
+index 6ad65bb..95db4b8 100644
+--- a/README.md
++++ b/README.md
+@@ -29,7 +29,9 @@ Zeilen `schlüssel=wert`:
+   `session_listed_usd=` über alle `.run`-Dateien des Auftrags. Werte, die keine
+   Zahl sind, zählen als 0.
+ 
+-Dateien ohne Endung `.run` werden nicht berücksichtigt.
++Dateien ohne Endung `.run` werden nicht berücksichtigt, ebenso Dateien, die
++wie eine Runde aussehen, aber nicht genau `round-NN.run` heißen (etwa
++`round-1.run`); deren Kosten zählen nicht.
+ 
+ ## Ausgabe
+ 
+diff --git a/src/lib.rs b/src/lib.rs
+index 4427d7b..2fbb977 100644
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -87,6 +87,10 @@ pub fn zaehle_auftrag(name: &str, pfad: &Path) -> io::Result<Auftrag> {
+         if !ist_protokoll(dateiname) {
+             continue;
+         }
++        // Fehlerhafte Rundennamen (z. B. `round-1.run`) werden ganz übergangen.
++        if dateiname.starts_with("round-") && rundennummer(dateiname).is_none() {
++            continue;
++        }
+         let dateipfad = eintrag.path();
+         if !fs::metadata(&dateipfad)?.is_file() {
+             continue;

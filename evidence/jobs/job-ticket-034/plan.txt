@@ -1,0 +1,6 @@
+kind=sitzung
+repo=auftragsbericht
+repo_path=/Users/rainer/.local/state/taik-factory/repositories/auftragsbericht
+gate=pi-grok
+work=standard
+reason=Bestehender Code, README und Tests von auftragsbericht werden geändert; pruefer fiel kürzlich aus, daher schreibt grok-schnell das Gate und standard arbeitet. @grok-schnell fiel als Autor des Gates aus, @pi-grok sprang ein.

@@ -1,0 +1,6 @@
+kind=sitzung
+repo=auftragsbericht
+repo_path=/Users/rainer/.local/state/taik-factory/repositories/auftragsbericht
+gate=pruefer
+work=standard
+reason=Bestehender Code, README und Tests im Repository auftragsbericht werden geändert; pruefer liest als Claude-Agent zuerst den Code für das Gate, standard erledigt die Arbeit.

@@ -1,0 +1,9 @@
+   Compiling auftragsbericht v0.1.0 (/private/var/folders/42/3b6rh6r518dgtk80pkb7bp540000gn/T/.tmpCeB1fr/checkout)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.70s
+ohne Optionen: Textausgabe weicht ab
+job-"q	1	a"b\c	0.25
+job-a	2	accepted	3.75
+job-b	1	rejected	10.49
+job-z	0	-	0.00
+gesamt	4	1	14.49
+

@@ -1,0 +1,334 @@
+diff --git a/README.md b/README.md
+index 0e5d42d..6ad65bb 100644
+--- a/README.md
++++ b/README.md
+@@ -9,6 +9,7 @@ letzte Entscheidung und die angefallenen Kosten, dazu eine Gesamtzeile.
+ ```
+ auftragsbericht ORDNER
+ auftragsbericht --offen ORDNER
++auftragsbericht --json [--offen] ORDNER
+ ```
+ 
+ Mit `--offen` erscheinen nur die Aufträge, deren letzte Entscheidung nicht
+@@ -52,6 +53,42 @@ job-b	1	rejected	0.50
+ gesamt	1	0	0.50
+ ```
+ 
++## JSON-Ausgabe (`--json`)
++
++```
++auftragsbericht --json ORDNER
++auftragsbericht --json --offen ORDNER
++auftragsbericht --offen --json ORDNER
++```
++
++Mit `--json` erscheint dieselbe Auswertung als genau ein JSON-Objekt in einer
++Zeile (mit Zeilenende). Die Optionen `--json` und `--offen` dürfen in
++beliebiger Reihenfolge vor `ORDNER` stehen; zusammen mit `--offen` enthält das
++JSON nur die offenen Aufträge, und `gesamt` zählt nur diese. Sortierung (nach
++Name) und Auswertung sind wie in der Textausgabe.
++
++Aufbau (Schlüssel in dieser Reihenfolge):
++
++- `auftraege`: Liste der Aufträge, je mit `name` (Ordnername), `runden`
++  (ganze Zahl), `entscheidung` (letzte Entscheidung oder `-`) und `kosten`.
++- `gesamt`: `auftraege` (Anzahl), `angenommen` (Anzahl der gelisteten
++  Aufträge mit Entscheidung `accepted`) und `kosten` (Summe).
++
++Kosten sind JSON-Zahlen mit höchstens zwei Nachkommastellen (überflüssige
++Nullen entfallen, z. B. `0.5` oder `0`), keine Zeichenketten. In `name` und
++`entscheidung` werden Anführungszeichen (`\"`), Rückstrich (`\\`) und
++Steuerzeichen (`\n`, `\r`, `\t`, `\b`, `\f`, sonst `\u00XX`) JSON-konform
++maskiert.
++
++Beispiel (zu den Aufträgen oben):
++
++```
++{"auftraege":[{"name":"job-a","runden":2,"entscheidung":"accepted","kosten":3.75},{"name":"job-b","runden":1,"entscheidung":"rejected","kosten":0.5}],"gesamt":{"auftraege":2,"angenommen":1,"kosten":4.25}}
++```
++
++Ein leerer `ORDNER` ergibt
++`{"auftraege":[],"gesamt":{"auftraege":0,"angenommen":0,"kosten":0}}`.
++
+ ## Fehler und Rückgabewerte
+ 
+ - `0`: Erfolg (auch bei leerem `ORDNER`; dann erscheint nur
+diff --git a/src/lib.rs b/src/lib.rs
+index 305da49..4427d7b 100644
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -179,10 +179,99 @@ pub fn bericht(auftraege: &[Auftrag]) -> String {
+     aus
+ }
+ 
++/// Maskiert eine Zeichenkette als JSON-Zeichenkette (einschließlich Anführungszeichen).
++pub fn json_text(s: &str) -> String {
++    let mut aus = String::with_capacity(s.len() + 2);
++    aus.push('"');
++    for c in s.chars() {
++        match c {
++            '"' => aus.push_str("\\\""),
++            '\\' => aus.push_str("\\\\"),
++            '\n' => aus.push_str("\\n"),
++            '\r' => aus.push_str("\\r"),
++            '\t' => aus.push_str("\\t"),
++            '\u{08}' => aus.push_str("\\b"),
++            '\u{0c}' => aus.push_str("\\f"),
++            c if (c as u32) < 0x20 || c == '\u{7f}' => {
++                aus.push_str(&format!("\\u{:04x}", c as u32));
++            }
++            c => aus.push(c),
++        }
++    }
++    aus.push('"');
++    aus
++}
++
++/// Formatiert einen Betrag als JSON-Zahl mit höchstens zwei Nachkommastellen
++/// (überflüssige Nullen entfallen, z. B. `0.5`, `0`).
++pub fn json_betrag(x: f64) -> String {
++    let s = betrag(x);
++    let s = s.trim_end_matches('0').trim_end_matches('.');
++    if s.is_empty() || s == "-" {
++        "0".to_string()
++    } else {
++        s.to_string()
++    }
++}
++
++/// Erzeugt den Bericht als einzeiliges JSON-Objekt mit Zeilenende.
++pub fn bericht_json(auftraege: &[Auftrag]) -> String {
++    let mut aus = String::from("{\"auftraege\":[");
++    let mut summe = 0.0;
++    let mut angenommen = 0usize;
++    for (i, a) in auftraege.iter().enumerate() {
++        if i > 0 {
++            aus.push(',');
++        }
++        aus.push_str(&format!(
++            "{{\"name\":{},\"runden\":{},\"entscheidung\":{},\"kosten\":{}}}",
++            json_text(&a.name),
++            a.runden,
++            json_text(&a.entscheidung),
++            json_betrag(a.kosten)
++        ));
++        summe += a.kosten;
++        if a.entscheidung == "accepted" {
++            angenommen += 1;
++        }
++    }
++    aus.push_str(&format!(
++        "],\"gesamt\":{{\"auftraege\":{},\"angenommen\":{},\"kosten\":{}}}}}\n",
++        auftraege.len(),
++        angenommen,
++        json_betrag(summe)
++    ));
++    aus
++}
++
+ #[cfg(test)]
+ mod tests {
+     use super::*;
+ 
++    #[test]
++    fn json_maskierung() {
++        assert_eq!(json_text("a\"b\\c\u{1}"), "\"a\\\"b\\\\c\\u0001\"");
++        assert_eq!(json_text("x\ny"), "\"x\\ny\"");
++    }
++
++    #[test]
++    fn json_leer() {
++        assert_eq!(
++            bericht_json(&[]),
++            "{\"auftraege\":[],\"gesamt\":{\"auftraege\":0,\"angenommen\":0,\"kosten\":0}}\n"
++        );
++    }
++
++    #[test]
++    fn json_betraege() {
++        assert_eq!(json_betrag(0.0), "0");
++        assert_eq!(json_betrag(0.5), "0.5");
++        assert_eq!(json_betrag(3.75), "3.75");
++        assert_eq!(json_betrag(10.0), "10");
++        assert_eq!(json_betrag(-0.0001), "0");
++        assert_eq!(json_betrag(-1.5), "-1.5");
++    }
++
+     #[test]
+     fn rundennamen() {
+         assert_eq!(rundennummer("round-01.run"), Some(1));
+diff --git a/src/main.rs b/src/main.rs
+index 2be10d2..60056bc 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -6,6 +6,7 @@ use std::process::ExitCode;
+ 
+ fn main() -> ExitCode {
+     let mut offen = false;
++    let mut json = false;
+     let mut ordner_args = Vec::new();
+     let mut nur_noch_ordner = false;
+     for arg in env::args_os().skip(1) {
+@@ -16,6 +17,8 @@ fn main() -> ExitCode {
+         let als_text = arg.to_string_lossy().into_owned();
+         if als_text == "--offen" {
+             offen = true;
++        } else if als_text == "--json" {
++            json = true;
+         } else if als_text == "--" {
+             nur_noch_ordner = true;
+         } else if als_text.starts_with('-') && als_text != "-" {
+@@ -57,7 +60,11 @@ fn main() -> ExitCode {
+         }
+     };
+ 
+-    let text = auftragsbericht::bericht(&auftraege);
++    let text = if json {
++        auftragsbericht::bericht_json(&auftraege)
++    } else {
++        auftragsbericht::bericht(&auftraege)
++    };
+     let mut aus = io::stdout().lock();
+     if aus.write_all(text.as_bytes()).and_then(|_| aus.flush()).is_err() {
+         return ExitCode::from(1);
+diff --git a/tests/cli.rs b/tests/cli.rs
+index 65f172b..fc75d79 100644
+--- a/tests/cli.rs
++++ b/tests/cli.rs
+@@ -171,6 +171,136 @@ fn falscher_aufruf() {
+     assert!(String::from_utf8_lossy(&aus.stderr).contains("Aufruf: auftragsbericht ORDNER"));
+ }
+ 
++fn beispiel(w: &Path) {
++    schreibe(
++        &w.join("job-a/round-01.run"),
++        "decision=pending\nworker_cost_usd=1.25\nsession_listed_usd=0.50\n",
++    );
++    schreibe(
++        &w.join("job-a/round-02.run"),
++        "decision=accepted\nworker_cost_usd=2.00\n",
++    );
++    schreibe(&w.join("job-a/notes.txt"), "worker_cost_usd=100\n");
++    schreibe(
++        &w.join("job-b/round-01.run"),
++        "decision=rejected\nworker_cost_usd=0.50\nworker_cost_usd=nope\n",
++    );
++    schreibe(
++        &w.join("job-b/round-1.run"),
++        "decision=accepted\nworker_cost_usd=9.99\n",
++    );
++    schreibe(&w.join("job-z/meta.run"), "worker_cost_usd=abc\n");
++    schreibe(
++        &w.join("job-\"q/round-01.run"),
++        "decision=a\"b\\c\u{1}\nworker_cost_usd=0.25\n",
++    );
++    schreibe(&w.join("skip-me/round-01.run"), "decision=accepted\nworker_cost_usd=5\n");
++    schreibe(&w.join("loose.run"), "decision=accepted\nworker_cost_usd=5\n");
++}
++
++const JSON_ALLE: &str = "{\"auftraege\":[\
++{\"name\":\"job-\\\"q\",\"runden\":1,\"entscheidung\":\"a\\\"b\\\\c\\u0001\",\"kosten\":0.25},\
++{\"name\":\"job-a\",\"runden\":2,\"entscheidung\":\"accepted\",\"kosten\":3.75},\
++{\"name\":\"job-b\",\"runden\":1,\"entscheidung\":\"rejected\",\"kosten\":0.5},\
++{\"name\":\"job-z\",\"runden\":0,\"entscheidung\":\"-\",\"kosten\":0}],\
++\"gesamt\":{\"auftraege\":4,\"angenommen\":1,\"kosten\":4.5}}\n";
++
++const JSON_OFFEN: &str = "{\"auftraege\":[\
++{\"name\":\"job-\\\"q\",\"runden\":1,\"entscheidung\":\"a\\\"b\\\\c\\u0001\",\"kosten\":0.25},\
++{\"name\":\"job-b\",\"runden\":1,\"entscheidung\":\"rejected\",\"kosten\":0.5},\
++{\"name\":\"job-z\",\"runden\":0,\"entscheidung\":\"-\",\"kosten\":0}],\
++\"gesamt\":{\"auftraege\":3,\"angenommen\":0,\"kosten\":0.75}}\n";
++
++#[test]
++fn beispiel_text() {
++    let t = TempOrdner::neu();
++    beispiel(&t.0);
++    let aus = starte(&[t.0.as_os_str()]);
++    assert_eq!(aus.status.code(), Some(0), "{:?}", aus);
++    assert_eq!(
++        String::from_utf8(aus.stdout).unwrap(),
++        "job-\"q\t1\ta\"b\\c\u{1}\t0.25\n\
++         job-a\t2\taccepted\t3.75\n\
++         job-b\t1\trejected\t0.50\n\
++         job-z\t0\t-\t0.00\n\
++         gesamt\t4\t1\t4.50\n"
++    );
++
++    let aus = starte(&[std::ffi::OsStr::new("--offen"), t.0.as_os_str()]);
++    assert_eq!(aus.status.code(), Some(0), "{:?}", aus);
++    assert_eq!(
++        String::from_utf8(aus.stdout).unwrap(),
++        "job-\"q\t1\ta\"b\\c\u{1}\t0.25\n\
++         job-b\t1\trejected\t0.50\n\
++         job-z\t0\t-\t0.00\n\
++         gesamt\t3\t0\t0.75\n"
++    );
++}
++
++#[test]
++fn beispiel_json() {
++    let t = TempOrdner::neu();
++    beispiel(&t.0);
++    let json = std::ffi::OsStr::new("--json");
++    let offen = std::ffi::OsStr::new("--offen");
++
++    let aus = starte(&[json, t.0.as_os_str()]);
++    assert_eq!(aus.status.code(), Some(0), "{:?}", aus);
++    assert_eq!(String::from_utf8(aus.stdout).unwrap(), JSON_ALLE);
++
++    for args in [[json, offen], [offen, json]] {
++        let aus = starte(&[args[0], args[1], t.0.as_os_str()]);
++        assert_eq!(aus.status.code(), Some(0), "{:?}", aus);
++        let stdout = String::from_utf8(aus.stdout).unwrap();
++        assert_eq!(stdout, JSON_OFFEN);
++        assert_eq!(stdout.lines().count(), 1);
++    }
++}
++
++#[test]
++fn json_leerer_ordner() {
++    let t = TempOrdner::neu();
++    let json = std::ffi::OsStr::new("--json");
++    let offen = std::ffi::OsStr::new("--offen");
++    let erwartet =
++        "{\"auftraege\":[],\"gesamt\":{\"auftraege\":0,\"angenommen\":0,\"kosten\":0}}\n";
++
++    let aus = starte(&[json, t.0.as_os_str()]);
++    assert_eq!(aus.status.code(), Some(0));
++    assert_eq!(String::from_utf8(aus.stdout).unwrap(), erwartet);
++
++    let aus = starte(&[json, offen, t.0.as_os_str()]);
++    assert_eq!(aus.status.code(), Some(0));
++    assert_eq!(String::from_utf8(aus.stdout).unwrap(), erwartet);
++}
++
++#[test]
++fn json_fehler() {
++    let t = TempOrdner::neu();
++    let json = std::ffi::OsStr::new("--json");
++
++    // ohne Ordner
++    let aus = starte(&[json]);
++    assert_eq!(aus.status.code(), Some(2));
++    assert!(String::from_utf8_lossy(&aus.stderr).contains("Aufruf: auftragsbericht ORDNER"));
++
++    // zwei Ordner
++    let aus = starte(&[json, t.0.as_os_str(), t.0.as_os_str()]);
++    assert_eq!(aus.status.code(), Some(2));
++    assert!(String::from_utf8_lossy(&aus.stderr).contains("Aufruf: auftragsbericht ORDNER"));
++
++    // unbekannte Option
++    let aus = starte(&[std::ffi::OsStr::new("--json=ja"), t.0.as_os_str()]);
++    assert_eq!(aus.status.code(), Some(2));
++    assert!(aus.stdout.is_empty());
++
++    // Ordner fehlt
++    let fehlt = t.0.join("gibt-es-nicht");
++    let aus = starte(&[json, fehlt.as_os_str()]);
++    assert_eq!(aus.status.code(), Some(1));
++    assert!(aus.stdout.is_empty());
++}
++
+ #[test]
+ fn kein_ordner() {
+     let t = TempOrdner::neu();

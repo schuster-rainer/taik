@@ -1,0 +1,26 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-02
+intent=Erweitere auftragsbericht um `--json`, das dieselbe Auswertung als einzeiliges JSON ausgibt, ohne die bisherige Textausgabe oder die Abhängigkeiten zu ändern.
+baseline=fa0600665a608e8efd30c8cf306bdcce45279663
+worker=claude-session
+worker_model=claude-opus-5-5
+worker_output_tokens=1115
+worker_cache_read_tokens=56985
+session_listed_usd=0.4462678000000001
+worker_failure=
+worker_duration_ms=14404
+session=69366c06-ef56-4d65-bab0-297e2e520007
+limits=6 rounds and one per reply; lease 600s without ceiling; file tools only
+gate_sha256=8eca8dfb1fad35d6e4de3a4df245a15078d9e9ef904238f18e0f311f2d6cb06e
+gate_ms=653
+checks=PASS: JSON-Ausgabe und bisherige Textausgabe geprüft
+artifact=83eab67be350df2462f96dcf4dde062a6044d481
+commit=83eab67be350df2462f96dcf4dde062a6044d481
+files=README.md +3 -1; src/lib.rs +4 -0
+summary=Die Prüfung schlug fehl, weil die Kosten aus `job-b/round-1.run` (9,99) mitgezählt wurden, obwohl die Datei laut Auftrag ignoriert werden soll; erwartet waren 0,50 für job-b und 4,50 als Summe. Jetzt überspringt `zaehle_auftrag` in `src/lib.rs` Dateien, die mit `round-` beginnen, aber nicht genau `round-NN.run` heißen, also zählen auch ihre Kosten nicht mehr. Andere `.run`-Dateien wie `meta.run` fließen weiter in die Kosten ein, und die bisherigen Tests bleiben davon unberührt. Das README beschreibt diese Regel jetzt. Bauen und Testen konnte ich die Korrektur nicht, das neue Ergebnis der Prüfung steht noch aus.
+continuation=The accepted state is commit 83eab67b in /Users/rainer/.local/state/taik-factory/work/ticket-034.
+advance=false
+end
