@@ -30,11 +30,14 @@ fn say(arguments: &[&str], text: &str) -> Output {
     child.wait_with_output().unwrap()
 }
 
-fn calls(root: &Path) -> usize {
-    fs::read_to_string(root.join("calls"))
-        .unwrap_or_default()
-        .lines()
-        .count()
+// The questions of the orchestrator: the messages of the agent in the conversation.
+fn questions(talk: &Path) -> usize {
+    fs::read_dir(talk).map_or(0, |entries| {
+        entries
+            .flatten()
+            .filter(|entry| entry.file_name().to_string_lossy().ends_with(".agent.md"))
+            .count()
+    })
 }
 
 #[test]
@@ -66,12 +69,12 @@ fn an_unclear_request_waits_for_the_answer_of_the_user() {
         reply("=== brief.md ===\nEine Seite mit blauem Titel bauen\n\n=== verify.mjs ===\nconsole.log('PASS');\n"),
     )
     .unwrap();
-    // The orchestrator plans once the user said "Blau.", and asks otherwise. Every question is counted.
+    // The orchestrator plans once the user said "Blau.", and asks otherwise.
     let worker = root.join("lead");
     fs::write(
         &worker,
         format!(
-            "#!/bin/sh\ncase \"$*\" in *'orchestrator of a software factory'*'[user] Blau.'*) cat '{0}/plan.json';; *'orchestrator of a software factory'*) echo q >> '{0}/calls'; cat '{0}/question.json';; *) cat '{0}/files.json';; esac\n",
+            "#!/bin/sh\ncase \"$*\" in *'orchestrator of a software factory'*'[user] Blau.'*) cat '{0}/plan.json';; *'orchestrator of a software factory'*) cat '{0}/question.json';; *) cat '{0}/files.json';; esac\n",
             root.display()
         ),
     )
@@ -100,12 +103,14 @@ fn an_unclear_request_waits_for_the_answer_of_the_user() {
     assert!(!state.join("requests/ticket-001.plan").exists());
     assert!(!state.join("requests/ticket-001.failed").exists());
     assert!(!state.join("proposals/ticket-001").exists());
-    assert_eq!(calls(&root), 1);
+    assert_eq!(questions(&talk), 1);
 
     // While the question is open, the service neither plans nor derives the request.
     serve();
-    assert_eq!(calls(&root), 1);
+    assert_eq!(questions(&talk), 1);
     assert!(!talk.join("message-002.agent.md").exists());
+    assert!(!state.join("requests/ticket-001.plan").exists());
+    assert!(!state.join("requests/ticket-001.failed").exists());
     assert!(!state.join("proposals/ticket-001").exists());
 
     // The answer is planned with the conversation, and the proposal follows the plan.
@@ -119,7 +124,7 @@ fn an_unclear_request_waits_for_the_answer_of_the_user() {
         state.join("proposals/ticket-001/brief.md").is_file(),
         "{served:?}"
     );
-    assert_eq!(calls(&root), 1);
+    assert_eq!(questions(&talk), 1);
 
     // A worker that keeps asking: after three answers a fourth question is no plan.
     let asked = say(&["request", home], "Noch eine Seite");
@@ -147,5 +152,6 @@ fn an_unclear_request_waits_for_the_answer_of_the_user() {
         state.join("proposals/ticket-002/brief.md").is_file(),
         "{served:?}"
     );
-    assert_eq!(calls(&root), 5);
+    // The fourth question was not kept.
+    assert_eq!(questions(&talk), 3);
 }
