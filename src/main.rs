@@ -61,6 +61,7 @@ const USAGE: &str = "usage: taik-seed seed OUTPUT.run
        taik-seed queue-session STATE NAME BRIEF.md GATE.sh [REPOSITORY]
        taik-seed propose STATE NAME RECORD.run
        taik-seed approve STATE NAME
+       taik-seed decline STATE NAME < REASON
        taik-seed orchestrator-prompt STATE REQUEST.run
        taik-seed adopt STATE job-NAME
        taik-seed settle STATE job-NAME
@@ -492,6 +493,17 @@ fn run() -> Result<bool> {
         "approve" if rest.len() == 1 => {
             let name = rest[0].to_str().ok_or("proposal name must be ASCII")?;
             println!("{}", proposal::approve(first, name)?.display());
+            Ok(true)
+        }
+        #[cfg(target_os = "macos")]
+        "decline" if rest.len() == 1 => {
+            use std::io::Read;
+            let name = rest[0].to_str().ok_or("proposal name must be ASCII")?;
+            let mut reason = Vec::new();
+            std::io::stdin()
+                .take(proposal::MAX_DECLINE_REASON_BYTES as u64 + 1)
+                .read_to_end(&mut reason)?;
+            println!("{}", proposal::decline(first, name, &reason)?.display());
             Ok(true)
         }
         #[cfg(target_os = "macos")]

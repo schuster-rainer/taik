@@ -164,7 +164,10 @@ The service stays a persistent process. It finished tag jobs in 55 to 72 ms. A `
 ```sh
 taik-seed propose STATE NAME evidence/jobs/job-X/round-NN.run
 taik-seed approve STATE NAME
+printf 'reason' | taik-seed decline STATE NAME
 ```
+
+`decline` keeps the reason (1 to 2000 bytes from standard input) as `declined.md` in a waiting proposal, which then can no longer be approved. For a request without a proposal it writes `STATE/requests/NAME.withdrawn`: the service no longer plans the request, and `reply` to it is refused. Each happens once.
 
 With `TAIK_AUTO_PROPOSE` set, the service reflects once after each finished software job, at most three times in 24 hours, and either writes a proposal or records why it stops. Waiting proposals appear in the viewer with an approve button.
 
@@ -246,6 +249,7 @@ taik-seed source JOB BRIEF GATE [--attached[=WORKER]]
 taik-seed promote JOB BRIEF GATE INSTALLED_BINARY WORKER
 taik-seed propose STATE NAME RECORD.run
 taik-seed approve STATE NAME
+taik-seed decline STATE NAME
 taik-seed orchestrator-prompt STATE REQUEST.run
 taik-seed adopt STATE job-NAME
 taik-seed settle STATE job-NAME

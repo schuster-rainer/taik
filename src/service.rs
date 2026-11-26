@@ -62,6 +62,24 @@ pub fn reply(state: &Path, name: &str, text: &str) -> Result<PathBuf> {
                 .bytes()
                 .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
     });
+    // A withdrawn request and a declined proposal take no further word.
+    if let Some(ticket) = crate::worker_name(name).filter(|_| !plain) {
+        let proposal = state.join("proposals").join(ticket);
+        if fs::symlink_metadata(&proposal).is_err()
+            && crate::proposal::withdrawn(state, ticket)
+                .symlink_metadata()
+                .is_ok()
+        {
+            return Err("the request is withdrawn".into());
+        }
+        if proposal
+            .join(crate::proposal::DECLINED)
+            .symlink_metadata()
+            .is_ok()
+        {
+            return Err("the proposal is declined".into());
+        }
+    }
     let jobs = jobs_in(state)?;
     // An answer to a question of the orchestrator about a request that has no proposal yet.
     if let Some(ticket) = crate::worker_name(name).filter(|_| !plain) {
@@ -166,6 +184,9 @@ fn derive_requests(home: &Path) {
     for name in names {
         if requests.join(format!("reflection-{name}.run")).exists()
             || requests.join(format!("{name}.failed")).exists()
+            || crate::proposal::withdrawn(home, &name)
+                .symlink_metadata()
+                .is_ok()
             || home.join("proposals").join(&name).exists()
         {
             continue;

@@ -563,9 +563,64 @@ pub fn reflect(state: &Path, jobs: &Path, job: &Path) -> Result<()> {
     propose(state, &name, &last).map(|_| ())
 }
 
+/// The reason a proposal was declined with. A declined proposal is never approved.
+pub const DECLINED: &str = "declined.md";
+/// The reason a request STATE/requests/NAME.run was withdrawn with: STATE/requests/NAME.withdrawn.
+pub const WITHDRAWN: &str = "withdrawn";
+pub const MAX_DECLINE_REASON_BYTES: usize = 2000;
+
+/// The file that marks the request STATE/requests/NAME.run as withdrawn.
+pub fn withdrawn(state: &Path, name: &str) -> PathBuf {
+    state.join("requests").join(format!("{name}.{WITHDRAWN}"))
+}
+
+/// Declines a waiting proposal or withdraws a request, with the reason as it was given. Nothing is
+/// written when the name, the reason or the state of the proposal or request does not allow it.
+pub fn decline(state: &Path, name: &str, reason: &[u8]) -> Result<PathBuf> {
+    let name = crate::worker_name(name).ok_or("invalid proposal or request name")?;
+    let proposal = state.join("proposals").join(name);
+    let target = if proposal.is_dir() {
+        if proposal.join("approved.txt").symlink_metadata().is_ok() {
+            return Err("the proposal is already approved".into());
+        }
+        let declined = proposal.join(DECLINED);
+        if declined.symlink_metadata().is_ok() {
+            return Err("the proposal is already declined".into());
+        }
+        declined
+    } else if state.join("requests").join(format!("{name}.run")).is_file() {
+        let withdrawn = withdrawn(state, name);
+        if withdrawn.symlink_metadata().is_ok() {
+            return Err("the request is already withdrawn".into());
+        }
+        withdrawn
+    } else {
+        return Err(format!("no waiting proposal or request named {name}").into());
+    };
+    if reason.is_empty() || reason.len() > MAX_DECLINE_REASON_BYTES {
+        return Err("a reason is between 1 and 2000 bytes".into());
+    }
+    use std::io::Write;
+    let folder = target.parent().ok_or("a reason without a folder")?;
+    let mut pending = tempfile::Builder::new()
+        .prefix(".taik-")
+        .suffix(".pending")
+        .tempfile_in(folder)?;
+    pending.write_all(reason)?;
+    pending.as_file().sync_all()?;
+    // Never replaces an existing reason.
+    pending
+        .persist_noclobber(&target)
+        .map_err(|error| error.error)?;
+    Ok(target)
+}
+
 pub fn approve(state: &Path, name: &str) -> Result<PathBuf> {
     let name = crate::worker_name(name).ok_or("invalid proposal name")?;
     let proposal = state.canonicalize()?.join("proposals").join(name);
+    if proposal.join(DECLINED).symlink_metadata().is_ok() {
+        return Err("a declined proposal cannot be approved".into());
+    }
     let plan = crate::orchestrator::Plan::read(&proposal.join("plan.txt"));
     let worker = plan
         .as_ref()
