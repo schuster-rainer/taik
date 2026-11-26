@@ -1,0 +1,20 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-28
+intent=Ein Wunsch wird vollständig festgehalten.
+baseline=taik-seed 860e6bf533433bac044657ef427a2f9ba716fbeb87243d0af2c507d352b12549
+worker=claude-fable
+decided_by=the installed taik-seed 860e6bf533433bac044657ef427a2f9ba716fbeb87243d0af2c507d352b12549 at /Users/rainer/.local/state/taik-factory/taik-seed
+limits=99 rounds; gate 900s; candidate checks 10s each
+gate_sha256=76b41170f51fa7e1a5424ba01f903bcf2276b8f8f19e4d87f952e88d18b6b0ce
+gate_ms=37323
+checks=PASS: Rust tests, Clippy with warnings denied, release build; candidate seeded, rejected an invalid procedure without touching the accepted record, and extended it
+evidence=round-28.checks.log
+artifact=round-28-taik-seed
+artifact_sha256=eb62a5a593d57eb0758e1f555c990e98a2bd0534699e3643d67ce8dceca906c9
+rollback=round-28.rollback-taik-seed
+continuation=Restart the service so that it runs the accepted binary.
+advance=false
+end

@@ -46,6 +46,8 @@ private struct Job: Codable {
     let changes: [String: Change]
     let analyses: [String: String]
     let dialogs: [String: [[String: String]]]
+    // The reason the user closed the job with. A closed job gets no further round.
+    let closed: String?
     let baseline: Round
     let rounds: [Round]
     let progress: [String: [ProgressEvent]]
@@ -186,6 +188,7 @@ private struct Agent: Codable {
 private struct StockEntry: Codable {
     let id: String
     let title: String
+    // accepted, rejected, closed or empty
     let decision: String
     let rounds: Int
 }
@@ -434,7 +437,7 @@ private final class FactoryMonitor {
             let brief = (try? String(contentsOf: briefURL(of: url), encoding: .utf8))?
                 .split(separator: "\n").first.map(String.init)
             let title = brief ?? last?.fields["intent"] ?? ""
-            return StockEntry(id: url.lastPathComponent, title: String(title.prefix(300)), decision: last?.fields["decision"] ?? "", rounds: rounds)
+            return StockEntry(id: url.lastPathComponent, title: String(title.prefix(300)), decision: FileManager.default.fileExists(atPath: url.appendingPathComponent("closed.md").path) ? "closed" : last?.fields["decision"] ?? "", rounds: rounds)
         }
     }
 
@@ -462,6 +465,7 @@ private final class FactoryMonitor {
     // A job that waits is always loaded in full, however old it is: waiting is not a decision.
     // It waits when its last round was rejected, when its agent asked last, or when a round is still due.
     private func waits(_ url: URL) -> Bool {
+        if FileManager.default.fileExists(atPath: url.appendingPathComponent("closed.md").path) { return false }
         var last: Round?
         for number in 1...99 {
             guard let round = Round(file: url.appendingPathComponent(String(format: "round-%02d.run", number))) else { break }
@@ -525,8 +529,13 @@ private final class FactoryMonitor {
         }
         let draft = active ? readSource(at: url.appendingPathComponent(next + ".draft")) : nil
         return Job(id: url.lastPathComponent, goal: goal, preview: preview, previous: previous,
-            cost: (cost * 10000).rounded() / 10000, draft: draft, agent: jobAgent(in: url), brief: jobBrief(in: url), messages: jobMessages(in: url), changes: roundChanges(rounds, in: url), analyses: roundAnalyses(rounds, in: url), dialogs: roundDialogs(rounds.count, in: url), baseline: baseline, rounds: rounds, progress: progress,
+            cost: (cost * 10000).rounded() / 10000, draft: draft, agent: jobAgent(in: url), brief: jobBrief(in: url), messages: jobMessages(in: url), changes: roundChanges(rounds, in: url), analyses: roundAnalyses(rounds, in: url), dialogs: roundDialogs(rounds.count, in: url), closed: closedReason(in: url), baseline: baseline, rounds: rounds, progress: progress,
             sourceQueued: queued, sourceActive: active, sourceStartedAt: startedAt)
+    }
+
+    private func closedReason(in directory: URL) -> String? {
+        guard let data = try? Data(contentsOf: directory.appendingPathComponent("closed.md")), data.count <= 2000 else { return nil }
+        return String(data: data, encoding: .utf8)
     }
 
     // The short analysis the Factory wrote for a rejected round.
@@ -710,6 +719,7 @@ private final class FactoryWindow: NSObject, NSApplicationDelegate, WKNavigation
         configuration.userContentController.add(self, name: "commentTicket")
         configuration.userContentController.add(self, name: "newTicket")
         configuration.userContentController.add(self, name: "showJob")
+        configuration.userContentController.add(self, name: "closeTicket")
         configuration.userContentController.add(self, name: "setParallel")
         for name in ["saveAgent", "deleteAgent", "setJobAgent", "refreshCrew", "attention"] {
             configuration.userContentController.add(self, name: name)
@@ -835,6 +845,25 @@ private final class FactoryWindow: NSObject, NSApplicationDelegate, WKNavigation
             approval.executableURL = state.appendingPathComponent("taik-seed")
             approval.arguments = ["approve", state.path, name]
             try? approval.run()
+            return
+        }
+        if message.name == "closeTicket", let body = message.body as? [String: String],
+           let name = body["job"], name.range(of: #"^job-[A-Za-z0-9-]{1,60}$"#, options: .regularExpression) != nil,
+           let text = body["text"], !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, text.utf8.count <= 2000 {
+            // The user ends the job. The installed Factory writes the reason into the job, once.
+            let call = Process()
+            call.executableURL = state.appendingPathComponent("taik-seed")
+            call.arguments = ["close", state.path, name]
+            let input = Pipe()
+            call.standardInput = input
+            call.standardOutput = FileHandle.nullDevice
+            call.standardError = FileHandle.nullDevice
+            if (try? call.run()) != nil {
+                input.fileHandleForWriting.write(Data(text.utf8))
+                try? input.fileHandleForWriting.close()
+                call.waitUntilExit()
+            }
+            monitor.refresh(watch: true)
             return
         }
         if message.name == "showJob", let name = message.body as? String,

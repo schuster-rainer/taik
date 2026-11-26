@@ -262,6 +262,15 @@ fn a_request_of_the_user_becomes_a_proposal_and_keeps_what_was_said() {
         !state.join("proposals").exists(),
         "a request alone starts nothing"
     );
+    // A long request is kept whole.
+    let long = format!("Langer Wunsch\n\n{} Ende.", "Satz mit Inhalt. ".repeat(120));
+    assert_eq!(say(&["request", home], &long).status.code(), Some(0));
+    let kept = fs::read_to_string(state.join("requests/ticket-002.run")).unwrap();
+    assert!(
+        kept.contains(" Ende.\ncontinuation="),
+        "the request was cut"
+    );
+    fs::remove_file(state.join("requests/ticket-002.run")).unwrap();
 
     // The service derives the proposal with its own worker.
     answer(

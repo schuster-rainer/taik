@@ -114,7 +114,11 @@ pub fn request(state: &Path, text: &str) -> Result<String> {
         &format!(
             "decision=observed\nidentity={name}\nintent={}\nobservation={}\ncontinuation=Derive one job that fulfils this request of the user. Stop if the request is unclear or cannot be checked by a gate.\nend\n",
             crate::source::single_line(title),
-            crate::source::single_line(rest.trim()),
+            // The whole request on one line. It is not cut: the worker must read all of it.
+            rest.trim()
+                .chars()
+                .map(|c| if c.is_control() { ' ' } else { c })
+                .collect::<String>(),
         ),
         MAX_RECORD_BYTES,
     )?;
