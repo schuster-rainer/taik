@@ -9,3 +9,5 @@ service.lock
 /evidence/jobs/job-backend/*-taik-seed
 # The dialog of an agent session stays local until the user decides otherwise.
 *.dialog.jsonl
+# The output of a landing started from the app.
+land.log

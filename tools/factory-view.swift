@@ -51,6 +51,11 @@ private struct Job: Codable {
     // What the orchestrator planned for this job, and the branch its accepted result was put on.
     let plan: [String: String]?
     let adopted: String?
+    // Landing: the repository of the job takes the accepted work into itself with its own .taik/land.sh.
+    let landable: Bool
+    let landing: Bool
+    let landed: String?
+    let landFailed: String?
     let baseline: Round
     let rounds: [Round]
     let progress: [String: [ProgressEvent]]
@@ -465,6 +470,17 @@ private final class FactoryMonitor {
         return (total * 1000).rounded() / 1000
     }
 
+    // The job whose landing runs right now, if any.
+    var landingJob = ""
+
+    // The landing procedure of the repository a session job works on, if that repository has one.
+    func landScript(of job: URL) -> URL? {
+        guard let repo = (try? String(contentsOf: job.appendingPathComponent("session.repo"), encoding: .utf8))?
+            .trimmingCharacters(in: .whitespacesAndNewlines), !repo.isEmpty else { return nil }
+        let script = URL(fileURLWithPath: repo).appendingPathComponent(".taik/land.sh")
+        return FileManager.default.isExecutableFile(atPath: script.path) ? script : nil
+    }
+
     // The job the user opened from the stock. It is loaded in full beside the latest ones.
     var shownJob = ""
 
@@ -575,7 +591,13 @@ private final class FactoryMonitor {
         }
         let draft = active ? readSource(at: url.appendingPathComponent(next + ".draft")) : nil
         return Job(id: url.lastPathComponent, goal: goal, preview: preview, previous: previous,
-            cost: (cost * 10000).rounded() / 10000, draft: draft, agent: jobAgent(in: url), brief: jobBrief(in: url), messages: jobMessages(in: url), changes: roundChanges(rounds, in: url), analyses: roundAnalyses(rounds, in: url), dialogs: roundDialogs(rounds.count, in: url), closed: closedReason(in: url), plan: plan(at: url.appendingPathComponent("plan.txt")), adopted: (try? String(contentsOf: url.appendingPathComponent("adopted.txt"), encoding: .utf8))?.trimmingCharacters(in: .whitespacesAndNewlines), baseline: baseline, rounds: rounds, progress: progress,
+            cost: (cost * 10000).rounded() / 10000, draft: draft, agent: jobAgent(in: url), brief: jobBrief(in: url), messages: jobMessages(in: url), changes: roundChanges(rounds, in: url), analyses: roundAnalyses(rounds, in: url), dialogs: roundDialogs(rounds.count, in: url), closed: closedReason(in: url), plan: plan(at: url.appendingPathComponent("plan.txt")), adopted: (try? String(contentsOf: url.appendingPathComponent("adopted.txt"), encoding: .utf8))?.trimmingCharacters(in: .whitespacesAndNewlines),
+            landable: landScript(of: url) != nil && rounds.last?.fields["decision"] == "accepted"
+                && !FileManager.default.fileExists(atPath: url.appendingPathComponent("landed.txt").path),
+            landing: landingJob == url.lastPathComponent,
+            landed: (try? String(contentsOf: url.appendingPathComponent("landed.txt"), encoding: .utf8))?.trimmingCharacters(in: .whitespacesAndNewlines),
+            landFailed: (try? String(contentsOf: url.appendingPathComponent("land-failed.txt"), encoding: .utf8))?.trimmingCharacters(in: .whitespacesAndNewlines),
+            baseline: baseline, rounds: rounds, progress: progress,
             sourceQueued: queued, sourceActive: active, sourceStartedAt: startedAt)
     }
 
@@ -768,6 +790,7 @@ private final class FactoryWindow: NSObject, NSApplicationDelegate, WKNavigation
         configuration.userContentController.add(self, name: "closeTicket")
         configuration.userContentController.add(self, name: "declineTicket")
         configuration.userContentController.add(self, name: "addRepo")
+        configuration.userContentController.add(self, name: "landJob")
         configuration.userContentController.add(self, name: "setParallel")
         for name in ["saveAgent", "deleteAgent", "setJobAgent", "refreshCrew", "attention"] {
             configuration.userContentController.add(self, name: name)
@@ -893,6 +916,34 @@ private final class FactoryWindow: NSObject, NSApplicationDelegate, WKNavigation
             approval.executableURL = state.appendingPathComponent("taik-seed")
             approval.arguments = ["approve", state.path, name]
             try? approval.run()
+            return
+        }
+        if message.name == "landJob", let name = message.body as? String,
+           name.range(of: #"^job-[a-z0-9-]{1,60}$"#, options: .regularExpression) != nil, monitor.landingJob.isEmpty {
+            // The user takes the accepted work into its repository. The repository's own procedure does it.
+            let job = state.appendingPathComponent("jobs", isDirectory: true).appendingPathComponent(name, isDirectory: true)
+            guard let script = monitor.landScript(of: job) else { return }
+            let call = Process()
+            call.executableURL = script
+            call.arguments = [String(name.dropFirst(4))]
+            call.currentDirectoryURL = script.deletingLastPathComponent().deletingLastPathComponent()
+            var environment = ProcessInfo.processInfo.environment
+            let home = NSHomeDirectory()
+            environment["PATH"] = "\(home)/.cargo/bin:\(home)/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+            call.environment = environment
+            let log = job.appendingPathComponent("land.log")
+            FileManager.default.createFile(atPath: log.path, contents: nil)
+            if let handle = try? FileHandle(forWritingTo: log) { call.standardOutput = handle; call.standardError = handle }
+            call.terminationHandler = { [weak self] _ in
+                DispatchQueue.main.async {
+                    self?.monitor.landingJob = ""
+                    self?.monitor.refresh(watch: true)
+                }
+            }
+            if (try? call.run()) != nil {
+                monitor.landingJob = name
+                monitor.refresh(watch: true)
+            }
             return
         }
         if message.name == "addRepo", let body = message.body as? [String: String],

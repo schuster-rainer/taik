@@ -1,0 +1,26 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=Prüfen, ob der unbeaufsichtigte Code-Worker des Dienstes einen kleinen Auftrag liefern kann.
+baseline=(empty)
+worker=grok-cli
+agent=grok-schnell
+worker_model=grok-4.7-build-fast
+worker_input_tokens=10245
+worker_output_tokens=91
+worker_cost_usd=0.050904
+worker_duration_ms=4509
+limits=4 rounds; worker lease 60s without ceiling; verifier 15s; 512KiB source
+gate_sha256=c1d47eff4ddd4e3cd943623d2c4ee0ba469838f5fdd150bc5d744375e16684f6
+gate_ms=105
+patch_blocks=
+checks=PASS: inert probe document with heading and paragraph
+artifact=round-01.html
+rejected_candidate=
+feedback=
+follow_up=
+continuation=Retain the accepted artifact. No further work was authorized by this round.
+advance=false
+end
