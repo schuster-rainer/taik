@@ -176,6 +176,8 @@ private struct Proposal: Codable {
     var note: String? = nil
     // What the orchestrator decided: kind, repo, gate, work, reason.
     var plan: [String: String]? = nil
+    // The gate the job will be judged by, so that the user can read it before approving.
+    var gate: String? = nil
 }
 
 private struct Agent: Codable {
@@ -358,7 +360,10 @@ private final class FactoryMonitor {
                 .split(separator: "\n").first { $0.hasPrefix("derived_from=") }
                 .map { URL(fileURLWithPath: String($0.dropFirst("derived_from=".count))).deletingLastPathComponent().lastPathComponent } ?? ""
             return Proposal(name: url.lastPathComponent, intent: String(intent.prefix(300)), origin: origin,
-                brief: String(brief.prefix(8192)), messages: jobMessages(in: url), plan: plan(at: url.appendingPathComponent("plan.txt")))
+                brief: String(brief.prefix(8192)), messages: jobMessages(in: url), plan: plan(at: url.appendingPathComponent("plan.txt")),
+                gate: ["gate.sh", "verify.mjs"].compactMap { name in
+                    (try? Data(contentsOf: url.appendingPathComponent(name))).flatMap { $0.count <= 65_536 ? String(data: $0, encoding: .utf8) : nil }
+                }.first)
         } + openRequests()
     }
 

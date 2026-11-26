@@ -1273,6 +1273,10 @@
       const proposalState = { deriving: 'Die Factory leitet Auftrag und Gate ab', declined: 'Die Factory hat daraus keinen Auftrag abgeleitet', failed: 'Das Ableiten ist fehlgeschlagen' };
       const proposalKey = proposal ? `proposal:${proposal.name}/brief` : '';
       const proposalOpen = openRounds.get(proposalKey) ?? true;
+      const gateText = proposal && typeof proposal.gate === 'string' && proposal.gate !== '' ? proposal.gate : '';
+      const gateKey = proposal ? `proposal:${proposal.name}/gate` : '';
+      const gateOpen = openRounds.get(gateKey) ?? false;
+      const gateLines = gateText ? gateText.replace(/\r?\n$/, '').split('\n').length : 0;
       const ticketOpen = '<section id="taik-ticket" aria-label="Ticket"';
       const ticket = proposal
         ? `${ticketOpen} data-proposal="${escape(proposal.name)}">
@@ -1281,6 +1285,7 @@
           ${proposal.note ? `<p class="round-checks">${escape(proposal.note)}</p>` : ''}
           ${proposal.plan ? `<dl class="ticket-state"><div><dt>Plan</dt><dd>${escape(planLine(proposal.plan))}</dd></div><div><dt>Grund</dt><dd>${escape(proposal.plan.reason)}</dd></div></dl>` : ''}
           ${proposal.brief ? `<details class="ticket-brief" data-round="${escape(proposalKey)}" data-initial-open="${proposalOpen}"${proposalOpen ? ' open' : ''}><summary>Beschreibung</summary><pre>${escape(proposal.brief)}</pre></details>` : ''}
+          ${gateText ? `<details class="ticket-brief ticket-gate" data-round="${escape(gateKey)}" data-initial-open="${gateOpen}"${gateOpen ? ' open' : ''}><summary>Gate (${gateLines} Zeilen)</summary><pre>${escape(gateText)}</pre></details>` : ''}
           <div class="thread" aria-label="Auftragsverlauf">${(proposal.messages ?? []).length ? `<ol class="rounds">${proposal.messages.map(item =>
             `<li class="thread-message ${item.author === 'user' ? 'user' : 'agent'}"><span class="who">${item.author === 'user' ? 'Du' : 'Agent'}</span>${escape(item.text)}</li>`).join('')}</ol>` : ''}</div>
           ${proposal.state ? '' : ticketDetail({ key: 'proposal:' + proposal.name, proposal: proposal.name })}</section>`

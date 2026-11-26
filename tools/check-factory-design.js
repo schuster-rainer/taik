@@ -170,7 +170,7 @@ async function runDesignGate(requireOpen) {
       requested.proposals = [
         { name: 'ticket-901', intent: 'Ein Rechner für Brotteig', origin: '', brief: 'Ein Rechner für Brotteig\n\nMit Hydration.', messages: [], state: 'deriving' },
         { name: 'ticket-902', intent: 'Unklar', origin: '', brief: 'Unklar', messages: [], state: 'declined', note: 'Der Wunsch nennt nichts Prüfbares.' },
-        { name: 'ticket-903', intent: 'Fertig abgeleitet', origin: 'requests', brief: 'Fertig abgeleitet\n\nVerlangt: ein Titel.', messages: [{ author: 'user', round: 0, text: 'Bitte in Blau.' }], plan: { kind: 'sitzung', repo: 'taik', gate: 'savant', work: 'standard', reason: 'Es müssen bestehende Dateien geändert werden.' } },
+        { name: 'ticket-903', intent: 'Fertig abgeleitet', origin: 'requests', brief: 'Fertig abgeleitet\n\nVerlangt: ein Titel.', messages: [{ author: 'user', round: 0, text: 'Bitte in Blau.' }], gate: 'test -f hello.txt || exit 1\necho PASS', plan: { kind: 'sitzung', repo: 'taik', gate: 'savant', work: 'standard', reason: 'Es müssen bestehende Dateien geändert werden.' } },
       ];
       window.updateFactory(requested);
       await delayFrame();
@@ -192,6 +192,11 @@ async function runDesignGate(requireOpen) {
       const ticket = find('#taik-ticket');
       requireFact(ticket.textContent.includes('Verlangt: ein Titel.') && ticket.textContent.includes('Bitte in Blau.'), 'A proposal lacks its description or what was said about it');
       requireFact(rendered(ticket.querySelector('button[data-proposal="ticket-903"]')), 'A finished proposal cannot be approved');
+      const gateText = [...ticket.querySelectorAll('details')].find(details => /^Gate \(2 Zeilen\)/.test(details.querySelector('summary')?.textContent.trim() ?? ''));
+      requireFact(gateText && !gateText.open, 'A proposal does not offer its gate, closed at first');
+      gateText.open = true;
+      await delayFrame();
+      requireFact(gateText.querySelector('pre')?.textContent.includes('test -f hello.txt') && gateText.scrollWidth <= gateText.clientWidth + 1, 'The gate of a proposal is not shown in full');
       const plans = find('#taik-orchestrator .plans');
       requireFact(rendered(plans) && plans.textContent.includes('Sitzung auf taik · Gate @savant · Arbeit @standard') && plans.textContent.includes('Der Orchestrator plant.'), 'The orchestrator does not show its plans');
       requireFact(ticket.textContent.includes('Es müssen bestehende Dateien geändert werden.'), 'The proposal does not show the plan of the orchestrator');
