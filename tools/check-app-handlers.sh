@@ -24,6 +24,13 @@ grep -q 'Mit einem zweiten Absatz' "$state/requests/ticket-001.run" || fail "new
 send commentTicket '{"name":"idee","text":"Bitte in Blau."}'
 grep -q 'Bitte in Blau' "$state/proposals/idee/message-001.user.md" 2>/dev/null || fail "a comment on a proposal was not kept with it"
 
+mkdir -p "$state/crew"
+printf 'harness=claude\nmodel=m\neffort=low\npersona=\nend\n' > "$state/crew/helfer.agent"
+send assignWorker '{"name":"idee","agent":"helfer"}'
+[ "$(cat "$state/proposals/idee/worker" 2>/dev/null)" = helfer ] || fail "assignWorker did not record the chosen agent"
+send assignWorker '{"name":"idee","agent":"niemand"}'
+[ "$(cat "$state/proposals/idee/worker")" = helfer ] || fail "assignWorker took an agent that does not exist"
+
 send declineTicket '{"name":"weg","text":"Brauche ich nicht."}'
 grep -q 'Brauche ich nicht' "$state/proposals/weg/declined.md" 2>/dev/null || fail "declineTicket did not record the reason"
 send approveProposal '"weg"'
@@ -31,6 +38,7 @@ send approveProposal '"weg"'
 
 send approveProposal '"idee"'
 [ -f "$state/jobs/job-idee/submission.brief.md" ] || fail "approveProposal did not queue the job"
+[ "$(cat "$state/jobs/job-idee/agent" 2>/dev/null)" = helfer ] || fail "the job did not get the agent the user chose"
 grep -q 'Bitte in Blau' "$state/jobs/job-idee/message-001.user.md" 2>/dev/null || fail "the comment did not move into the job"
 
 send commentTicket '{"name":"job-idee","text":"Eine Antwort."}'
@@ -59,8 +67,9 @@ send addRepo "{\"name\":\"../x\",\"path\":\"$root/repo\"}"
 send addRepo '{"name":"rel","path":"repo"}'
 send approveProposal '"../weg"'
 send landJob '"job-../x"'
+send assignWorker '{"name":"../idee","agent":"helfer"}'
 send newTicket '{"text":"   "}'
 after=$(find "$root" | sort | shasum | cut -d' ' -f1)
 [ "$before" = "$after" ] || fail "a malformed message changed the state"
 
-echo "PASS: 9 messages of the viewer handled, 9 malformed ones ignored"
+echo "PASS: 10 messages of the viewer handled, 10 malformed ones ignored"

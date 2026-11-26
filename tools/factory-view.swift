@@ -183,6 +183,8 @@ private struct Proposal: Codable {
     var plan: [String: String]? = nil
     // The gate the job will be judged by, so that the user can read it before approving.
     var gate: String? = nil
+    // The worker the user chose instead of the planned one, if any.
+    var worker: String? = nil
 }
 
 private struct Agent: Codable {
@@ -391,6 +393,8 @@ private final class FactoryMonitor {
                 gate: ["gate.sh", "verify.mjs"].compactMap { name in
                     (try? Data(contentsOf: url.appendingPathComponent(name))).flatMap { $0.count <= 65_536 ? String(data: $0, encoding: .utf8) : nil }
                 }.first)
+            proposal.worker = (try? String(contentsOf: url.appendingPathComponent("worker"), encoding: .utf8))?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
             // The user declined it. It stays visible for a day, with the reason.
             let declined = url.appendingPathComponent("declined.md")
             if let reason = try? String(contentsOf: declined, encoding: .utf8) {
@@ -791,6 +795,7 @@ private final class FactoryWindow: NSObject, NSApplicationDelegate, WKNavigation
         configuration.userContentController.add(self, name: "declineTicket")
         configuration.userContentController.add(self, name: "addRepo")
         configuration.userContentController.add(self, name: "landJob")
+        configuration.userContentController.add(self, name: "assignWorker")
         configuration.userContentController.add(self, name: "setParallel")
         for name in ["saveAgent", "deleteAgent", "setJobAgent", "refreshCrew", "attention"] {
             configuration.userContentController.add(self, name: name)
@@ -926,6 +931,19 @@ private final class FactoryWindow: NSObject, NSApplicationDelegate, WKNavigation
             approval.executableURL = state.appendingPathComponent("taik-seed")
             approval.arguments = ["approve", state.path, name]
             try? approval.run()
+            return
+        }
+        if name == "assignWorker", let body = body as? [String: String],
+           let proposal = body["name"], proposal.range(of: #"^[a-z0-9-]{1,32}$"#, options: .regularExpression) != nil,
+           let agent = body["agent"], agent.range(of: #"^[a-z0-9-]{1,32}$"#, options: .regularExpression) != nil {
+            // The user gives the work of a waiting proposal to another agent. The installed Factory checks the choice.
+            let call = Process()
+            call.executableURL = state.appendingPathComponent("taik-seed")
+            call.arguments = ["assign", state.path, proposal, agent]
+            call.standardOutput = FileHandle.nullDevice
+            call.standardError = FileHandle.nullDevice
+            if (try? call.run()) != nil { call.waitUntilExit() }
+            monitor.refresh(watch: true)
             return
         }
         if name == "landJob", let name = body as? String,
