@@ -193,7 +193,10 @@ fn the_standard_worker_means_no_agent_file() {
     assert_eq!(output.status.code(), Some(0), "{output:?}");
     let job = approve(&state, "titel");
     assert!(!job.join("agent").exists());
-    assert_eq!(fs::read_to_string(job.join("worker")).unwrap(), "standard\n");
+    assert_eq!(
+        fs::read_to_string(job.join("worker")).unwrap(),
+        "standard\n"
+    );
     assert_eq!(
         fs::read(job.join("plan.txt")).unwrap(),
         fs::read(folder.join("plan.txt")).unwrap()

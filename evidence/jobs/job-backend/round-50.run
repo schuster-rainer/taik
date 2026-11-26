@@ -1,0 +1,20 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-50
+intent=Der Befehl `taik-seed assign STATE NAME AGENT` lässt den Nutzer vor der Freigabe festlegen, welcher Agent die Arbeit eines Vorschlags macht.
+baseline=taik-seed 41a05f4c1cb12bdddd5dad9d2a7c6937fd1e74fe88ba0c6215c69fc1309152af
+worker=opus-session-ticket-030
+decided_by=the installed taik-seed 41a05f4c1cb12bdddd5dad9d2a7c6937fd1e74fe88ba0c6215c69fc1309152af at /Users/rainer/.local/state/taik-factory/taik-seed
+limits=99 rounds; gate 900s; candidate checks 10s each
+gate_sha256=76b41170f51fa7e1a5424ba01f903bcf2276b8f8f19e4d87f952e88d18b6b0ce
+gate_ms=44244
+checks=PASS: Rust tests, Clippy with warnings denied, release build; candidate seeded, rejected an invalid procedure without touching the accepted record, and extended it
+evidence=round-50.checks.log
+artifact=round-50-taik-seed
+artifact_sha256=10085d61d00dadccc74cecd010825aff20a31c32db3f3821b5e0437bb365208a
+rollback=round-50.rollback-taik-seed
+continuation=Restart the service so that it runs the accepted binary.
+advance=false
+end

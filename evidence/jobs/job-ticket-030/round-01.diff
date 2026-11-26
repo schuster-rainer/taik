@@ -1,0 +1,488 @@
+diff --git a/README.md b/README.md
+index 691b186..db8ef3d 100644
+--- a/README.md
++++ b/README.md
+@@ -32,6 +32,7 @@ For this repository `.taik/land.sh NAME` takes the work in. It merges the job's
+ ### Four commands
+ 
+ - `taik-seed close STATE job-NAME` closes a job for good with the reason from standard input, and no reply gives it another round.
++- `taik-seed assign STATE NAME AGENT` sets, before `approve`, which agent works a waiting proposal instead of the one its plan names: `standard` or an agent of `STATE/crew`. It writes `STATE/proposals/NAME/worker`, which travels with the job. The agent that wrote the gate is refused, and a session takes only an agent on the Claude harness or `standard`.
+ - `taik-seed decline STATE NAME` declines a waiting proposal, or withdraws a request that has none, with the reason from standard input.
+ - `taik-seed orchestrator-prompt STATE REQUEST.run` prints the text the orchestrator would send for a request and calls no worker.
+ - `taik-seed reflect STATE job-NAME` turns the oldest open intent of the Factory into a request that goes through the orchestrator like a wish of the user.
+@@ -282,6 +283,7 @@ taik-seed source JOB BRIEF GATE [--attached[=WORKER]]
+ taik-seed promote JOB BRIEF GATE INSTALLED_BINARY WORKER
+ taik-seed propose STATE NAME RECORD.run
+ taik-seed reflect STATE job-NAME
++taik-seed assign STATE NAME AGENT
+ taik-seed approve STATE NAME
+ taik-seed decline STATE NAME
+ taik-seed orchestrator-prompt STATE REQUEST.run
+diff --git a/src/main.rs b/src/main.rs
+index dcb7232..9a7853e 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -61,6 +61,7 @@ const USAGE: &str = "usage: taik-seed seed OUTPUT.run
+        taik-seed queue-session STATE NAME BRIEF.md GATE.sh [REPOSITORY]
+        taik-seed propose STATE NAME RECORD.run
+        taik-seed reflect STATE job-NAME
++       taik-seed assign STATE NAME AGENT
+        taik-seed approve STATE NAME
+        taik-seed decline STATE NAME < REASON
+        taik-seed orchestrator-prompt STATE REQUEST.run
+@@ -511,6 +512,13 @@ fn run() -> Result<bool> {
+             Ok(true)
+         }
+         #[cfg(target_os = "macos")]
++        "assign" if rest.len() == 2 => {
++            let name = rest[0].to_str().ok_or("proposal name must be ASCII")?;
++            let agent = rest[1].to_str().ok_or("agent name must be ASCII")?;
++            println!("{}", proposal::assign(first, name, agent)?.display());
++            Ok(true)
++        }
++        #[cfg(target_os = "macos")]
+         "decline" if rest.len() == 1 => {
+             use std::io::Read;
+             let name = rest[0].to_str().ok_or("proposal name must be ASCII")?;
+diff --git a/src/proposal.rs b/src/proposal.rs
+index e09a00e..8bc90cc 100644
+--- a/src/proposal.rs
++++ b/src/proposal.rs
+@@ -655,6 +655,53 @@ pub fn decline(state: &Path, name: &str, reason: &[u8]) -> Result<PathBuf> {
+     Ok(target)
+ }
+ 
++/// The work agent the user assigned to a waiting proposal: STATE/proposals/NAME/worker.
++pub const WORKER: &str = "worker";
++const MAX_WORKER_BYTES: usize = 64;
++
++/// Assigns the agent that works a waiting proposal once it is approved, instead of the one its plan
++/// names. Nothing is written when the name, the state of the proposal or the agent does not allow it.
++pub fn assign(state: &Path, name: &str, agent: &str) -> Result<PathBuf> {
++    let name = crate::worker_name(name).ok_or("invalid proposal name")?;
++    let proposal = state.join("proposals").join(name);
++    if !proposal
++        .symlink_metadata()
++        .is_ok_and(|metadata| metadata.is_dir())
++    {
++        return Err(format!("no waiting proposal named {name}").into());
++    }
++    if proposal.join("approved.txt").symlink_metadata().is_ok() {
++        return Err("the proposal is already approved".into());
++    }
++    if proposal.join(DECLINED).symlink_metadata().is_ok() {
++        return Err("the proposal is already declined".into());
++    }
++    let plan = crate::orchestrator::Plan::read(&proposal.join("plan.txt"));
++    if agent != crate::orchestrator::STANDARD {
++        let loaded = crate::crew::load(state, agent)?;
++        if plan.as_ref().is_some_and(|plan| plan.session)
++            && loaded.harness != crate::crew::Harness::Claude
++        {
++            return Err("a session needs an agent on the Claude harness".into());
++        }
++    }
++    // Nobody judges their own work.
++    if plan.as_ref().is_some_and(|plan| plan.gate == agent) {
++        return Err("the agent that wrote the gate cannot do the work".into());
++    }
++    use std::io::Write;
++    let target = proposal.join(WORKER);
++    let mut pending = tempfile::Builder::new()
++        .prefix(".taik-")
++        .suffix(".pending")
++        .tempfile_in(&proposal)?;
++    pending.write_all(format!("{agent}\n").as_bytes())?;
++    pending.as_file().sync_all()?;
++    // Replaces an earlier choice in one step.
++    pending.persist(&target).map_err(|error| error.error)?;
++    Ok(target)
++}
++
+ pub fn approve(state: &Path, name: &str) -> Result<PathBuf> {
+     let name = crate::worker_name(name).ok_or("invalid proposal name")?;
+     let proposal = state.canonicalize()?.join("proposals").join(name);
+@@ -662,10 +709,18 @@ pub fn approve(state: &Path, name: &str) -> Result<PathBuf> {
+         return Err("a declined proposal cannot be approved".into());
+     }
+     let plan = crate::orchestrator::Plan::read(&proposal.join("plan.txt"));
+-    let worker = plan
+-        .as_ref()
+-        .map(|plan| plan.work.as_str())
+-        .filter(|name| *name != crate::orchestrator::STANDARD);
++    // The work agent the user assigned counts instead of the one the plan names.
++    let assigned = proposal.join(WORKER);
++    let assigned = if assigned.symlink_metadata().is_ok() {
++        Some(record::read_regular(&assigned, MAX_WORKER_BYTES)?)
++    } else {
++        None
++    };
++    let worker = match &assigned {
++        Some(text) => Some(text.trim()),
++        None => plan.as_ref().map(|plan| plan.work.as_str()),
++    }
++    .filter(|name| *name != crate::orchestrator::STANDARD);
+     let said = crate::talk::read(&proposal);
+     // The plan file is copied as it is, so that the job still names who wrote its gate.
+     let plan_file = proposal.join("plan.txt");
+@@ -688,6 +743,7 @@ pub fn approve(state: &Path, name: &str) -> Result<PathBuf> {
+                 agent: worker,
+                 said: &said,
+                 plan: plan_file,
++                worker: assigned.as_deref(),
+             },
+         )?
+     } else {
+@@ -704,6 +760,7 @@ pub fn approve(state: &Path, name: &str) -> Result<PathBuf> {
+                 // What the user said about the proposal starts the conversation of the job.
+                 said: &said,
+                 plan: plan_file,
++                worker: assigned.as_deref(),
+             },
+         )?
+     };
+diff --git a/src/service.rs b/src/service.rs
+index 6ce3b20..6da9ee2 100644
+--- a/src/service.rs
++++ b/src/service.rs
+@@ -247,6 +247,8 @@ pub struct Handover<'a> {
+     pub agent: Option<&'a str>,
+     pub said: &'a [crate::talk::Message],
+     pub plan: Option<&'a Path>,
++    /// The content of the file `worker` of the proposal, when the user assigned the work agent.
++    pub worker: Option<&'a str>,
+ }
+ 
+ #[cfg(target_os = "macos")]
+@@ -262,6 +264,7 @@ pub fn queue_source(
+         agent,
+         said: conversation,
+         plan,
++        worker,
+     } = handover;
+     if name.is_empty()
+         || name.len() > 48
+@@ -322,6 +325,14 @@ pub fn queue_source(
+         let text = record::read_regular(plan, MAX_RECORD_BYTES)?;
+         record::publish_text(&job.path().join("plan.txt"), &text, MAX_RECORD_BYTES)?;
+     }
++    // The work agent the user assigned travels with the job, before the service sees it.
++    if let Some(worker) = worker {
++        record::publish_text(
++            &job.path().join(crate::proposal::WORKER),
++            worker,
++            MAX_RECORD_BYTES,
++        )?;
++    }
+     record::publish(&job.path().join("request.run"), crate::source::REQUEST)?;
+     publish_job(job, jobs.join(destination))
+ }
+diff --git a/src/session.rs b/src/session.rs
+index 59e86c7..376b31f 100644
+--- a/src/session.rs
++++ b/src/session.rs
+@@ -78,7 +78,12 @@ pub fn queue(
+     repo: Option<&Path>,
+     handover: crate::service::Handover<'_>,
+ ) -> Result<PathBuf> {
+-    let crate::service::Handover { agent, said, plan } = handover;
++    let crate::service::Handover {
++        agent,
++        said,
++        plan,
++        worker,
++    } = handover;
+     let name = crate::worker_name(name).ok_or("invalid job name")?;
+     let brief = record::read_regular(brief, record::MAX_RECORD_BYTES)?;
+     source::intent(&brief)?;
+@@ -124,6 +129,14 @@ pub fn queue(
+             record::MAX_RECORD_BYTES,
+         )?;
+     }
++    // The work agent the user assigned travels with the job, before the service sees it.
++    if let Some(worker) = worker {
++        record::publish_text(
++            &staged.path().join(crate::proposal::WORKER),
++            worker,
++            record::MAX_RECORD_BYTES,
++        )?;
++    }
+     record::publish(&staged.path().join("request.run"), source::REQUEST)?;
+     fs::rename(staged.path(), &job)?;
+     let _ = staged.keep();
+diff --git a/tests/assign.rs b/tests/assign.rs
+new file mode 100644
+index 0000000..13a1628
+--- /dev/null
++++ b/tests/assign.rs
+@@ -0,0 +1,270 @@
++#![cfg(target_os = "macos")]
++
++//! The user assigns the agent that works a waiting proposal before approving it. The test lays out
++//! proposal, plan and crew itself in the state folder. No worker and no sandbox run.
++
++use std::collections::BTreeMap;
++use std::fs;
++use std::path::{Path, PathBuf};
++use std::process::{Command, Output};
++
++fn factory() -> Command {
++    Command::new(env!("CARGO_BIN_EXE_taik-seed"))
++}
++
++fn run(arguments: &[&str]) -> Output {
++    factory().args(arguments).output().unwrap()
++}
++
++// Every file and folder below the state with its content: what a refused command must leave alone.
++fn snapshot(root: &Path) -> BTreeMap<PathBuf, Option<Vec<u8>>> {
++    let mut found = BTreeMap::new();
++    let mut open = vec![root.to_path_buf()];
++    while let Some(folder) = open.pop() {
++        for entry in fs::read_dir(&folder).unwrap().flatten() {
++            let path = entry.path();
++            let relative = path.strip_prefix(root).unwrap().to_path_buf();
++            if path.is_dir() {
++                found.insert(relative, None);
++                open.push(path);
++            } else {
++                found.insert(relative, Some(fs::read(&path).unwrap()));
++            }
++        }
++    }
++    found
++}
++
++fn state() -> (tempfile::TempDir, PathBuf) {
++    let root = tempfile::Builder::new()
++        .prefix("taik-assign-")
++        .tempdir_in("/tmp")
++        .unwrap();
++    let state = root.path().canonicalize().unwrap().join("state");
++    fs::create_dir_all(state.join("jobs")).unwrap();
++    let crew = state.join("crew");
++    fs::create_dir_all(&crew).unwrap();
++    for (name, harness) in [
++        ("anna", "claude"),
++        ("bert", "pi"),
++        ("carl", "codex"),
++        ("dora", "claude"),
++    ] {
++        fs::write(
++            crew.join(format!("{name}.agent")),
++            format!("harness={harness}\nmodel=m\neffort=high\nend\n"),
++        )
++        .unwrap();
++    }
++    (root, state)
++}
++
++const BRIEF: &str = "Eine Seite mit blauem Titel bauen\n\nDer Titel ist blau.\n";
++
++fn document(state: &Path, name: &str, gate: &str, work: &str) -> PathBuf {
++    let folder = state.join("proposals").join(name);
++    fs::create_dir_all(&folder).unwrap();
++    fs::write(folder.join("brief.md"), BRIEF).unwrap();
++    fs::write(folder.join("verify.mjs"), "console.log('PASS: ok');\n").unwrap();
++    fs::write(
++        folder.join("origin.txt"),
++        "derived_from=x\nproposed_by=test\nstate=waiting for approval\n",
++    )
++    .unwrap();
++    fs::write(
++        folder.join("plan.txt"),
++        format!("kind=dokument\nrepo=\nrepo_path=\ngate={gate}\nwork={work}\nreason=Test.\n"),
++    )
++    .unwrap();
++    folder
++}
++
++fn git(repo: &Path, arguments: &[&str]) {
++    let output = Command::new("git")
++        .arg("-C")
++        .arg(repo)
++        .args([
++            "-c",
++            "user.name=Test",
++            "-c",
++            "user.email=test@example.invalid",
++            "-c",
++            "commit.gpgsign=false",
++            "-c",
++            "core.hooksPath=/dev/null",
++        ])
++        .args(arguments)
++        .output()
++        .unwrap();
++    assert!(output.status.success(), "git {arguments:?}: {output:?}");
++}
++
++fn session(state: &Path, name: &str, gate: &str, work: &str) -> PathBuf {
++    let repo = state.parent().unwrap().join("repo");
++    if !repo.exists() {
++        fs::create_dir_all(&repo).unwrap();
++        git(&repo, &["init", "-q"]);
++        fs::write(repo.join("README.md"), "Ein Test.\n").unwrap();
++        git(&repo, &["add", "README.md"]);
++        git(&repo, &["commit", "-q", "-m", "start"]);
++    }
++    let folder = state.join("proposals").join(name);
++    fs::create_dir_all(&folder).unwrap();
++    fs::write(folder.join("brief.md"), BRIEF).unwrap();
++    fs::write(folder.join("gate.sh"), "echo 'PASS: ok'\n").unwrap();
++    fs::write(
++        folder.join("origin.txt"),
++        "derived_from=x\nproposed_by=test\nstate=waiting for approval\n",
++    )
++    .unwrap();
++    fs::write(
++        folder.join("plan.txt"),
++        format!(
++            "kind=sitzung\nrepo=probe\nrepo_path={}\ngate={gate}\nwork={work}\nreason=Test.\n",
++            repo.display()
++        ),
++    )
++    .unwrap();
++    folder
++}
++
++fn approve(state: &Path, name: &str) -> PathBuf {
++    let output = run(&["approve", state.to_str().unwrap(), name]);
++    assert_eq!(output.status.code(), Some(0), "{output:?}");
++    let job = state.join("jobs").join(format!("job-{name}"));
++    assert!(job.is_dir(), "{output:?}");
++    job
++}
++
++#[test]
++fn an_assignment_is_written_and_replaced_while_the_proposal_waits() {
++    let (_root, state) = state();
++    let home = state.to_str().unwrap();
++    let folder = document(&state, "titel", "anna", "bert");
++    let plan = fs::read(folder.join("plan.txt")).unwrap();
++    for agent in ["carl", "standard", "bert"] {
++        let output = run(&["assign", home, "titel", agent]);
++        assert_eq!(output.status.code(), Some(0), "{agent}: {output:?}");
++        assert_eq!(
++            fs::read_to_string(folder.join("worker")).unwrap(),
++            format!("{agent}\n")
++        );
++    }
++    assert_eq!(fs::read(folder.join("plan.txt")).unwrap(), plan);
++    // No temporary file stays behind.
++    let names: Vec<String> = fs::read_dir(&folder)
++        .unwrap()
++        .flatten()
++        .map(|entry| entry.file_name().to_string_lossy().into_owned())
++        .collect();
++    assert!(names.iter().all(|name| !name.starts_with('.')), "{names:?}");
++}
++
++#[test]
++fn an_approved_job_takes_the_assigned_agent() {
++    let (_root, state) = state();
++    let home = state.to_str().unwrap();
++    let folder = document(&state, "titel", "anna", "bert");
++    let output = run(&["assign", home, "titel", "carl"]);
++    assert_eq!(output.status.code(), Some(0), "{output:?}");
++    let job = approve(&state, "titel");
++    assert_eq!(fs::read_to_string(job.join("agent")).unwrap(), "carl\n");
++    assert_eq!(
++        fs::read(job.join("worker")).unwrap(),
++        fs::read(folder.join("worker")).unwrap()
++    );
++    assert_eq!(
++        fs::read(job.join("plan.txt")).unwrap(),
++        fs::read(folder.join("plan.txt")).unwrap()
++    );
++    assert!(
++        fs::read_to_string(folder.join("plan.txt"))
++            .unwrap()
++            .contains("work=bert\n")
++    );
++}
++
++#[test]
++fn the_standard_worker_means_no_agent_file() {
++    let (_root, state) = state();
++    let home = state.to_str().unwrap();
++    let folder = document(&state, "titel", "anna", "bert");
++    let output = run(&["assign", home, "titel", "standard"]);
++    assert_eq!(output.status.code(), Some(0), "{output:?}");
++    let job = approve(&state, "titel");
++    assert!(!job.join("agent").exists());
++    assert_eq!(fs::read_to_string(job.join("worker")).unwrap(), "standard\n");
++    assert_eq!(
++        fs::read(job.join("plan.txt")).unwrap(),
++        fs::read(folder.join("plan.txt")).unwrap()
++    );
++}
++
++#[test]
++fn without_an_assignment_the_plan_decides() {
++    let (_root, state) = state();
++    document(&state, "titel", "anna", "bert");
++    let job = approve(&state, "titel");
++    assert_eq!(fs::read_to_string(job.join("agent")).unwrap(), "bert\n");
++    assert!(!job.join("worker").exists());
++}
++
++#[test]
++fn a_session_takes_an_assigned_agent_on_the_claude_harness() {
++    let (_root, state) = state();
++    let home = state.to_str().unwrap();
++    let folder = session(&state, "sitzung", "anna", "standard");
++    let output = run(&["assign", home, "sitzung", "dora"]);
++    assert_eq!(output.status.code(), Some(0), "{output:?}");
++    let job = approve(&state, "sitzung");
++    assert_eq!(fs::read_to_string(job.join("agent")).unwrap(), "dora\n");
++    assert_eq!(fs::read_to_string(job.join("worker")).unwrap(), "dora\n");
++    assert_eq!(
++        fs::read(job.join("plan.txt")).unwrap(),
++        fs::read(folder.join("plan.txt")).unwrap()
++    );
++}
++
++#[test]
++fn wrong_names_states_and_agents_are_refused_without_writing() {
++    let (_root, state) = state();
++    let home = state.to_str().unwrap();
++    document(&state, "offen", "anna", "bert");
++    document(&state, "frei", "anna", "bert");
++    let declined = document(&state, "weg", "anna", "bert");
++    fs::write(declined.join("declined.md"), "Nein.\n").unwrap();
++    session(&state, "sitzung", "anna", "dora");
++    approve(&state, "frei");
++
++    let before = snapshot(&state);
++    let long_name = "a".repeat(33);
++    let refused: [(&str, &str); 15] = [
++        ("unbekannt", "bert"),
++        ("Offen", "bert"),
++        ("of_fen", "bert"),
++        ("../offen", "bert"),
++        (&long_name, "bert"),
++        ("", "bert"),
++        ("frei", "carl"),
++        ("weg", "carl"),
++        ("offen", "niemand"),
++        ("offen", "Bert"),
++        ("offen", "../crew/bert"),
++        ("offen", ""),
++        ("sitzung", "bert"),
++        ("sitzung", "carl"),
++        ("offen", "anna"),
++    ];
++    for (name, agent) in refused {
++        let output = run(&["assign", home, name, agent]);
++        assert_eq!(output.status.code(), Some(2), "{name} {agent}: {output:?}");
++        assert_eq!(snapshot(&state), before, "{name} {agent} wrote something");
++    }
++    // The author of the gate of a session is refused as well.
++    let output = run(&["assign", home, "sitzung", "anna"]);
++    assert_eq!(output.status.code(), Some(2), "{output:?}");
++    assert_eq!(snapshot(&state), before);
++    for name in ["offen", "frei", "weg", "sitzung"] {
++        assert!(!state.join("proposals").join(name).join("worker").exists());
++    }
++}

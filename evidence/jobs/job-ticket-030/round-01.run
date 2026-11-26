@@ -1,0 +1,26 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=Der Befehl `taik-seed assign STATE NAME AGENT` lässt den Nutzer vor der Freigabe festlegen, welcher Agent die Arbeit eines Vorschlags macht.
+baseline=29767202a91ed090c3df09582ba54b6535045f10
+worker=claude-session
+worker_model=claude-opus-5-5
+worker_output_tokens=14977
+worker_cache_read_tokens=755124
+session_listed_usd=0.9950448
+worker_failure=
+worker_duration_ms=157168
+session=858ad101-9739-4658-8924-ba31145a63f3
+limits=6 rounds and one per reply; lease 600s without ceiling; file tools only
+gate_sha256=f3834f65ec700bfc2cf790cc5db86d3851622b2e5689b8c906c00289de289e53
+gate_ms=13276
+checks=PASS: assign schreibt, überschreibt, weist ab und approve folgt der Datei worker
+artifact=d06235f5821af76951f8af828a9c5bea992a0a5d
+commit=d06235f5821af76951f8af828a9c5bea992a0a5d
+files=README.md +2 -0; src/main.rs +8 -0; src/proposal.rs +61 -4; src/service.rs +11 -0; src/session.rs +14 -1; tests/assign.rs +270 -0
+summary=Ich habe den Befehl `taik-seed assign STATE NAME AGENT` gebaut: Er schreibt `STATE/proposals/NAME/worker` über eine temporäre Datei und Umbenennen und überschreibt dabei eine frühere Wahl. Abgewiesen wird mit Status 2 und ohne etwas zu schreiben ein ungültiger oder unbekannter Vorschlag, ein freigegebener oder abgelehnter, ein unbekannter oder ungültiger Agent, bei einer Sitzung ein Agent, der nicht auf dem Claude-Harness läuft, und der Gate-Autor aus dem Plan. `approve` nimmt den Inhalt von `worker` statt `work=` (bei `standard` gibt es keine Datei `agent`), und ein neues Feld `worker` in `service::Handover` legt die Datei `worker` vor dem Veröffentlichen in den Auftragsordner, bei Dokument- und bei Sitzungsaufträgen; ohne die Datei bleibt alles wie bisher. Dazu gibt es das Testziel `tests/assign.rs` mit allen geforderten Fällen und je eine Zeile in `README.md` und im Usage-Text. Gebaut, getestet und mit Clippy geprüft habe ich nichts, das macht erst das Gate. Die Überschrift „Four commands“ habe ich wie ver
+continuation=The accepted state is commit d06235f5 in /Users/rainer/.local/state/taik-factory/work/ticket-030.
+advance=false
+end

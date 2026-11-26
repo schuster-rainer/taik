@@ -1,0 +1,6 @@
+kind=sitzung
+repo=taik
+repo_path=/Users/rainer/projects/ideas/talk
+gate=pruefer
+work=standard
+reason=Bestehender Rust-Code von taik-seed, README und Tests müssen geändert werden; pruefer liest als Claude-Agent zuerst den Code für das Gate, standard übernimmt die Arbeit.
