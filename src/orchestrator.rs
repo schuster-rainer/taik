@@ -6,6 +6,7 @@
 
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 use crate::progress::Progress;
 use crate::{Result, record, source};
@@ -23,6 +24,11 @@ Grund: <one German sentence of at most 30 words: why this kind and these agents>
 'sitzung' is right when existing files of a listed repository must be read or changed; it needs a repository, and its work agent must be on the claude harness or be 'standard'. \
 The gate is written before the work and judges it. For a 'sitzung' prefer a Gate agent on the claude harness other than the work agent: only such an agent can read the repository before it writes the gate. Choose two different agents for Gate and Arbeit whenever two are listed, so that nobody judges their own work. \
 Prefer the agent whose description fits the task; without a reason to prefer one, use 'standard' for the work.";
+const RULES: &str = "A change to a listed product is of the kind 'dokument': the job starts from the product's accepted source and is judged by its own pinned gate. \
+A session may not change the protected paths listed under its repository; a commit that touches one is rejected. \
+An agent marked '(failed recently)' could not be reached a short while ago; do not choose it for the gate while another agent can write it.";
+// How long a failed call of a gate author keeps it out of the gate.
+const FAILED_FOR: Duration = Duration::from_secs(6 * 60 * 60);
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Plan {
@@ -72,6 +78,39 @@ struct Member {
     name: String,
     claude: bool,
     about: String,
+    failed: bool,
+}
+
+fn failed_marker(home: &Path, name: &str) -> PathBuf {
+    home.join("crew").join(format!("{name}.failed"))
+}
+
+// STATE/crew/NAME.failed younger than six hours: the last call of this gate author failed.
+fn failed_recently(home: &Path, name: &str) -> bool {
+    fs::symlink_metadata(failed_marker(home, name))
+        .and_then(|data| data.modified())
+        .ok()
+        .and_then(|changed| changed.elapsed().ok())
+        .is_some_and(|age| age < FAILED_FOR)
+}
+
+/// Keeps the outcome of a call of a named gate author: a failure leaves STATE/crew/NAME.failed with
+/// the error, a delivered gate removes it. The standard worker gets no such file.
+pub fn mark_gate_author(home: &Path, name: &str, failure: Option<&str>) {
+    if name == STANDARD || !crate::crew::valid_name(name) {
+        return;
+    }
+    let marker = failed_marker(home, name);
+    match failure {
+        Some(error) => {
+            if fs::create_dir_all(home.join("crew")).is_ok() {
+                let _ = fs::write(&marker, format!("{}\n", source::single_line(error)));
+            }
+        }
+        None => {
+            let _ = fs::remove_file(&marker);
+        }
+    }
 }
 
 // The standard worker of the service and every agent of the crew.
@@ -80,6 +119,7 @@ fn crew(home: &Path) -> Vec<Member> {
         name: STANDARD.to_owned(),
         claude: true,
         about: "the standard worker of the service".to_owned(),
+        failed: failed_recently(home, STANDARD),
     }];
     let mut names: Vec<String> = fs::read_dir(home.join("crew"))
         .into_iter()
@@ -112,6 +152,7 @@ fn crew(home: &Path) -> Vec<Member> {
                         format!(", {}", source::single_line(&agent.persona))
                     }
                 ),
+                failed: failed_recently(home, &name),
                 name,
             });
         }
@@ -186,6 +227,18 @@ fn parse(answer: &str, crew: &[Member], repositories: &[(String, PathBuf)]) -> R
         gate = other;
         reason.push_str(" Das Gate schreibt ein anderer Agent als die Arbeit.");
     }
+    // A gate author that failed recently gives way to one that did not, as long as one exists.
+    if gate.failed
+        && let Some(other) = crew
+            .iter()
+            .find(|member| !member.failed && member.name != work.name)
+    {
+        reason.push_str(&format!(
+            " @{} fiel kürzlich aus, deshalb schreibt @{} das Gate.",
+            gate.name, other.name
+        ));
+        gate = other;
+    }
     Ok(Plan {
         session,
         repo: repo.filter(|_| session),
@@ -212,6 +265,77 @@ pub fn substitutes(home: &Path, plan: &Plan) -> Vec<Plan> {
         .collect()
 }
 
+// Paths a session may not change in a repository: the lines of its .taik/protected without comments.
+fn protected(repository: &Path) -> Vec<String> {
+    fs::read_to_string(repository.join(".taik/protected"))
+        .unwrap_or_default()
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        .map(str::to_owned)
+        .collect()
+}
+
+// The text the orchestrator sends to its worker for a request.
+fn compose(
+    home: &Path,
+    crew: &[Member],
+    repositories: &[(String, PathBuf)],
+    request: &Path,
+) -> Result<String> {
+    let mut prompt = format!("{CONTRACT}\n\n{RULES}\n\nAGENTS:\n");
+    for member in crew {
+        prompt.push_str(&format!(
+            "- {}: {}{}\n",
+            member.name,
+            member.about,
+            if member.failed {
+                " (failed recently)"
+            } else {
+                ""
+            }
+        ));
+    }
+    prompt.push_str("\nREPOSITORIES:\n");
+    if repositories.is_empty() {
+        prompt.push_str("(none)\n");
+    }
+    for (name, path) in repositories {
+        let about = fs::read_to_string(path.join("README.md")).unwrap_or_default();
+        prompt.push_str(&format!(
+            "- {name}: {}\n",
+            source::single_line(&about.chars().take(300).collect::<String>())
+        ));
+        let protected = protected(path);
+        prompt.push_str(&format!(
+            "  protected: {}\n",
+            if protected.is_empty() {
+                "(none)".to_owned()
+            } else {
+                protected.join(", ")
+            }
+        ));
+    }
+    prompt.push_str("\nPRODUCTS:\n");
+    let products = crate::proposal::products(home);
+    if products.is_empty() {
+        prompt.push_str("(none)\n");
+    }
+    for product in &products {
+        prompt.push_str(&format!("- {}: {}\n", product.name, product.about));
+    }
+    prompt.push_str(&format!(
+        "\nREQUEST OF THE USER:\n{}",
+        record::read_regular(request, record::MAX_RECORD_BYTES)?
+    ));
+    Ok(prompt)
+}
+
+/// The text the orchestrator would send to its worker for a request. Nothing is called or written.
+pub fn prompt(home: &Path, request: &Path) -> Result<String> {
+    compose(home, &crew(home), &repositories(home), request)
+}
+
 /// Asks the standard worker for the plan of a request and keeps it beside the request.
 pub fn plan(home: &Path, name: &str, request: &Path) -> Result<Plan> {
     let target = request.with_file_name(format!("{name}.plan"));
@@ -221,25 +345,7 @@ pub fn plan(home: &Path, name: &str, request: &Path) -> Result<Plan> {
     let folder = request.parent().ok_or("request without a folder")?;
     let crew = crew(home);
     let repositories = repositories(home);
-    let mut prompt = format!("{CONTRACT}\n\nAGENTS:\n");
-    for member in &crew {
-        prompt.push_str(&format!("- {}: {}\n", member.name, member.about));
-    }
-    prompt.push_str("\nREPOSITORIES:\n");
-    if repositories.is_empty() {
-        prompt.push_str("(none)\n");
-    }
-    for (name, path) in &repositories {
-        let about = fs::read_to_string(path.join("README.md")).unwrap_or_default();
-        prompt.push_str(&format!(
-            "- {name}: {}\n",
-            source::single_line(&about.chars().take(300).collect::<String>())
-        ));
-    }
-    prompt.push_str(&format!(
-        "\nREQUEST OF THE USER:\n{}",
-        record::read_regular(request, record::MAX_RECORD_BYTES)?
-    ));
+    let prompt = compose(home, &crew, &repositories, request)?;
     let scratch = tempfile::tempdir()?;
     let scratch = scratch.path().canonicalize()?;
     let workspace = scratch.join("worker");
@@ -272,7 +378,83 @@ mod tests {
             name: name.into(),
             claude,
             about: String::new(),
+            failed: false,
         }
+    }
+
+    #[test]
+    fn a_failed_gate_agent_is_replaced() {
+        let failed = |name: &str| Member {
+            failed: true,
+            ..member(name, true)
+        };
+        let crew = [
+            member(STANDARD, true),
+            failed("anna"),
+            member("bert", true),
+            member("carl", true),
+        ];
+        let plan = parse(
+            "Art: dokument\nRepo: -\nGate: anna\nArbeit: standard\nGrund: Ein Dokument.",
+            &crew,
+            &[],
+        )
+        .unwrap();
+        // The first agent in the order of the crew that did not fail and does not do the work.
+        assert_eq!((plan.gate.as_str(), plan.work.as_str()), ("bert", STANDARD));
+        assert_eq!(
+            plan.reason,
+            "Ein Dokument. @anna fiel kürzlich aus, deshalb schreibt @bert das Gate."
+        );
+
+        // An agent that did not fail keeps the gate.
+        let kept = parse(
+            "Art: dokument\nRepo: -\nGate: carl\nArbeit: standard\nGrund: Ein Dokument.",
+            &crew,
+            &[],
+        )
+        .unwrap();
+        assert_eq!((kept.gate.as_str(), kept.reason.as_str()), ("carl", "Ein Dokument."));
+
+        // Without another agent the choice of the worker stays.
+        let alone = [member(STANDARD, true), failed("anna")];
+        let stays = parse(
+            "Art: dokument\nRepo: -\nGate: anna\nArbeit: standard\nGrund: Ein Dokument.",
+            &alone,
+            &[],
+        )
+        .unwrap();
+        assert_eq!((stays.gate.as_str(), stays.reason.as_str()), ("anna", "Ein Dokument."));
+    }
+
+    #[test]
+    fn the_failed_marker_is_written_and_removed() {
+        let home = tempfile::tempdir().unwrap();
+        let marker = home.path().join("crew/anna.failed");
+        mark_gate_author(home.path(), "anna", Some("the call\nfailed"));
+        assert_eq!(fs::read_to_string(&marker).unwrap(), "the call failed\n");
+        assert!(failed_recently(home.path(), "anna"));
+
+        // The standard worker gets no marker.
+        mark_gate_author(home.path(), STANDARD, Some("down"));
+        assert!(!home.path().join("crew/standard.failed").exists());
+        assert!(!failed_recently(home.path(), STANDARD));
+
+        // An old marker does nothing.
+        let old = std::time::SystemTime::now() - Duration::from_secs(7 * 60 * 60);
+        fs::File::options()
+            .write(true)
+            .open(&marker)
+            .unwrap()
+            .set_modified(old)
+            .unwrap();
+        assert!(!failed_recently(home.path(), "anna"));
+
+        // A delivered gate removes the marker.
+        mark_gate_author(home.path(), "anna", None);
+        assert!(!marker.exists());
+        mark_gate_author(home.path(), "anna", None);
+        assert!(!marker.exists());
     }
 
     #[test]

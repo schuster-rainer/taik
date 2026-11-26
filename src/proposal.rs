@@ -82,14 +82,14 @@ fn open_intents(jobs: &Path) -> Vec<(String, String)> {
 }
 
 /// An existing artifact with its pinned gate that a job may build on, from STATE/products/NAME.product.
-struct Product {
-    name: String,
-    about: String,
+pub struct Product {
+    pub name: String,
+    pub about: String,
     seed: PathBuf,
     gate: PathBuf,
 }
 
-fn products(state: &Path) -> Vec<Product> {
+pub fn products(state: &Path) -> Vec<Product> {
     let mut list = Vec::new();
     for file in fs::read_dir(state.join("products"))
         .into_iter()
@@ -283,6 +283,10 @@ pub fn propose_planned(
         None => source::ask(&workspace, job, &prompt, &mut Progress::silent()),
     };
     let worker = author.as_ref().map_or(worker, |agent| agent.name.as_str());
+    // A named gate author whose call fails is marked, so that the orchestrator passes it over for a while.
+    if let (Err(error), Some(agent)) = (&answer, &author) {
+        crate::orchestrator::mark_gate_author(&state, &agent.name, Some(&error.to_string()));
+    }
     let (answer, usage) = answer?;
     // An optional first line names the open intent that the worker took up.
     let mut answer = answer.trim_start().to_owned();
@@ -394,6 +398,9 @@ pub fn propose_planned(
         record::MAX_RECORD_BYTES,
     )?;
     note(&format!("proposal {} waits for approval", target.display()))?;
+    if let Some(agent) = &author {
+        crate::orchestrator::mark_gate_author(&state, &agent.name, None);
+    }
     Ok(Some(target))
 }
 

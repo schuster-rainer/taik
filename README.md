@@ -131,7 +131,12 @@ taik-seed queue-session STATE NAME BRIEF.md GATE.sh REPOSITORY
 # A request in plain words. The orchestrator plans it: one document or a session on a repository
 # listed in STATE/repos/NAME.repo, who writes the gate, who does the work. The proposal waits for approval.
 printf 'Eine Seite mit Uhrzeit' | taik-seed request STATE
+# The text the orchestrator would send for a request: agents (marked when they failed in the last
+# six hours), repositories with their protected paths, and products. No worker is called.
+taik-seed orchestrator-prompt STATE REQUEST.run
 ```
+
+A named agent whose gate call fails leaves `STATE/crew/NAME.failed`. For six hours the orchestrator gives the gate to another agent that does not do the work, if there is one. The file goes when that agent delivers a gate again.
 
 A reply to a finished job grants exactly one further round, and its worker reads the whole conversation. Each reply grants one round beyond the budget of four, at most eight. A worker may return a question instead of a candidate. Then nothing is judged, the question stands in the job, its cost in a record of its own, and the job waits until the user has answered. The viewer shows description, messages and rounds in the open ticket and plays a sound when a ticket starts to wait.
 
@@ -241,6 +246,7 @@ taik-seed source JOB BRIEF GATE [--attached[=WORKER]]
 taik-seed promote JOB BRIEF GATE INSTALLED_BINARY WORKER
 taik-seed propose STATE NAME RECORD.run
 taik-seed approve STATE NAME
+taik-seed orchestrator-prompt STATE REQUEST.run
 taik-seed adopt STATE job-NAME
 taik-seed experiment BASELINE.run OUTPUT_DIRECTORY
 taik-seed queue STATE BASELINE.run

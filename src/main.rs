@@ -61,6 +61,7 @@ const USAGE: &str = "usage: taik-seed seed OUTPUT.run
        taik-seed queue-session STATE NAME BRIEF.md GATE.sh [REPOSITORY]
        taik-seed propose STATE NAME RECORD.run
        taik-seed approve STATE NAME
+       taik-seed orchestrator-prompt STATE REQUEST.run
        taik-seed adopt STATE job-NAME
        taik-seed experiment BASELINE.run OUTPUT_DIRECTORY
        taik-seed queue STATE BASELINE.run
@@ -473,6 +474,11 @@ fn run() -> Result<bool> {
                 Some(path) => println!("{}", path.display()),
                 None => println!("stop"),
             }
+            Ok(true)
+        }
+        #[cfg(target_os = "macos")]
+        "orchestrator-prompt" if rest.len() == 1 => {
+            print!("{}", orchestrator::prompt(first, Path::new(&rest[0]))?);
             Ok(true)
         }
         #[cfg(target_os = "macos")]
