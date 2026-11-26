@@ -1,0 +1,24 @@
+627633	start	Sitzung in /Users/rainer/.local/state/taik-factory/work/ticket-013
+628051	worker	Beginnt die Sitzung 8c06094b
+4286637	tool	Read src/proposal.rs
+4348632	tool	Grep queue_source|session::queue|fn queue
+8061155	tool	Read src/service.rs
+8711833	tool	Read src/session.rs
+13797288	tool	Read src/main.rs
+14802160	tool	Grep pub fn read_regular|pub fn publish_text
+19294670	tool	Edit src/service.rs
+21845854	tool	Edit src/service.rs
+23346547	tool	Edit src/session.rs
+25446825	tool	Edit src/session.rs
+26397236	tool	Edit src/main.rs
+27329574	tool	Edit src/main.rs
+32027802	tool	Edit src/proposal.rs
+33076823	tool	Edit src/proposal.rs
+33994118	tool	Edit src/proposal.rs
+37784627	tool	Grep pub fn read|pub fn text|repo_path|kind=
+38412285	tool	Read tests/proposal.rs
+53771435	tool	Write tests/plan_job.rs
+57094550	tool	Grep ExitCode|exit\(
+64430085	checks	5 Dateien geändert, Commit d71b12a8
+64503625	evaluate	Gate prüft Commit d71b12a8
+75760798	accepted	PASS: approve übernimmt plan.txt in beide Auftragsarten, ohne Plan bleibt sie aus, plan_job hat 3 Tests

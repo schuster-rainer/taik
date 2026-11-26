@@ -1,0 +1,20 @@
+decision=rejected
+kind=software
+procedure=
+tags=
+identity=round-34
+intent=Der Plan des Orchestrators zieht bei der Freigabe mit in den Auftrag.
+baseline=taik-seed 918ee552b4212eb2f4414d4d87c6673b4eacf04cf38828d18d710e09d20e73cb
+worker=opus-session-ticket-013
+decided_by=the installed taik-seed 918ee552b4212eb2f4414d4d87c6673b4eacf04cf38828d18d710e09d20e73cb at /Users/rainer/.local/state/taik-factory/taik-seed
+limits=99 rounds; gate 900s; candidate checks 10s each
+gate_sha256=76b41170f51fa7e1a5424ba01f903bcf2276b8f8f19e4d87f952e88d18b6b0ce
+gate_ms=
+checks=gate failed (exit status: 101): error: could not compile `taik-seed` (bin "taik-seed" test) due to 2 previous errors
+evidence=round-34.checks.log
+artifact=
+artifact_sha256=
+rollback=
+continuation=The installed binary stays in place.
+advance=false
+end

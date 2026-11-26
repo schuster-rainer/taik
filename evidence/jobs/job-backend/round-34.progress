@@ -1,0 +1,4 @@
+4415	start	Die installierte Factory beurteilt ihren Nachfolger
+9258	evaluate	Fixiertes Gate ausführen
+25607497	error	gate failed (exit status: 101): error: could not compile `taik-seed` (bin "taik-seed" test) due to 2 previous errors
+25620808	rejected	The installed binary stays in place.
