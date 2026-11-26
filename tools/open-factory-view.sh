@@ -58,13 +58,14 @@ snapshot="$staging/snapshot.html"
 data=$(node "$source_dir/check-app.mjs" "$bundle/Contents/Resources/factory-view.html" < "$snapshot" 2>&1 | grep -E '^PASS|Assertion' | head -1 || true)
 view=$(/usr/bin/swift "$source_dir/check-factory-design.swift" --require-open < "$snapshot" 2>&1 | tail -1 || true)
 rm -f "$snapshot"
-case "$data$view" in
-  PASS*PASS*) decision=accepted ;;
+handlers=$(sh "$source_dir/check-app-handlers.sh" "$bundle/Contents/MacOS/factory-view" 2>&1 | tail -1 || true)
+case "$data$view$handlers" in
+  PASS*PASS*PASS*) decision=accepted ;;
   *) decision=rejected ;;
 esac
-printf 'decision=%s\nkind=release\nidentity=app-release-%03d\nsource_sha256=%s\nviewer_sha256=%s\nreleased_by=tools/open-factory-view.sh\nchecks=data: %s viewer: %s\nend\n' \
+printf 'decision=%s\nkind=release\nidentity=app-release-%03d\nsource_sha256=%s\nviewer_sha256=%s\nreleased_by=tools/open-factory-view.sh\nchecks=data: %s viewer: %s messages: %s\nend\n' \
   "$decision" "$number" "$(shasum -a 256 "$source_dir/factory-view.swift" | cut -d' ' -f1)" \
-  "$(shasum -a 256 "$source_dir/factory-view.html" | cut -d' ' -f1)" "$data" "$view" > "$record"
+  "$(shasum -a 256 "$source_dir/factory-view.html" | cut -d' ' -f1)" "$data" "$view" "$handlers" > "$record"
 if [ "$decision" != accepted ]; then
   cat "$record" >&2
   rm -rf "$bundle"

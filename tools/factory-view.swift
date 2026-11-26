@@ -854,7 +854,17 @@ private final class FactoryWindow: NSObject, NSApplicationDelegate, WKNavigation
 
     func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
         guard message.frameInfo.isMainFrame else { return }
-        if message.name == "setAppearance", let value = message.body as? String,
+        handle(name: message.name, body: message.body)
+    }
+
+    // For `--handle NAME JSON`: the same handling without a window, so that it can be tested.
+    func prepareHeadless() {
+        monitor = FactoryMonitor(state: state) { _ in }
+    }
+
+    // What the viewer asks the app to do. Every value is checked here; the page is not trusted.
+    func handle(name: String, body: Any) {
+        if name == "setAppearance", let value = body as? String,
            let appearance = ViewerAppearance(rawValue: value) {
             UserDefaults.standard.set(appearance.rawValue, forKey: ViewerAppearance.preference)
             window.appearance = appearance.native
@@ -864,11 +874,11 @@ private final class FactoryWindow: NSObject, NSApplicationDelegate, WKNavigation
         // and files are written only into STATE/crew or as the one file `agent` of a known job.
         let agentName = #"^[a-z0-9-]{1,32}$"#
         let crew = state.appendingPathComponent("crew", isDirectory: true)
-        if message.name == "refreshCrew" {
+        if name == "refreshCrew" {
             refreshCrew()
             return
         }
-        if message.name == "saveAgent", let body = message.body as? [String: String],
+        if name == "saveAgent", let body = body as? [String: String],
            let name = body["name"], name.range(of: agentName, options: .regularExpression) != nil,
            let harness = body["harness"], ["claude", "codex", "savant", "grok", "pi"].contains(harness),
            let model = body["model"], model.range(of: #"^[A-Za-z0-9._:/-]{0,80}$"#, options: .regularExpression) != nil,
@@ -882,13 +892,13 @@ private final class FactoryWindow: NSObject, NSApplicationDelegate, WKNavigation
             refreshCrew()
             return
         }
-        if message.name == "deleteAgent", let name = message.body as? String,
+        if name == "deleteAgent", let name = body as? String,
            name.range(of: agentName, options: .regularExpression) != nil {
             try? FileManager.default.removeItem(at: crew.appendingPathComponent(name + ".agent"))
             refreshCrew()
             return
         }
-        if message.name == "setJobAgent", let body = message.body as? [String: String],
+        if name == "setJobAgent", let body = body as? [String: String],
            let job = body["job"], job.range(of: #"^job-[A-Za-z0-9-]{1,60}$"#, options: .regularExpression) != nil,
            let agent = body["agent"] {
             let folder = state.appendingPathComponent("jobs", isDirectory: true).appendingPathComponent(job, isDirectory: true)
@@ -904,12 +914,12 @@ private final class FactoryWindow: NSObject, NSApplicationDelegate, WKNavigation
             monitor.refresh(watch: false)
             return
         }
-        if message.name == "setParallel", let slots = message.body as? Int, (1...8).contains(slots) {
+        if name == "setParallel", let slots = body as? Int, (1...8).contains(slots) {
             try? "\(slots)\n".write(to: state.appendingPathComponent("parallel"), atomically: true, encoding: .utf8)
             monitor.refresh(watch: false)
             return
         }
-        if message.name == "approveProposal", let name = message.body as? String,
+        if name == "approveProposal", let name = body as? String,
            name.range(of: #"^[a-z0-9-]{1,32}$"#, options: .regularExpression) != nil {
             // The user's click is the approval. The installed Factory queues the job.
             let approval = Process()
@@ -918,7 +928,7 @@ private final class FactoryWindow: NSObject, NSApplicationDelegate, WKNavigation
             try? approval.run()
             return
         }
-        if message.name == "landJob", let name = message.body as? String,
+        if name == "landJob", let name = body as? String,
            name.range(of: #"^job-[a-z0-9-]{1,60}$"#, options: .regularExpression) != nil, monitor.landingJob.isEmpty {
             // The user takes the accepted work into its repository. The repository's own procedure does it.
             let job = state.appendingPathComponent("jobs", isDirectory: true).appendingPathComponent(name, isDirectory: true)
@@ -946,7 +956,7 @@ private final class FactoryWindow: NSObject, NSApplicationDelegate, WKNavigation
             }
             return
         }
-        if message.name == "addRepo", let body = message.body as? [String: String],
+        if name == "addRepo", let body = body as? [String: String],
            let name = body["name"], name.range(of: #"^[a-z0-9-]{1,32}$"#, options: .regularExpression) != nil,
            let given = body["path"], given.hasPrefix("/") || given.hasPrefix("~"), given.utf8.count <= 1024 {
             // The user names a repository on this machine. Only a folder that is a Git repository is taken.
@@ -959,7 +969,7 @@ private final class FactoryWindow: NSObject, NSApplicationDelegate, WKNavigation
             monitor.refresh(watch: true)
             return
         }
-        if message.name == "declineTicket", let body = message.body as? [String: String],
+        if name == "declineTicket", let body = body as? [String: String],
            let name = body["name"], name.range(of: #"^[a-z0-9-]{1,32}$"#, options: .regularExpression) != nil,
            let text = body["text"], !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, text.utf8.count <= 2000 {
             // The user declines a proposal or withdraws a request. The installed Factory records the reason.
@@ -978,7 +988,7 @@ private final class FactoryWindow: NSObject, NSApplicationDelegate, WKNavigation
             monitor.refresh(watch: true)
             return
         }
-        if message.name == "closeTicket", let body = message.body as? [String: String],
+        if name == "closeTicket", let body = body as? [String: String],
            let name = body["job"], name.range(of: #"^job-[A-Za-z0-9-]{1,60}$"#, options: .regularExpression) != nil,
            let text = body["text"], !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, text.utf8.count <= 2000 {
             // The user ends the job. The installed Factory writes the reason into the job, once.
@@ -997,19 +1007,19 @@ private final class FactoryWindow: NSObject, NSApplicationDelegate, WKNavigation
             monitor.refresh(watch: true)
             return
         }
-        if message.name == "showJob", let name = message.body as? String,
+        if name == "showJob", let name = body as? String,
            name.range(of: #"^job-[A-Za-z0-9-]{1,60}$"#, options: .regularExpression) != nil {
             monitor.shownJob = name
             monitor.refresh(watch: true)
             return
         }
-        if message.name == "attention" {
+        if name == "attention" {
             // A ticket started to wait for the user: a sound and the Dock, no notification service.
             NSSound(named: "Glass")?.play()
             NSApp.requestUserAttention(.informationalRequest)
             return
         }
-        if message.name == "commentTicket", let body = message.body as? [String: String],
+        if name == "commentTicket", let body = body as? [String: String],
            let name = body["name"], name.range(of: #"^job-[A-Za-z0-9-]{1,60}$"#, options: .regularExpression) != nil,
            let text = body["text"], !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, text.utf8.count <= 8000 {
             // A reply to a job belongs into the job. The installed Factory writes it there and wakes the service.
@@ -1026,12 +1036,12 @@ private final class FactoryWindow: NSObject, NSApplicationDelegate, WKNavigation
             }
             return
         }
-        if message.name == "commentTicket" || message.name == "newTicket", let body = message.body as? [String: String],
+        if name == "commentTicket" || name == "newTicket", let body = body as? [String: String],
            let text = body["text"], !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-           text.utf8.count <= (message.name == "newTicket" ? 4000 : 8000) {
+           text.utf8.count <= (name == "newTicket" ? 4000 : 8000) {
             // A comment on a waiting proposal stays with the proposal. A new ticket is a request the service derives a proposal from.
             var arguments = ["request", state.path]
-            if message.name == "commentTicket" {
+            if name == "commentTicket" {
                 guard let name = body["name"], name.range(of: #"^[a-z0-9-]{1,32}$"#, options: .regularExpression) != nil else { return }
                 arguments = ["reply", state.path, name]
             }
@@ -1048,7 +1058,7 @@ private final class FactoryWindow: NSObject, NSApplicationDelegate, WKNavigation
             }
             return
         }
-        guard message.name == "openArtifact", let body = message.body as? [String: String],
+        guard name == "openArtifact", let body = body as? [String: String],
               let job = body["job"], job.hasPrefix("job-"), !job.contains("/"),
               let name = body["name"], name.range(of: #"^round-[0-9]{2}(\.html|-taik-seed)$"#, options: .regularExpression) != nil else { return }
         let directory = state.appendingPathComponent("jobs", isDirectory: true).appendingPathComponent(job, isDirectory: true)
@@ -1083,7 +1093,16 @@ if arguments.contains("--stream") {
     withExtendedLifetime(monitor) { dispatchMain() }
 } else {
     let fragment = try String(contentsOf: fragmentPath, encoding: .utf8)
-    if arguments.contains("--snapshot") {
+    if let at = arguments.firstIndex(of: "--handle"), arguments.indices.contains(at + 2) {
+        // Test entry: one message of the viewer, handled as the running app would handle it.
+        let controller = FactoryWindow(state: state, fragment: fragment)
+        controller.prepareHeadless()
+        let text = arguments[at + 2]
+        let body = (try? JSONSerialization.jsonObject(with: Data(text.utf8), options: [.fragmentsAllowed])) ?? text
+        controller.handle(name: arguments[at + 1], body: body)
+        // Commands the handler started without waiting get a moment to finish.
+        Thread.sleep(forTimeInterval: 1.5)
+    } else if arguments.contains("--snapshot") {
         FactoryMonitor(state: state) { json in
             print(fragment.replacingOccurrences(of: "/*FACTORY_DATA*/null", with: scriptSafe(json)))
         }.refresh(watch: false)

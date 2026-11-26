@@ -53,7 +53,7 @@ A brief names its intent in the first line and the observation that justifies it
 - A gate is fixed for a job once its first round ran (`gate.sha256`). A different check needs a new job.
 - The promotion of the core runs Clippy with warnings denied and the whole test suite. A gate for a session that changes `src/` should run `cargo clippy --offline --locked --all-targets -- -D warnings` too; one that did not let a change through that the promotion then refused (`job-ticket-013`, round 34 of `job-backend`).
 - The gate of a session runs in a sandbox that cannot start another sandbox. It can test commands and its own test targets, not a round of the service.
-- The Mac app is built and installed by `tools/open-factory-view.sh`. It installs only when the new host hands the viewer well-formed data (`tools/check-app.mjs`) and the viewer passes its contract with it. Each attempt leaves a record in `evidence/app/`.
+- The Mac app is built and installed by `tools/open-factory-view.sh`. It installs only when the new host hands the viewer well-formed data (`tools/check-app.mjs`), the viewer passes its contract with it, and every message of the viewer does what it should against a throwaway state (`tools/check-app-handlers.sh`). Each attempt leaves a record in `evidence/app/`.
 - Work done by an agent is attributed to that agent, not to the Factory (specification, section 7.2).
 
 ## Decisions of the user
