@@ -63,6 +63,7 @@ const USAGE: &str = "usage: taik-seed seed OUTPUT.run
        taik-seed approve STATE NAME
        taik-seed orchestrator-prompt STATE REQUEST.run
        taik-seed adopt STATE job-NAME
+       taik-seed settle STATE job-NAME
        taik-seed experiment BASELINE.run OUTPUT_DIRECTORY
        taik-seed queue STATE BASELINE.run
        taik-seed queue-source STATE NAME BRIEF GATE [ACCEPTED_SOURCE] [--agent=NAME]
@@ -400,6 +401,13 @@ fn run() -> Result<bool> {
         "adopt" if rest.len() == 1 => {
             let name = rest[0].to_str().ok_or("job name must be ASCII")?;
             println!("{}", adopt::adopt(first, name)?);
+            Ok(true)
+        }
+        "settle" if rest.len() == 1 => {
+            let name = rest[0].to_str().ok_or("job name must be ASCII")?;
+            if let Some(branch) = adopt::settle(first, name)? {
+                println!("{branch}");
+            }
             Ok(true)
         }
         "experiment" if rest.len() == 1 => {

@@ -524,6 +524,14 @@ fn run_source_job(home: &Path, jobs: &Path, job: &Path) -> Result<bool> {
     #[cfg(target_os = "macos")]
     if job.join(crate::session::BRIEF).is_file() {
         let outcome = crate::session::run_queued(home, job, agent.as_ref())?;
+        // An accepted round is brought into the repository it came from. A failure is recorded in
+        // the job and changes neither the decision nor the rounds.
+        if outcome == Some(true)
+            && let Some(name) = job.file_name().and_then(|name| name.to_str())
+            && let Err(error) = crate::adopt::settle(home, name)
+        {
+            eprintln!("{}: settle: {error}", job.display());
+        }
         if outcome == Some(false)
             && let Err(error) = crate::analysis::of_last_round(job)
         {

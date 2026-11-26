@@ -67,6 +67,80 @@ fn last_round(job: &Path) -> Result<std::path::PathBuf> {
         .ok_or_else(|| format!("no round in {}", job.display()).into())
 }
 
+/// The branch of a settled job, written once.
+pub const ADOPTED: &str = "adopted.txt";
+/// Why the last settling failed, in one line. Replaced by the next failure.
+pub const ADOPT_FAILED: &str = "adopt-failed.txt";
+
+// One nonempty line: line breaks become spaces.
+fn one_line(message: &str) -> String {
+    let line = message.replace(['\r', '\n'], " ");
+    let line = line.trim();
+    if line.is_empty() {
+        "adopt failed".to_owned()
+    } else {
+        line.to_owned()
+    }
+}
+
+fn pending_in(job: &Path, text: &str) -> Result<tempfile::NamedTempFile> {
+    use std::io::Write;
+    let mut pending = tempfile::Builder::new()
+        .prefix(".taik-")
+        .suffix(".pending")
+        .tempfile_in(job)?;
+    pending.write_all(text.as_bytes())?;
+    pending.as_file().sync_all()?;
+    Ok(pending)
+}
+
+/// Adopts the accepted commit of a session job with [`adopt`] and records the result in the job
+/// folder: the branch in `adopted.txt` (written once), or the failure in `adopt-failed.txt`.
+/// A job without `session.repo` has nothing to adopt: `Ok(None)`, nothing is written.
+/// An unknown job is an error and nothing is created.
+pub fn settle(state: &Path, job_name: &str) -> Result<Option<String>> {
+    let mut parts = Path::new(job_name).components();
+    if !matches!(
+        (parts.next(), parts.next()),
+        (Some(std::path::Component::Normal(_)), None)
+    ) {
+        return Err("a job is named by one folder name".into());
+    }
+    let job = state.join("jobs").join(job_name);
+    if !job.is_dir() {
+        return Err(format!("no such job: {}", job.display()).into());
+    }
+    if job.join("session.repo").symlink_metadata().is_err() {
+        return Ok(None);
+    }
+    match adopt(state, job_name) {
+        Ok(branch) => {
+            let adopted = job.join(ADOPTED);
+            if adopted.symlink_metadata().is_err() {
+                // Never replaces an existing adopted.txt.
+                let pending = pending_in(&job, &format!("{branch}\n"))?;
+                if let Err(error) = pending.persist_noclobber(&adopted)
+                    && error.error.kind() != std::io::ErrorKind::AlreadyExists
+                {
+                    return Err(error.error.into());
+                }
+            }
+            Ok(Some(branch))
+        }
+        Err(error) => {
+            let message = one_line(&error.to_string());
+            pending_in(&job, &format!("{message}\n"))
+                .and_then(|pending| {
+                    pending
+                        .persist(job.join(ADOPT_FAILED))
+                        .map_err(|error| error.error.into())
+                })
+                .map_err(|written| format!("{message}; {ADOPT_FAILED}: {written}"))?;
+            Err(message.into())
+        }
+    }
+}
+
 /// Returns the branch name `taik/NAME` once it points at the accepted commit.
 pub fn adopt(state: &Path, job_name: &str) -> Result<String> {
     let name = job_name
@@ -137,5 +211,14 @@ pub fn adopt(state: &Path, job_name: &str) -> Result<String> {
         other => {
             Err(format!("{branch} points at {other:?} after the fetch, not at {commit}").into())
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn a_failure_is_one_nonempty_line() {
+        assert_eq!(super::one_line("a\nb\r\nc\n"), "a b  c");
+        assert_eq!(super::one_line("\n"), "adopt failed");
     }
 }

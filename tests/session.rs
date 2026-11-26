@@ -155,6 +155,17 @@ say '{{"type":"result","is_error":false,"result":"'"$text"'","usage":{{"output_t
     // The user's repository is untouched, and the copy cannot push back.
     assert!(!repo.join("hello.txt").exists());
     assert_eq!(git(&copy, &["remote"]).trim(), "");
+    // The accepted commit is settled: it is a branch of the repository and recorded in the job.
+    assert_eq!(
+        git(&repo, &["rev-parse", "refs/heads/taik/gruss"]).trim(),
+        commit
+    );
+    assert_eq!(
+        fs::read_to_string(job.join("adopted.txt")).unwrap(),
+        "taik/gruss\n"
+    );
+    assert!(!job.join("adopt-failed.txt").exists());
+    assert_eq!(git(&repo, &["status", "--porcelain"]).trim(), "");
     // A finished job is left alone.
     serve();
     assert!(!job.join("round-02.run").exists());
@@ -229,4 +240,37 @@ say '{{"type":"result","is_error":false,"result":"'"$text"'","usage":{{"output_t
         field(&seen, "summary").contains("wrote=no read=no"),
         "{seen}"
     );
+
+    // 6. A failed settling is recorded and changes neither the decision nor the rounds.
+    fs::write(&mode, "write").unwrap();
+    git(&repo, &["branch", "taik/besetzt", "HEAD"]);
+    let occupied = queue("besetzt");
+    let occupied_run = serve();
+    let accepted = fs::read_to_string(occupied.join("round-01.run"))
+        .unwrap_or_else(|_| panic!("{occupied_run:?}"));
+    assert!(accepted.starts_with("decision=accepted\n"), "{accepted}");
+    let failed = fs::read_to_string(occupied.join("adopt-failed.txt"))
+        .unwrap_or_else(|_| panic!("{occupied_run:?}"));
+    assert_eq!(failed.lines().count(), 1, "{failed:?}");
+    assert!(failed.contains("taik/besetzt"), "{failed:?}");
+    assert!(!occupied.join("adopted.txt").exists());
+    assert!(!occupied.join("round-02.run").exists());
+    serve();
+    assert!(!occupied.join("round-02.run").exists());
+
+    // 7. A session job without a repository has nothing to settle.
+    let bare_brief = root.join("bare.md");
+    fs::write(&bare_brief, "Eine Datei hello.txt anlegen\n\nOhne Repository.\n").unwrap();
+    let bare = factory()
+        .args(["queue-session", state.to_str().unwrap(), "leer"])
+        .arg(&bare_brief)
+        .arg(&gate)
+        .output()
+        .unwrap();
+    assert_eq!(bare.status.code(), Some(0), "{bare:?}");
+    let bare = state.join("jobs/job-leer");
+    serve();
+    let alone = fs::read_to_string(bare.join("round-01.run")).unwrap();
+    assert!(alone.starts_with("decision=accepted\n"), "{alone}");
+    assert!(!bare.join("adopted.txt").exists() && !bare.join("adopt-failed.txt").exists());
 }
