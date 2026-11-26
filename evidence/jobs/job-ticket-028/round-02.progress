@@ -1,0 +1,8 @@
+126	start	Factory hat den Auftrag übernommen
+188	probe	Prüfbefund aus round-01.run: AssertionError [ERR_ASSERTION]: the state is not cut off
+675	worker	Claude erhält Auftrag und akzeptierten Ausgangsstand
+16059065	worker	worker_model=claude-opus-5-5 worker_output_tokens=1329 worker_cost_usd=0.8471320000000001 worker_duration_ms=16058 worker_account_usage=seven_day allowed 0 
+16059165	worker	Lease durch laufende Ausgabe gehalten, 1 Herzschläge, zuletzt bei 746 Zeichen
+16059180	evaluate	Unabhängiges, gespeichertes Prüfgate ausführen
+16186859	checks	patch not applicable: the SEARCH text of block 1 does not occur in the accepted source
+16203595	rejected	Revise the retained source using the gate diagnosis, then run the same gate.

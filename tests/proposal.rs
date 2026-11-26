@@ -560,7 +560,7 @@ fn a_planned_product_change_gets_a_check_that_is_red_on_the_current_source() {
     fs::write(root.join("plan.json"), reply("Art: dokument\nRepo: -\nGate: standard\nArbeit: standard\nGrund: Ein Produkt wird geändert.")).unwrap();
     fs::write(
         root.join("product.json"),
-        reply("=== product seite ===\nDie Seite bekommt eine Überschrift\n\nMehr.\n"),
+        reply("Ich nehme das Produkt.\n\n=== product seite ===\nDie Seite bekommt eine Überschrift\n\nMehr.\n"),
     )
     .unwrap();
     let worker = root.join("lead");

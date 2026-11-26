@@ -315,8 +315,8 @@ for (const gone of ['taik-live-job', 'aria-labelledby="taik-goal"', 'Software-Au
 assert(html.indexOf('id="taik-ticket"') > 0 && html.indexOf('id="taik-ticket"') < html.indexOf('aria-label="Auftragsverlauf"'), 'the history is part of the ticket');
 assert.doesNotMatch(html, /<section aria-label="Auftragsverlauf"/, 'the history is no card of its own');
 assert(html.includes('class="ticket-brief"') && html.includes('class="round-checks"'), 'description and the full finding of the gate are shown');
-assert.doesNotMatch(css, /#taik-live \.round-checks \{[^}]*(?:text-overflow|white-space:\s*nowrap|line-clamp)/, 'the finding of the gate is not cut off');
-assert.doesNotMatch(css, /#taik-live \.thread-message \{[^}]*(?:text-overflow|white-space:\s*nowrap|line-clamp)/, 'a message is not cut off');
+assert.doesNotMatch(css, /#taik-live \.round-checks \{[^}]*(?:text-overflow|white-space:\s*nowrap|line-clamp)/, 'the finding of the gate is not cut off: its style rules must not use text-overflow, white-space: nowrap or line-clamp');
+assert.doesNotMatch(css, /#taik-live \.thread-message \{[^}]*(?:text-overflow|white-space:\s*nowrap|line-clamp)/, 'a message is not cut off: its style rules must not use text-overflow, white-space: nowrap or line-clamp');
 
 // 15. A ticket is opened in the viewer, in the user's words. A request shows where it stands.
 for (const hook of ['id="taik-new-ticket"', 'newTicket', 'firstTicket(', 'foldSteps(']) assert(html.includes(hook), `request hook ${hook}`);
@@ -395,7 +395,7 @@ assert.equal(changeLine({ file: 'round-02.html', added: 12, removed: 3 }), 'roun
 assert.equal(changeLine({ file: 'round-01.html', added: 1, removed: 0, fresh: true }), 'round-01.html · neu, 1 Zeile');
 assert.equal(changeLine({ file: 'round-03.rejected.txt', added: 0, removed: 0 }), 'round-03.rejected.txt · unverändert');
 assert.equal(changeLine(undefined), '');
-assert.doesNotMatch(css, /#taik-live \.ticket-state[^{]*\{[^}]*(?:text-overflow|white-space:\s*nowrap|line-clamp)/, 'the state is not cut off');
+assert.doesNotMatch(css, /#taik-live \.ticket-state[^{]*\{[^}]*(?:text-overflow|white-space:\s*nowrap|line-clamp)/, 'the state is not cut off: its style rules must not use text-overflow, white-space: nowrap or line-clamp');
 
 // 18. A rejected round is explained: the analysis is read into labelled lines and stands in the state.
 for (const hook of ['class="analysis"', 'analysisLines(']) assert(html.includes(hook), `analysis hook ${hook}`);
@@ -408,7 +408,7 @@ const explained = ticketState({ rounds: [stood('rejected', { checks: 'FAIL: kein
 assert.deepEqual(explained.analysis, [['Verlangt', 'ein Titel.'], ['Ursache', 'fehlt.']], 'the state carries the analysis of the last round');
 assert.equal(explained.problem, 'FAIL: kein Titel', 'the finding of the gate stays beside the analysis');
 assert.deepEqual(ticketState({ rounds: [stood('accepted')], messages: [], analyses: { 'round': 'Verlangt: x' } }).analysis, [], 'an accepted round has no analysis in the state');
-assert.doesNotMatch(css, /#taik-live \.analysis[^{]*\{[^}]*(?:text-overflow|white-space:\s*nowrap|line-clamp)/, 'the analysis is not cut off');
+assert.doesNotMatch(css, /#taik-live \.analysis[^{]*\{[^}]*(?:text-overflow|white-space:\s*nowrap|line-clamp)/, 'the analysis is not cut off: its style rules must not use text-overflow, white-space: nowrap or line-clamp');
 
 // 19. An agent session: each round shows what the agent said and did, and its own summary.
 for (const hook of ['class="round-dialog"', 'class="round-summary"', 'dialogLine(']) assert(html.includes(hook), `session hook ${hook}`);
@@ -418,7 +418,7 @@ assert.deepEqual(dialogLine({ who: 'user', text: 'Bitte kürzer.' }), { who: 'Du
 assert.deepEqual(dialogLine({ tool: 'Edit', target: 'src/main.rs' }), { who: 'Edit', text: 'src/main.rs', tool: true });
 assert.deepEqual(dialogLine({ tool: 'Glob', target: '' }), { who: 'Glob', text: '', tool: true });
 assert.equal(dialogLine(undefined), null);
-assert.doesNotMatch(css, /#taik-live \.round-(?:dialog|summary)[^{]*\{[^}]*(?:text-overflow|white-space:\s*nowrap|line-clamp)/, 'the dialog is not cut off');
+assert.doesNotMatch(css, /#taik-live \.round-(?:dialog|summary)[^{]*\{[^}]*(?:text-overflow|white-space:\s*nowrap|line-clamp)/, 'the dialog is not cut off: its style rules must not use text-overflow, white-space: nowrap or line-clamp');
 
 // 20. Every waiting ticket says why it waits, on the board and in the ticket.
 const waiting = boardTickets({ proposals: [{ name: 'idee', intent: 'Eine Idee', origin: '' }], jobs: [
@@ -440,7 +440,7 @@ assert.equal(ticketState({ rounds: [], messages: [{ author: 'agent', round: 0, t
 assert.equal(ticketState({ rounds: [stood('rejected', { checks: 'x' })], messages: [] }).waits, 'Die letzte Runde wurde abgelehnt. Es läuft nichts weiter, bis du im Feld unten antwortest.');
 assert.equal(ticketState({ rounds: [stood('accepted')], messages: [] }).waits, '', 'an accepted job does not wait');
 assert.equal(ticketState({ rounds: [stood('rejected', { checks: 'x' })], messages: [], sourceActive: true }).waits, '', 'a job at work does not wait');
-assert.doesNotMatch(css, /#taik-live \.ticket \.why[^{]*\{[^}]*(?:text-overflow|white-space:\s*nowrap|line-clamp)/, 'the reason is not cut off');
+assert.doesNotMatch(css, /#taik-live \.ticket \.why[^{]*\{[^}]*(?:text-overflow|white-space:\s*nowrap|line-clamp)/, 'the reason is not cut off: its style rules must not use text-overflow, white-space: nowrap or line-clamp');
 
 // 21. The orchestrator: the user speaks to it, and it shows for each request what it planned and why.
 for (const hook of ['id="taik-orchestrator"', 'class="plans"', 'planLine(', 'orchestratorFeed(']) assert(html.includes(hook), `orchestrator hook ${hook}`);
@@ -460,7 +460,7 @@ assert.deepEqual(feed.map(entry => [entry.key, entry.line, entry.reason]), [
   ['proposal:ticket-002', 'Dokument · Gate @savant · Arbeit @standard', 'Ein neues Dokument.'],
 ], 'the feed shows planned and pending requests, newest first, and leaves out what has no plan');
 assert.deepEqual(orchestratorFeed({ jobs: [] }), []);
-assert.doesNotMatch(css, /#taik-live \.plans[^{]*\{[^}]*(?:text-overflow|white-space:\s*nowrap|line-clamp)/, 'a plan is not cut off');
+assert.doesNotMatch(css, /#taik-live \.plans[^{]*\{[^}]*(?:text-overflow|white-space:\s*nowrap|line-clamp)/, 'a plan is not cut off: its style rules must not use text-overflow, white-space: nowrap or line-clamp');
 
 console.log(`PASS: host contract, offline isolation, ${shadows.length} token shadows without glow, contrast ${Math.min(...measured).toFixed(2)}–${Math.max(...measured).toFixed(2)}, lossless .run highlighting, token flow per round, one workpiece pane with live draft, animated flow, ticket board in one group at a time, crew with agents and harnesses, conversation in the ticket, one ticket with the full history, tickets opened in the viewer, the whole stock on the board, top-down state and changes, analysis of a rejection, dialog of an agent session, a reason for every waiting ticket, the orchestrator and its plans`);
 // TAIK: check added by job ticket-018
@@ -665,4 +665,59 @@ assert.equal(got.round, 'round-02', 'sessionChange must name the last round that
 assert.deepEqual(got.change, c2, 'sessionChange must return the change of the last round that has one.');
 assert.equal(sessionChange(mk([sessRound('round-01.run')], {})), null, 'sessionChange must return null when no round has a change.');
 assert.equal(sessionChange(mk([sessRound('round-01.run')], undefined)), null, 'sessionChange must return null when job.changes is missing.');
+})();
+// TAIK: check added by job ticket-028
+await (async () => {
+  const { default: assert } = await import('node:assert/strict');
+  const { readFileSync } = await import('node:fs');
+  const html = readFileSync(process.argv[2], 'utf8');
+  void readFileSync;
+const marked = html.match(/\/\*THREAD_BEGIN\*\/([\s\S]*?)\/\*THREAD_END\*\//);
+assert.ok(marked, "Im Block THREAD zwischen /*THREAD_BEGIN*/ und /*THREAD_END*/ fehlt der auswertbare Funktionsblock.");
+let landState;
+let ticketState;
+try {
+  ({ landState, ticketState } = new Function(marked[1] + "\nreturn { landState, ticketState };")());
+} catch (error) {
+  assert.fail("Im Block THREAD fehlt die reine Funktion landState(job) neben ticketState.");
+}
+assert.equal(typeof landState, "function", "Im Block THREAD fehlt die reine Funktion landState(job).");
+assert.equal(landState(null), null, "Fehlt der Auftrag, muss landState null liefern.");
+assert.equal(landState({}), null, "Ohne landable, landing und landed muss landState null liefern.");
+assert.deepEqual(
+  landState({ landed: "abcdef0123456789", landing: true, landable: true, landFailed: "Konflikt" }),
+  { label: "Übernommen", text: "Commit abcdef01", action: false },
+  "Ist job.landed gesetzt, muss landState Übernommen, die ersten 8 Zeichen des Commits und action false liefern."
+);
+assert.deepEqual(
+  landState({ landing: true, landable: true, landFailed: "Konflikt" }),
+  { label: "Übernahme", text: "läuft: zusammenführen, prüfen, installieren", action: false },
+  "Läuft die Übernahme, muss landState den Lauftext und action false liefern."
+);
+assert.deepEqual(
+  landState({ landable: true }),
+  { label: "Übernahme", text: "bereit", action: true },
+  "Ist der Auftrag übernehmbar und nicht gescheitert, muss landState bereit und action true liefern."
+);
+assert.deepEqual(
+  landState({ landable: true, landFailed: "Konflikt" }),
+  { label: "Übernahme", text: "Gescheitert: Konflikt", action: true },
+  "Ist job.landFailed vorhanden, muss landState Gescheitert und den Fehlertext liefern."
+);
+const bare = { rounds: [], messages: [] };
+assert.equal(ticketState(bare).next, "Wartet auf die erste Runde.", "Ohne Übernahme muss ticketState den bisherigen nächsten Schritt behalten.");
+assert.equal(
+  ticketState({ ...bare, landable: true, landing: true }).next,
+  "Wartet auf die erste Runde.",
+  "Läuft eine Übernahme, muss ticketState den bisherigen nächsten Schritt behalten."
+);
+assert.equal(
+  ticketState({
+    rounds: [{ name: "01.run", fields: { decision: "accepted", intent: "fertig" } }],
+    messages: [],
+    landable: true,
+  }).next,
+  "Übernehmen, damit das Ergebnis im Repository ankommt.",
+  "Ist der Auftrag übernehmbar und nicht in Übernahme, muss ticketState als Nächstes die Übernahme ins Repository nennen."
+);
 })();

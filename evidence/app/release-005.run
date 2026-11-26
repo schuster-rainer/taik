@@ -1,0 +1,8 @@
+decision=accepted
+kind=release
+identity=app-release-005
+source_sha256=29d0e7f1ffc66a50d81610e8de5137bb349c73bdd4c690d0c8d588ae63a83fe1
+viewer_sha256=060bbeca373b672a989174b4367e17384ee2916042f0b535b4d561ef09e6a5a3
+released_by=tools/open-factory-view.sh
+checks=data: PASS: 16 jobs, 106 stock entries, 7 proposals, 2 repositories viewer: PASS: Desktop and narrow history/viewport, live draft, Canvas interaction and theme checks passed.
+end

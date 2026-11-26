@@ -1,0 +1,9 @@
+320	start	Factory hat den Auftrag übernommen
+429	probe	Prüfbefund aus round-03.run: AssertionError [ERR_ASSERTION]: the state is not cut off
+1240	worker	Claude erhält Auftrag und akzeptierten Ausgangsstand
+26359751	worker	worker_model=claude-opus-5-5 worker_output_tokens=2873 worker_cost_usd=0.878948 worker_duration_ms=26358 worker_account_usage=seven_day allowed 0 
+26359875	worker	Lease durch laufende Ausgabe gehalten, 1 Herzschläge, zuletzt bei 1 Zeichen
+26359890	evaluate	Unabhängiges, gespeichertes Prüfgate ausführen
+26362472	worker	Patch mit 6 Blöcken auf den angenommenen Stand angewendet
+26573666	checks	PASS: host contract, offline isolation, 35 token shadows without glow, contrast 5.12–13.04, lossless .run highlighting, token flow per round, one workpiece pane with live draft, animated flow, ticket board in one group at a time, crew with agents and harnesses, conversation in the ticket, one ticket with the full history, tickets opened in the viewer, the whole stock on the board, top-down state and changes, analysis of a rejection, dialog of an agent session, a reason for every waiting ticket, the orchestrator and its plans
+26584069	accepted	Retain the accepted artifact. No further work was authorized by this round.

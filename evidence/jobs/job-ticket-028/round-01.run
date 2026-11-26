@@ -1,0 +1,25 @@
+decision=rejected
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=Einen angenommenen Sitzungsauftrag per Knopf ins Repository übernehmen, anhand der neuen Felder landable, landing, landed und landFailed.
+baseline=/Users/rainer/projects/ideas/talk/evidence/jobs/job-ticket-028/submission.seed.html
+worker=claude-cli
+worker_model=claude-opus-5-5
+worker_output_tokens=1883
+worker_cost_usd=0.45386
+worker_duration_ms=17789
+worker_account_usage=seven_day allowed 0
+limits=4 rounds; worker lease 60s without ceiling; verifier 15s; 512KiB source
+gate_sha256=510534665a151b824dd218fc9bdc7b551eb2eb574a74858f257bc9e0299b6cb2
+gate_ms=74
+patch_blocks=6
+checks=AssertionError [ERR_ASSERTION]: the state is not cut off
+artifact=
+rejected_candidate=round-01.rejected.txt
+feedback=
+follow_up=
+continuation=Revise the retained source using the gate diagnosis, then run the same gate.
+advance=true
+end

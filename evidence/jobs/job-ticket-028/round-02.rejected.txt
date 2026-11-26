@@ -1,0 +1,13 @@
+=== PATCH ===
+<<<<<<< SEARCH
+      const landRow = land ? `<div class="landing${landFailed ? ' land-failed' : ''}"><dt>${escape(land.label)}</dt><dd>${escape(land.text)}</dd></div>` : '';
+=======
+      const landStyle = landFailed ? ' style="color: var(--bad); white-space: pre-wrap; overflow: visible; overflow-wrap: anywhere; text-overflow: clip; max-height: none; -webkit-line-clamp: none;"' : '';
+      const landRow = land ? `<div class="landing${landFailed ? ' land-failed' : ''}"${landFailed ? ' style="color: var(--bad);"' : ''}><dt>${escape(land.label)}</dt><dd${landStyle}>${escape(land.text)}</dd></div>` : '';
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+  #taik-live .ticket-state .land-failed dd { color: var(--bad); white-space: normal; overflow: visible; text-overflow: clip; }
+=======
+  #taik-live .ticket-state .land-failed, #taik-live .ticket-state .land-failed dd { color: var(--bad); }
+  #taik-live .ticket-state .land-failed dd { white-space: pre-wrap; overflow: visible; overflow-wrap: anywhere; text-overflow: clip; max-height: none; -webkit-line-clamp: none; }
+>>>>>>> REPLACE

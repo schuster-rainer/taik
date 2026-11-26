@@ -1,0 +1,20 @@
+decision=rejected
+kind=software
+procedure=
+tags=
+identity=round-45
+intent=Die Antwort eines Gate-Autors, der ein Produkt nennt, wird auch mit Vorsatz gelesen.
+baseline=taik-seed 79176a1eafd7277b72742dfe240552d5731e8823d9c9a364f6589fc60ad0c012
+worker=claude-fable
+decided_by=the installed taik-seed 79176a1eafd7277b72742dfe240552d5731e8823d9c9a364f6589fc60ad0c012 at /Users/rainer/.local/state/taik-factory/taik-seed
+limits=99 rounds; gate 900s; candidate checks 10s each
+gate_sha256=76b41170f51fa7e1a5424ba01f903bcf2276b8f8f19e4d87f952e88d18b6b0ce
+gate_ms=
+checks=gate failed (exit status: 101): error: test failed, to rerun pass `--test source_worker`
+evidence=round-45.checks.log
+artifact=
+artifact_sha256=
+rollback=
+continuation=The installed binary stays in place.
+advance=false
+end

@@ -1,0 +1,9 @@
+141	start	Factory hat den Auftrag übernommen
+275	probe	Prüfbefund aus round-02.run: patch not applicable: the SEARCH text of block 1 does not occur in the accepted source
+650	worker	Claude erhält Auftrag und akzeptierten Ausgangsstand
+20868161	worker	worker_model=claude-opus-5-5 worker_output_tokens=2441 worker_cost_usd=0.470012 worker_duration_ms=20867 worker_account_usage=seven_day allowed 0 
+20868282	worker	Lease durch laufende Ausgabe gehalten, 1 Herzschläge, zuletzt bei 1355 Zeichen
+20868297	evaluate	Unabhängiges, gespeichertes Prüfgate ausführen
+20872290	worker	Patch mit 6 Blöcken auf den angenommenen Stand angewendet
+21093617	checks	AssertionError [ERR_ASSERTION]: the state is not cut off
+21108926	rejected	Revise the retained source using the gate diagnosis, then run the same gate.

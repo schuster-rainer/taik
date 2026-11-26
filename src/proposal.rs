@@ -448,7 +448,13 @@ pub fn propose_planned(
         return Ok(None);
     }
     // A job on a product takes the product's gate and starts from its accepted source.
-    let (brief, gate, seed) = if let Some(rest) = answer.strip_prefix("=== product ") {
+    // The product marker counts at the start of any line: an author tends to open with a sentence.
+    let product_part = answer
+        .match_indices("=== product ")
+        .map(|(at, _)| at)
+        .find(|at| *at == 0 || answer.as_bytes()[at - 1] == b'\n')
+        .map(|at| &answer[at + "=== product ".len()..]);
+    let (brief, gate, seed) = if let Some(rest) = product_part {
         let (head, text) = rest
             .split_once('\n')
             .ok_or("a product proposal without a brief")?;
