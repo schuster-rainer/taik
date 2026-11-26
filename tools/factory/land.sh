@@ -4,6 +4,8 @@ set -u
 cd "$(dirname "$0")/../.." || exit 1
 state="$HOME/.local/state/taik-factory"; name=$1; brief=$2; subject=$3
 copy="$state/work/$name"
+# A rejected attempt leaves formatting changes behind. They are redone below.
+git reset -q; git checkout -q -- src tests
 git fetch -q "$copy" HEAD && git merge -q --no-edit FETCH_HEAD || { echo "MERGE FAILED"; git merge --abort 2>/dev/null; exit 1; }
 cargo fmt
 lint=$(cargo clippy --offline --locked --all-targets -- -D warnings 2>&1 | grep -E '^(error|warning)' -A6 | head -14)

@@ -395,6 +395,9 @@ private final class FactoryMonitor {
             let text = [field(record, "intent"), field(record, "observation")].filter { !$0.isEmpty }.joined(separator: "\n\n")
             var request = Proposal(name: name, intent: String(field(record, "intent").prefix(300)), origin: "", brief: text, state: "deriving",
                 plan: plan(at: directory.appendingPathComponent(name + ".plan")))
+            // The orchestrator asked about this request. It waits for the answer of the user.
+            request.messages = jobMessages(in: directory.appendingPathComponent(name + ".talk", isDirectory: true))
+            if request.messages.last?.author == "agent" { request.state = "asks" }
             let answer = directory.appendingPathComponent("reflection-" + name + ".run")
             let failure = directory.appendingPathComponent(name + ".failed")
             for (file, state) in [(answer, "declined"), (failure, "failed")] {
