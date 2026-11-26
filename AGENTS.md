@@ -59,6 +59,7 @@ A brief names its intent in the first line and the observation that justifies it
 ## Decisions of the user
 
 - The Factory may propose jobs. A proposed job starts only after the user approved it.
+- In the night of 2026-11-25 to 26 the user told the agent to continue through the Factory without pause ("nutze die factory um weiter zu machen", "was auch immer du brauchst"). The agent approved the proposals that came from wishes it had submitted itself and raised the daily budget of the service to 40 USD at list price. Proposals the Factory makes on its own, and wishes of the user, remain his to approve.
 - The standard worker of the service is Claude Code with Opus 5.5 at medium effort (2026-11-25).
 - A ticket that waits never leaves the waiting group by age or by a limit. A job ends by a rejection on its merits or by the evolution.
 - Limits in the code (sizes, durations, numbers of rounds) were set by agents. They are assumptions to justify or change, not rules of the user.

@@ -1,0 +1,6 @@
+kind=dokument
+repo=
+repo_path=
+gate=pruefer
+work=standard
+reason=Es ist eine Änderung am Produkt ansicht, also ein Dokument; pruefer schreibt laut Beschreibung Gates, und standard übernimmt die Arbeit mangels besser passendem Agenten.

@@ -822,3 +822,76 @@ const real = feedParts(orchestratorFeed(snap));
 assert.deepEqual(real.done.map(e => e.key), ['proposal:p3', 'proposal:p1'], 'Mit echten Daten müssen abgelehnte und fehlgeschlagene Wünsche in done stehen, neueste zuerst.');
 assert.deepEqual(real.open.map(e => e.key), ['proposal:p4', 'proposal:p2'], 'Mit echten Daten müssen planende und fragende Wünsche in open stehen, neueste zuerst.');
 })();
+// TAIK: check added by job ticket-036
+await (async () => {
+  const { default: assert } = await import('node:assert/strict');
+  const { readFileSync } = await import('node:fs');
+  const html = readFileSync(process.argv[2], 'utf8');
+  void readFileSync;
+const m = html.match(/\/\*WORKPIECE_BEGIN\*\/([\s\S]*?)\/\*WORKPIECE_END\*\//);
+assert.ok(m, 'The WORKPIECE block between its marker comments is missing.');
+let api;
+try {
+  api = new Function(m[1] + '\nreturn { sessionLive, workpieceState };')();
+} catch (e) {
+  assert.fail('The WORKPIECE block must define a function sessionLive(job): ' + e.message);
+}
+const { sessionLive, workpieceState } = api;
+
+const mk = (rounds, dialogs, extra = {}) => ({
+  id: 'job-x', sourceActive: true,
+  rounds: Array.from({ length: rounds }, () => ({ fields: {} })),
+  dialogs, ...extra,
+});
+
+const example = mk(2, { 'round-03': [
+  { tool: 'Read', target: 'a.rs' }, { tool: 'Read', target: 'a.rs' },
+  { who: 'agent', text: 'Ich suche' }, { tool: 'Edit', target: 'src/main.rs' }] });
+const before = JSON.stringify(example);
+assert.deepEqual(sessionLive(example),
+  { round: 3, steps: 3, last: 'Edit src/main.rs', read: ['a.rs'], changed: ['src/main.rs'], said: 'Ich suche' },
+  'sessionLive does not return the expected summary for the example job.');
+assert.equal(JSON.stringify(example), before, 'sessionLive must not modify its input.');
+
+const second = sessionLive(mk(0, { 'round-01': [
+  { tool: 'Write', target: 'b.rs' }, { tool: 'Read', target: 'c.rs' }, { tool: 'Edit', target: 'a.rs' },
+  { tool: 'Edit', target: 'b.rs' }, { tool: 'Read', target: 'z.rs' }, { tool: 'Read', target: 'c.rs' },
+  { who: 'agent', text: 'eins' }, { who: 'user', text: 'zwei' }, { who: 'agent', text: 'drei' }] }));
+assert.ok(second, 'A fresh session with dialog entries in round-01 must count as live.');
+assert.equal(second.round, 1, 'round must be a number: rounds.length + 1.');
+assert.equal(second.steps, 6, 'steps must count all tool entries.');
+assert.equal(second.last, 'Read c.rs', 'last must be the last tool call as "Tool Target".');
+assert.deepEqual(second.read, ['c.rs', 'z.rs'], 'read must list distinct Read targets in first-seen order.');
+assert.deepEqual(second.changed, ['b.rs', 'a.rs'], 'changed must list distinct Edit/Write targets together in first-seen order.');
+assert.equal(second.said, 'drei', 'said must be the text of the last agent entry.');
+
+const quiet = sessionLive(mk(9, { 'round-10': [{ who: 'user', text: 'hallo' }] }));
+assert.ok(quiet, 'A session with only spoken entries must be live.');
+assert.equal(quiet.round, 10, 'round must be 10 for 9 rounds.');
+assert.equal(quiet.steps, 0, 'steps must be 0 without tool calls.');
+assert.equal(quiet.last, '', 'last must be an empty string without tool calls.');
+assert.deepEqual(quiet.read, [], 'read must be empty.');
+assert.deepEqual(quiet.changed, [], 'changed must be empty.');
+assert.equal(quiet.said, '', 'said must be an empty string without agent speech.');
+
+assert.equal(sessionLive(undefined), null, 'sessionLive(undefined) must be null.');
+assert.equal(sessionLive(null), null, 'sessionLive(null) must be null.');
+assert.equal(sessionLive(mk(2, { 'round-03': [] })), null, 'An empty dialog list for the running round is not a live session.');
+assert.equal(sessionLive(mk(2, { 'round-02': [{ tool: 'Read', target: 'a' }] })), null, 'Dialog of another round must not make a session live.');
+assert.equal(sessionLive(mk(2, undefined)), null, 'A job without dialogs is not live.');
+assert.equal(sessionLive(mk(2, { 'round-03': [{ tool: 'Read', target: 'a' }] }, { sourceActive: false })), null, 'A job with sourceActive false is not live.');
+
+for (const mode of ['view', 'source', 'diff', undefined]) {
+  assert.deepEqual(workpieceState(example, mode), { show: 'live', unverified: true },
+    'workpieceState must return show "live", unverified true for a running session (mode ' + mode + ').');
+}
+const committed = mk(1, { 'round-02': [{ tool: 'Read', target: 'q' }] });
+committed.rounds[0].fields.commit = 'abc123';
+assert.equal(workpieceState(committed, 'view').show, 'live', 'A running session with an earlier commit must also be live.');
+
+const done = mk(1, {}, { sourceActive: false });
+done.rounds[0].fields.commit = 'abc123';
+assert.deepEqual(workpieceState(done, 'view'), { show: 'session', unverified: false },
+  'A finished session must keep show "session".');
+assert.deepEqual(workpieceState(null, 'view'), { show: 'empty', unverified: false }, 'A missing job must stay "empty".');
+})();

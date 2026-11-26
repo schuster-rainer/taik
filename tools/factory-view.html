@@ -232,6 +232,18 @@
   /* The patch of a session wraps at the edge of the card: spaces and indentation stay, nothing is cut off. */
   #taik-live #taik-result-session { overflow-x: hidden; overflow-y: auto; }
   #taik-live #taik-result-session pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: normal; max-width: 100%; min-width: 0; }
+  /* A running session: what the agent does right now. Nothing is cut off, long lists scroll, long names wrap. */
+  #taik-live #taik-result-live { overflow-x: hidden; overflow-y: auto; display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 14px; }
+  #taik-live #taik-result-live[hidden] { display: none; }
+  #taik-live .live-part { min-width: 0; display: grid; gap: 5px; }
+  #taik-live .live-part > .label { display: block; }
+  #taik-live .live-last { min-width: 0; padding: 8px 11px; border-radius: 11px; box-shadow: var(--nm-raised-sm); color: var(--active);
+    font-weight: 600; overflow-wrap: anywhere; word-break: break-word; white-space: normal; }
+  #taik-live .live-last code { font-size: .84rem; }
+  #taik-live .live-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 10rem; overflow-y: auto; overflow-x: hidden; min-width: 0; }
+  #taik-live .live-list li { min-width: 0; overflow-wrap: anywhere; word-break: break-word; white-space: normal; }
+  #taik-live .live-said { min-width: 0; font-size: .86rem; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word;
+    max-height: 12rem; overflow-y: auto; overflow-x: hidden; }
   #taik-live .diff-add { color: var(--good); }
   #taik-live .diff-del { color: var(--bad); }
   #taik-live .diff-same, #taik-live .diff-gap { color: var(--quiet); }
@@ -396,6 +408,7 @@
         <div id="taik-result-source" class="diff" hidden></div>
         <div id="taik-result-diff" class="diff" hidden></div>
         <div id="taik-result-session" class="diff" hidden></div>
+        <div id="taik-result-live" class="diff" aria-live="polite" hidden></div>
       </section>
     </aside>
   </div>
@@ -479,6 +492,7 @@
     const resultSource = document.getElementById('taik-result-source');
     const resultDiff = document.getElementById('taik-result-diff');
     const resultSession = document.getElementById('taik-result-session');
+    const resultLive = document.getElementById('taik-result-live');
     const labels = { lower: 'Kleinschreiben', trim: 'Ränder trimmen', sort: 'Sortieren', dedup: 'Duplikate entfernen', 'drop-blank': 'Leere Tags entfernen' };
     const aliases = { 'lower-then-trim': 'lower,trim,sort,dedup,drop-blank', 'trim-then-lower': 'trim,lower,sort,dedup,drop-blank' };
     const openRounds = new Map();
@@ -534,7 +548,39 @@
     }
 
     /*WORKPIECE_BEGIN*/
+    // What the agent of a running session round does right now, or null.
+    function sessionLive(job) {
+      if (!job || typeof job !== 'object' || !job.sourceActive) return null;
+      const rounds = Array.isArray(job.rounds) ? job.rounds : [];
+      const round = rounds.length + 1;
+      const name = 'round-' + String(round).padStart(2, '0');
+      const dialogs = job.dialogs;
+      if (!dialogs || typeof dialogs !== 'object') return null;
+      const entries = Object.hasOwn(dialogs, name) && Array.isArray(dialogs[name]) ? dialogs[name] : [];
+      if (!entries.length) return null;
+      let steps = 0;
+      let last = '';
+      let said = '';
+      const read = [];
+      const changed = [];
+      for (const entry of entries) {
+        if (!entry || typeof entry !== 'object') continue;
+        if (entry.tool) {
+          steps += 1;
+          const tool = String(entry.tool);
+          const target = entry.target == null ? '' : String(entry.target);
+          last = target ? tool + ' ' + target : tool;
+          if (tool === 'Read' && target && !read.includes(target)) read.push(target);
+          if ((tool === 'Edit' || tool === 'Write') && target && !changed.includes(target)) changed.push(target);
+        } else if (entry.who === 'agent') {
+          said = entry.text == null ? '' : String(entry.text);
+        }
+      }
+      return { round, steps, last, read, changed, said };
+    }
+
     function workpieceState(job, mode) {
+      if (sessionLive(job)) return { show: 'live', unverified: true };
       const isDocument = text => /^\s*<(?:!doctype|html)/i.test(text ?? '');
       const isSession = !!job && Array.isArray(job.rounds)
         && job.rounds.some(round => String(round?.fields?.commit ?? '').trim() !== '');
@@ -572,14 +618,17 @@
     }
 
     function renderPreview(selectedJob, ticketProposal) {
-      const session = workpieceState(selectedJob, workpieceMode).show === 'session';
-      const shown = session ? selectedJob : selectedJob && (selectedJob.draft || selectedJob.preview) ? selectedJob
+      const firstShow = workpieceState(selectedJob, workpieceMode).show;
+      const session = firstShow === 'session';
+      const liveNow = firstShow === 'live';
+      const shown = session || liveNow ? selectedJob : selectedJob && (selectedJob.draft || selectedJob.preview) ? selectedJob
         : snapshot.jobs.find(job => workpieceState(job, 'view').show === 'accepted') ?? selectedJob;
       const state = workpieceState(shown, workpieceMode);
-      modes.hidden = session;
+      modes.hidden = session || liveNow;
       setWorkpieceModes(workpieceMode);
       const latest = session ? sessionChange(shown) : null;
-      const key = JSON.stringify([shown?.id, state.show, state.unverified, workpieceMode, shown?.draft, shown?.preview, shown?.previous, latest]);
+      const live = state.show === 'live' ? sessionLive(shown) : null;
+      const key = JSON.stringify([shown?.id, state.show, state.unverified, workpieceMode, shown?.draft, shown?.preview, shown?.previous, latest, live]);
       if (key === workpieceKey) { renderFlow(selectedJob, ticketProposal); return; }
       workpieceKey = key;
       resultViewport.hidden = state.show !== 'accepted';
@@ -587,6 +636,48 @@
       resultSource.hidden = state.show !== 'source';
       resultDiff.hidden = state.show !== 'diff';
       resultSession.hidden = state.show !== 'session';
+      resultLive.hidden = state.show !== 'live';
+      if (state.show === 'live' && live) {
+        const offset = resultLive.scrollTop;
+        const node = (tag, className, text) => {
+          const element = document.createElement(tag);
+          if (className) element.className = className;
+          if (text != null) element.textContent = text;
+          return element;
+        };
+        const part = title => {
+          const block = node('div', 'live-part');
+          block.append(node('span', 'label', title));
+          return block;
+        };
+        const list = names => {
+          if (!names.length) return node('p', 'sub', 'noch nichts');
+          const items = node('ul', 'live-list');
+          for (const file of names) {
+            const item = node('li');
+            item.append(node('code', '', file));
+            items.append(item);
+          }
+          return items;
+        };
+        const lastPart = part('Letzter Schritt');
+        const lastLine = node('div', 'live-last');
+        if (live.last) lastLine.append(node('code', '', live.last));
+        else lastLine.textContent = 'noch kein Werkzeugaufruf';
+        lastPart.append(lastLine);
+        const changedPart = part('Geändert');
+        changedPart.append(list(live.changed));
+        const readPart = part('Gelesen');
+        readPart.append(list(live.read));
+        const parts = [lastPart, changedPart, readPart];
+        if (live.said) {
+          const saidPart = part('Zuletzt gesagt');
+          saidPart.append(node('p', 'live-said', live.said));
+          parts.push(saidPart);
+        }
+        resultLive.replaceChildren(...parts);
+        resultLive.scrollTop = offset;
+      }
       if (state.show === 'session') {
         if (latest) {
           const change = latest.change;
@@ -620,7 +711,10 @@
         resultDiff.innerHTML = diff.markup ? `<pre>${diff.markup}</pre>` : '<p class="sub">Kein Unterschied zum vorherigen Stand.</p>';
         resultDiff.scrollTop = 0;
       }
-      if (state.show === 'session') {
+      if (state.show === 'live' && live) {
+        const name = String(shown.id ?? '').replace(/^job-/, '');
+        resultLabel.textContent = `${name} · Runde ${live.round} läuft · ${live.steps} ${live.steps === 1 ? 'Schritt' : 'Schritte'}`;
+      } else if (state.show === 'session') {
         const name = String(shown.id ?? '').replace(/^job-/, '');
         resultLabel.textContent = latest ? `${name} · ${latest.round} · ${changeLine(latest.change)}` : name;
       } else if (state.show === 'empty') {
@@ -1428,7 +1522,8 @@
       const software = job.baseline.fields.kind === 'software';
       const search = job.baseline.fields.kind === 'search';
       const policy = escape(searchPolicies[accepted.fields.policy ?? accepted.fields.procedure]);
-      const sessionJob = workpieceState(job, 'view').show === 'session';
+      const sessionJob = workpieceState(job, 'view').show === 'session'
+        || (Array.isArray(job.rounds) && job.rounds.some(round => String(round?.fields?.commit ?? '').trim() !== ''));
       const artifactButton = software && artifact && !sessionJob
         ? `<button type="button" data-artifact="${escape(artifact)}" data-job="${escape(job.id)}">${artifact.endsWith('-taik-seed') ? 'Im Finder zeigen' : 'Ergebnis öffnen'}</button>` : '';
       const results = software ? '' : search ? `<section><h2>Akzeptierte Suchprozedur</h2><p class="lead">${policy}</p></section>` : `<section><h2>Akzeptierte Prozedur</h2><ol class="steps">${steps}</ol>

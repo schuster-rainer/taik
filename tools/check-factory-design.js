@@ -396,6 +396,26 @@ async function runDesignGate(requireOpen) {
       await delayFrame();
       await chooseTicket('job-floorplanner');
     }
+    // A running session shows live what the agent does: last step, files changed and read, what it said.
+    {
+      const running = structuredClone(snapshot);
+      const job = structuredClone(running.jobs.find(entry => entry.id === 'job-floorplanner'));
+      job.id = 'job-laeuft'; job.goal = 'Eine laufende Sitzung'; job.rounds = []; job.sourceActive = true; job.preview = null; job.draft = null; job.changes = {}; job.progress = {};
+      job.dialogs = { 'round-01': [{ tool: 'Glob', target: '**/*' }, { tool: 'Read', target: 'src/main.rs' }, { who: 'agent', text: 'Ich ergänze den Befehl.' },
+        { tool: 'Edit', target: 'src/main.rs' }, { tool: 'Read', target: 'README.md' }, { tool: 'Write', target: 'tests/neu.rs' }, { tool: 'Edit', target: 'src/main.rs' }] };
+      running.jobs.unshift(job);
+      window.updateFactory(running);
+      await delayFrame();
+      await chooseTicket('job-laeuft');
+      const pane = find('#taik-preview');
+      const text = pane.textContent;
+      requireFact(text.includes('Runde 1 läuft') && text.includes('Edit src/main.rs') && text.includes('tests/neu.rs') && text.includes('README.md') && text.includes('Ich ergänze den Befehl.'),
+        'The workpiece does not show the running session: ' + text.replace(/\s+/g, ' ').slice(0, 200));
+      requireFact(pane.scrollWidth <= pane.clientWidth + 1, 'The live view of a session leaves its pane');
+      window.updateFactory(snapshot);
+      await delayFrame();
+      await chooseTicket('job-floorplanner');
+    }
     // Crew: a new agent is typed while the snapshot refreshes. The draft and the focus survive.
     const crew = find('#taik-crew');
     if (crew) {
