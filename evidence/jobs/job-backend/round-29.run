@@ -1,0 +1,20 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-29
+intent=Das angenommene Ergebnis einer Sitzung als Zweig ins Ursprungs-Repository holen: `taik-seed adopt STATE job-NAME`.
+baseline=taik-seed eb62a5a593d57eb0758e1f555c990e98a2bd0534699e3643d67ce8dceca906c9
+worker=opus-session-ticket-007
+decided_by=the installed taik-seed eb62a5a593d57eb0758e1f555c990e98a2bd0534699e3643d67ce8dceca906c9 at /Users/rainer/.local/state/taik-factory/taik-seed
+limits=99 rounds; gate 900s; candidate checks 10s each
+gate_sha256=76b41170f51fa7e1a5424ba01f903bcf2276b8f8f19e4d87f952e88d18b6b0ce
+gate_ms=36318
+checks=PASS: Rust tests, Clippy with warnings denied, release build; candidate seeded, rejected an invalid procedure without touching the accepted record, and extended it
+evidence=round-29.checks.log
+artifact=round-29-taik-seed
+artifact_sha256=ca796f277932c1e38a80777944fa9c4ddbd57b43b074ca465912daa48b1f8fa4
+rollback=round-29.rollback-taik-seed
+continuation=Restart the service so that it runs the accepted binary.
+advance=false
+end

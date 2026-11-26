@@ -1,0 +1,339 @@
+diff --git a/README.md b/README.md
+index 4088838..36369e1 100644
+--- a/README.md
++++ b/README.md
+@@ -241,6 +241,7 @@ taik-seed source JOB BRIEF GATE [--attached[=WORKER]]
+ taik-seed promote JOB BRIEF GATE INSTALLED_BINARY WORKER
+ taik-seed propose STATE NAME RECORD.run
+ taik-seed approve STATE NAME
++taik-seed adopt STATE job-NAME
+ taik-seed experiment BASELINE.run OUTPUT_DIRECTORY
+ taik-seed queue STATE BASELINE.run
+ taik-seed queue-source STATE NAME BRIEF GATE [ACCEPTED_SOURCE]
+diff --git a/src/adopt.rs b/src/adopt.rs
+new file mode 100644
+index 0000000..9e9037c
+--- /dev/null
++++ b/src/adopt.rs
+@@ -0,0 +1,132 @@
++//! Brings the accepted commit of a session job into the repository it came from, as branch
++//! `taik/NAME`. The repository gets the objects and one new branch. Nothing is checked out,
++//! merged or changed in its working files.
++
++use std::path::Path;
++use std::process::Command;
++
++use crate::Result;
++
++fn git(folder: &Path, arguments: &[&str]) -> Result<std::process::Output> {
++    Ok(Command::new("git")
++        .arg("-C")
++        .arg(folder)
++        .args([
++            "-c",
++            "core.hooksPath=/dev/null",
++            "-c",
++            "gc.auto=0",
++            "-c",
++            "maintenance.auto=false",
++            "-c",
++            "fetch.recurseSubmodules=false",
++            "-c",
++            "uploadpack.allowAnySHA1InWant=true",
++            "-c",
++            "protocol.version=2",
++        ])
++        .args(arguments)
++        .output()?)
++}
++
++fn branch_target(repo: &Path, reference: &str) -> Result<Option<String>> {
++    let output = git(
++        repo,
++        &["rev-parse", "--verify", "--quiet", &format!("{reference}^{{commit}}")],
++    )?;
++    Ok(output
++        .status
++        .success()
++        .then(|| String::from_utf8_lossy(&output.stdout).trim().to_owned()))
++}
++
++fn last_round(job: &Path) -> Result<std::path::PathBuf> {
++    let mut last: Option<(u8, std::path::PathBuf)> = None;
++    for entry in std::fs::read_dir(job)? {
++        let entry = entry?;
++        let name = entry.file_name();
++        let Some(name) = name.to_str() else { continue };
++        let Some(number) = name
++            .strip_prefix("round-")
++            .and_then(|rest| rest.strip_suffix(".run"))
++            .filter(|digits| digits.len() == 2 && digits.bytes().all(|b| b.is_ascii_digit()))
++            .and_then(|digits| digits.parse::<u8>().ok())
++        else {
++            continue;
++        };
++        if last.as_ref().is_none_or(|(best, _)| number > *best) {
++            last = Some((number, entry.path()));
++        }
++    }
++    last.map(|(_, path)| path)
++        .ok_or_else(|| format!("no round in {}", job.display()).into())
++}
++
++/// Returns the branch name `taik/NAME` once it points at the accepted commit.
++pub fn adopt(state: &Path, job_name: &str) -> Result<String> {
++    let name = job_name
++        .strip_prefix("job-")
++        .and_then(crate::worker_name)
++        .ok_or("a session job is named job-NAME")?;
++    let job = state.join("jobs").join(job_name);
++    if !job.is_dir() {
++        return Err(format!("no such job: {}", job.display()).into());
++    }
++    let repo_file = job.join("session.repo");
++    let repo = std::fs::read_to_string(&repo_file)
++        .map_err(|error| format!("{}: {error}", repo_file.display()))?;
++    let repo = repo.strip_suffix('\n').unwrap_or(&repo);
++    if repo.is_empty() || repo.contains('\n') {
++        return Err(format!("{} names no repository", repo_file.display()).into());
++    }
++    let repo = Path::new(repo);
++
++    let round = last_round(&job)?;
++    let text = std::fs::read_to_string(&round)?;
++    if text.lines().next() != Some("decision=accepted") {
++        return Err(format!("the last round is not accepted: {}", round.display()).into());
++    }
++    let commit = text
++        .lines()
++        .find_map(|line| line.strip_prefix("commit="))
++        .filter(|sha| {
++            matches!(sha.len(), 40 | 64)
++                && sha.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
++        })
++        .ok_or_else(|| format!("no commit in {}", round.display()))?;
++
++    let branch = format!("taik/{name}");
++    let reference = format!("refs/heads/{branch}");
++    match branch_target(repo, &reference)? {
++        Some(current) if current == commit => return Ok(branch),
++        Some(current) => {
++            return Err(format!("{branch} already points at {current}, not at {commit}").into());
++        }
++        None => {}
++    }
++
++    let work = state.join("work").join(name).canonicalize()?;
++    let work = work.to_str().ok_or("work path is not UTF-8")?;
++    // No "+": the fetch never moves an existing branch backwards or sideways.
++    let output = git(
++        repo,
++        &[
++            "fetch",
++            "--quiet",
++            "--no-tags",
++            work,
++            &format!("{commit}:{reference}"),
++        ],
++    )?;
++    if !output.status.success() {
++        return Err(format!(
++            "git fetch: {}",
++            String::from_utf8_lossy(&output.stderr).trim()
++        )
++        .into());
++    }
++    match branch_target(repo, &reference)? {
++        Some(current) if current == commit => Ok(branch),
++        other => Err(format!("{branch} points at {other:?} after the fetch, not at {commit}").into()),
++    }
++}
+diff --git a/src/main.rs b/src/main.rs
+index 83280a0..6f58f55 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -1,5 +1,6 @@
+ #[cfg(target_os = "macos")]
+ mod activation;
++mod adopt;
+ #[cfg(target_os = "macos")]
+ mod analysis;
+ #[cfg(target_os = "macos")]
+@@ -60,6 +61,7 @@ const USAGE: &str = "usage: taik-seed seed OUTPUT.run
+        taik-seed queue-session STATE NAME BRIEF.md GATE.sh [REPOSITORY]
+        taik-seed propose STATE NAME RECORD.run
+        taik-seed approve STATE NAME
++       taik-seed adopt STATE job-NAME
+        taik-seed experiment BASELINE.run OUTPUT_DIRECTORY
+        taik-seed queue STATE BASELINE.run
+        taik-seed queue-source STATE NAME BRIEF GATE [ACCEPTED_SOURCE] [--agent=NAME]
+@@ -394,6 +396,11 @@ fn run() -> Result<bool> {
+             close(first, &rest[0])?;
+             Ok(true)
+         }
++        "adopt" if rest.len() == 1 => {
++            let name = rest[0].to_str().ok_or("job name must be ASCII")?;
++            println!("{}", adopt::adopt(first, name)?);
++            Ok(true)
++        }
+         "experiment" if rest.len() == 1 => {
+             experiment::run(first, Path::new(&rest[0]))?;
+             Ok(true)
+diff --git a/tests/adopt.rs b/tests/adopt.rs
+new file mode 100644
+index 0000000..9997e5b
+--- /dev/null
++++ b/tests/adopt.rs
+@@ -0,0 +1,152 @@
++use std::fs;
++use std::path::Path;
++use std::process::{Command, Output};
++
++fn git(folder: &Path, arguments: &[&str]) -> String {
++    let output = Command::new("git")
++        .arg("-C")
++        .arg(folder)
++        .args([
++            "-c",
++            "user.name=Test",
++            "-c",
++            "user.email=test@example.invalid",
++            "-c",
++            "commit.gpgsign=false",
++            "-c",
++            "core.hooksPath=/dev/null",
++        ])
++        .args(arguments)
++        .output()
++        .unwrap();
++    assert!(output.status.success(), "git {arguments:?}: {output:?}");
++    String::from_utf8(output.stdout).unwrap().trim().to_owned()
++}
++
++fn adopt(state: &Path, job: &str) -> Output {
++    Command::new(env!("CARGO_BIN_EXE_taik-seed"))
++        .arg("adopt")
++        .arg(state)
++        .arg(job)
++        .output()
++        .unwrap()
++}
++
++struct Setup {
++    _root: tempfile::TempDir,
++    state: std::path::PathBuf,
++    origin: std::path::PathBuf,
++    job: std::path::PathBuf,
++    base: String,
++    commit: String,
++}
++
++// An origin with one commit, its copy in STATE/work/demo with one more, and a job naming both.
++fn setup() -> Setup {
++    let root = tempfile::tempdir().unwrap();
++    let origin = root.path().join("origin");
++    fs::create_dir(&origin).unwrap();
++    git(&origin, &["init", "--quiet"]);
++    fs::write(origin.join("a.txt"), "a\n").unwrap();
++    git(&origin, &["add", "a.txt"]);
++    git(&origin, &["commit", "--quiet", "-m", "start"]);
++    let base = git(&origin, &["rev-parse", "HEAD"]);
++
++    let state = root.path().join("state");
++    let work = state.join("work").join("demo");
++    fs::create_dir_all(state.join("work")).unwrap();
++    git(
++        root.path(),
++        &[
++            "clone",
++            "--quiet",
++            "--local",
++            "--no-hardlinks",
++            origin.to_str().unwrap(),
++            work.to_str().unwrap(),
++        ],
++    );
++    git(&work, &["remote", "remove", "origin"]);
++    fs::write(work.join("b.txt"), "b\n").unwrap();
++    git(&work, &["add", "b.txt"]);
++    git(&work, &["commit", "--quiet", "-m", "agent"]);
++    let commit = git(&work, &["rev-parse", "HEAD"]);
++
++    let job = state.join("jobs").join("job-demo");
++    fs::create_dir_all(&job).unwrap();
++    fs::write(job.join("session.repo"), format!("{}\n", origin.display())).unwrap();
++    fs::write(
++        job.join("round-01.run"),
++        format!("decision=rejected\ncommit={base}\nend\n"),
++    )
++    .unwrap();
++    fs::write(
++        job.join("round-02.run"),
++        format!("decision=accepted\nkind=software\ncommit={commit}\nend\n"),
++    )
++    .unwrap();
++    Setup {
++        _root: root,
++        state,
++        origin,
++        job,
++        base,
++        commit,
++    }
++}
++
++#[test]
++fn the_accepted_commit_becomes_a_branch_of_the_origin() {
++    let s = setup();
++    let head = git(&s.origin, &["symbolic-ref", "HEAD"]);
++
++    let output = adopt(&s.state, "job-demo");
++    assert_eq!(output.status.code(), Some(0), "{output:?}");
++    assert_eq!(output.stdout, b"taik/demo\n");
++    assert_eq!(
++        git(&s.origin, &["rev-parse", "refs/heads/taik/demo"]),
++        s.commit
++    );
++    // Nothing checked out, merged or changed in the working files.
++    assert_eq!(git(&s.origin, &["symbolic-ref", "HEAD"]), head);
++    assert_eq!(git(&s.origin, &["rev-parse", "HEAD"]), s.base);
++    assert!(!s.origin.join("b.txt").exists());
++    assert_eq!(git(&s.origin, &["status", "--porcelain"]), "");
++
++    // Again on the same commit is still success.
++    let again = adopt(&s.state, "job-demo");
++    assert_eq!(again.status.code(), Some(0), "{again:?}");
++    assert_eq!(again.stdout, b"taik/demo\n");
++}
++
++#[test]
++fn a_branch_on_another_commit_is_refused() {
++    let s = setup();
++    git(&s.origin, &["branch", "taik/demo", &s.base]);
++    let output = adopt(&s.state, "job-demo");
++    assert_eq!(output.status.code(), Some(2), "{output:?}");
++    assert_eq!(git(&s.origin, &["rev-parse", "refs/heads/taik/demo"]), s.base);
++}
++
++#[test]
++fn a_last_round_that_is_not_accepted_is_refused() {
++    let s = setup();
++    fs::write(
++        s.job.join("round-03.run"),
++        format!("decision=rejected\ncommit={}\nend\n", s.commit),
++    )
++    .unwrap();
++    let output = adopt(&s.state, "job-demo");
++    assert_eq!(output.status.code(), Some(2), "{output:?}");
++    let branches = git(&s.origin, &["branch", "--list", "taik/*"]);
++    assert_eq!(branches, "");
++}
++
++#[test]
++fn an_unknown_job_or_a_job_without_repository_is_refused() {
++    let s = setup();
++    assert_eq!(adopt(&s.state, "job-missing").status.code(), Some(2));
++    fs::remove_file(s.job.join("session.repo")).unwrap();
++    assert_eq!(adopt(&s.state, "job-demo").status.code(), Some(2));
++    assert_eq!(git(&s.origin, &["branch", "--list", "taik/*"]), "");
++}

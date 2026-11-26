@@ -1,0 +1,26 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=Füge dem TAIK-Seed den Befehl taik-seed adopt STATE job-NAME hinzu, der den angenommenen Commit einer Agentensitzung als Zweig ins Ursprungs-Repository holt.
+baseline=c26cbef9ce3f81f01d9233580880db21e255c063
+worker=claude-session
+worker_model=claude-opus-5-5
+worker_output_tokens=9398
+worker_cache_read_tokens=323600
+session_listed_usd=0.5873520000000001
+worker_failure=
+worker_duration_ms=118539
+session=aacf1170-8f3a-48a5-8d5d-dc0ce2f2002e
+limits=6 rounds and one per reply; lease 600s without ceiling; file tools only
+gate_sha256=45ca272f6d57b0fe6ea1e1ecd20c6a383cca351117486e87aba7febd3578be61
+gate_ms=18875
+checks=PASS: adopt legt taik/NAME auf den angenommenen Commit, lässt das Ursprungs-Repository sonst unberührt und weist die vier Fälle mit Status 2 ab
+artifact=8ca86d4c3e968c220833579d7b475a800660a714
+commit=8ca86d4c3e968c220833579d7b475a800660a714
+files=README.md +1 -0; src/adopt.rs +132 -0; src/main.rs +7 -0; tests/adopt.rs +152 -0
+summary=Ich habe den Befehl `taik-seed adopt STATE job-NAME` in der neuen Datei `src/adopt.rs` gebaut und in `src/main.rs` (samt Hilfetext) eingehängt; ohne Shell konnte ich nichts bauen oder testen, das Ergebnis des Gates steht also noch aus. Der Befehl prüft Auftrag, `session.repo` und die letzte Runde `round-NN.run` und holt den Commit per `git fetch` aus `STATE/work/NAME` nach `refs/heads/taik/NAME`. Er gibt bei Erfolg `taik/NAME` aus, auch wenn der Zweig schon auf denselben Commit zeigt, und endet in allen genannten Fehlerfällen mit Status 2. Der Fetch läuft ohne `+`, ohne Hooks und ohne Checkout, sodass im Ursprungs-Repository kein Zweig gewechselt, nichts zusammengeführt und keine Arbeitsdatei geändert wird. `tests/adopt.rs` legt echte kleine Git-Repositorys an und prüft den Erfolgsfall, die Wiederholung, einen Zweig auf einem anderen Commit, eine abgelehnte letzte Runde, einen unbekannten Auftrag und eine fehlende `session.repo`; in `README.md` steht die neue Befehlszeile.
+continuation=The accepted state is commit 8ca86d4c in /Users/rainer/.local/state/taik-factory/work/ticket-007.
+advance=false
+end

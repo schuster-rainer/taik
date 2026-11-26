@@ -32,7 +32,12 @@ fn git(folder: &Path, arguments: &[&str]) -> Result<std::process::Output> {
 fn branch_target(repo: &Path, reference: &str) -> Result<Option<String>> {
     let output = git(
         repo,
-        &["rev-parse", "--verify", "--quiet", &format!("{reference}^{{commit}}")],
+        &[
+            "rev-parse",
+            "--verify",
+            "--quiet",
+            &format!("{reference}^{{commit}}"),
+        ],
     )?;
     Ok(output
         .status
@@ -91,7 +96,9 @@ pub fn adopt(state: &Path, job_name: &str) -> Result<String> {
         .find_map(|line| line.strip_prefix("commit="))
         .filter(|sha| {
             matches!(sha.len(), 40 | 64)
-                && sha.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+                && sha
+                    .bytes()
+                    .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
         })
         .ok_or_else(|| format!("no commit in {}", round.display()))?;
 
@@ -127,6 +134,8 @@ pub fn adopt(state: &Path, job_name: &str) -> Result<String> {
     }
     match branch_target(repo, &reference)? {
         Some(current) if current == commit => Ok(branch),
-        other => Err(format!("{branch} points at {other:?} after the fetch, not at {commit}").into()),
+        other => {
+            Err(format!("{branch} points at {other:?} after the fetch, not at {commit}").into())
+        }
     }
 }

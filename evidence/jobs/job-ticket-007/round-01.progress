@@ -1,0 +1,23 @@
+1031762	start	Sitzung in /Users/rainer/.local/state/taik-factory/work/ticket-007
+1034108	worker	Beginnt die Sitzung aacf1170
+4415413	tool	Glob **/*
+6821185	tool	Glob {src/**/*,tests/**/*,Cargo.toml,README.md,*.md}
+9465249	tool	Read src/main.rs
+9964891	tool	Read CLAUDE.md
+10347211	tool	Read Cargo.toml
+13578434	tool	Read AGENTS.md
+14079995	tool	Read tests/close.rs
+14387159	tool	Read README.md
+17921478	tool	Grep session\.repo|"work"|Command::new\("git"\)|fn git
+21152864	tool	Read src/session.rs
+42737988	tool	Grep commit=
+58499208	tool	Write src/adopt.rs
+64265255	tool	Edit src/main.rs
+65499383	tool	Edit src/main.rs
+67113481	tool	Edit src/main.rs
+68079563	tool	Edit README.md
+71576723	tool	Grep usage:|USAGE|taik-seed approve
+89397952	tool	Write tests/adopt.rs
+99575750	checks	4 Dateien geändert, Commit 8ca86d4c
+99652420	evaluate	Gate prüft Commit 8ca86d4c
+118558178	accepted	PASS: adopt legt taik/NAME auf den angenommenen Commit, lässt das Ursprungs-Repository sonst unberührt und weist die vier Fälle mit Status 2 ab

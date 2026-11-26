@@ -125,7 +125,10 @@ fn a_branch_on_another_commit_is_refused() {
     git(&s.origin, &["branch", "taik/demo", &s.base]);
     let output = adopt(&s.state, "job-demo");
     assert_eq!(output.status.code(), Some(2), "{output:?}");
-    assert_eq!(git(&s.origin, &["rev-parse", "refs/heads/taik/demo"]), s.base);
+    assert_eq!(
+        git(&s.origin, &["rev-parse", "refs/heads/taik/demo"]),
+        s.base
+    );
 }
 
 #[test]
