@@ -1,0 +1,26 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=Der Zweig taik/NAME eines Auftrags rückt bei `adopt` und `settle` auf den neu angenommenen Commit vor, wenn er auf einen Vorfahren zeigt.
+baseline=ba113523c4c71bd70091ae4fea27f3d804f96791
+worker=claude-session
+worker_model=claude-opus-5-5
+worker_output_tokens=8902
+worker_cache_read_tokens=176698
+session_listed_usd=0.3806356
+worker_failure=
+worker_duration_ms=104880
+session=c8aff36e-3fbe-44d3-8ff4-ea6cf2ebd5b0
+limits=6 rounds and one per reply; lease 600s without ceiling; file tools only
+gate_sha256=d3998de3f35e770d103e16ec84a1f1b1c4c8170688df34de81ec9f3ece2da2d9
+gate_ms=11217
+checks=PASS: Zweig rückt nur vorwärts nach, Abweisungen bleiben, Tests und clippy sauber
+artifact=8d4b61aac5ad76bed8783aa3932abfea162a6b3b
+commit=8d4b61aac5ad76bed8783aa3932abfea162a6b3b
+files=src/adopt.rs +85 -8; tests/adopt.rs +7 -2; tests/adopt_forward.rs +197 -0
+summary=Ich habe `adopt` in `src/adopt.rs` geändert. Zeigt `taik/NAME` schon auf einen anderen Commit, holt `adopt` nur die Objekte aus der Arbeitskopie und prüft mit `git merge-base --is-ancestor`, ob der alte Stand ein Vorfahr ist. Nur dann rückt der Zweig per `git update-ref` vor, mit dem alten Wert als Absicherung gegen gleichzeitige Änderungen, sonst gibt es wie bisher Status 2. Ist der Zweig im Ursprung oder in einem seiner Worktrees ausgecheckt, wird abgewiesen, und die Fälle „kein Zweig“ und „gleicher Commit“ laufen unverändert. Im Test `a_branch_on_another_commit_is_refused` zeigt der Zweig jetzt auf einen eigenen Commit neben `base`. Das neue `tests/adopt_forward.rs` deckt alle vier Fälle ab, dazu eine zweite angenommene Runde über `settle`, bei der `adopted.txt` gleich bleibt. Bauen und testen konnte ich nicht, das Ergebnis steht also noch aus; beim Nachrücken schreibt der Fetch im Ursprung nur `FETCH_HEAD`, HEAD und Arbeitsdateien fasst er nicht an.
+continuation=The accepted state is commit 8d4b61aa in /Users/rainer/.local/state/taik-factory/work/ticket-016.
+advance=false
+end

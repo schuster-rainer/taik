@@ -1,0 +1,26 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-03
+intent=Der Zweig taik/NAME eines Auftrags rückt bei `adopt` und `settle` auf den neu angenommenen Commit vor, wenn er auf einen Vorfahren zeigt.
+baseline=ba113523c4c71bd70091ae4fea27f3d804f96791
+worker=claude-session
+worker_model=claude-opus-5-5
+worker_output_tokens=2188
+worker_cache_read_tokens=178566
+session_listed_usd=0.6337016
+worker_failure=
+worker_duration_ms=40217
+session=c8aff36e-3fbe-44d3-8ff4-ea6cf2ebd5b0
+limits=6 rounds and one per reply; lease 600s without ceiling; file tools only
+gate_sha256=d3998de3f35e770d103e16ec84a1f1b1c4c8170688df34de81ec9f3ece2da2d9
+gate_ms=11564
+checks=PASS: Zweig rückt nur vorwärts nach, Abweisungen bleiben, Tests und clippy sauber
+artifact=94800c69bc862b0e601423ef983aa5a7bb1920df
+commit=94800c69bc862b0e601423ef983aa5a7bb1920df
+files=tests/settle.rs +7 -2
+summary=Ich habe `a_branch_on_another_commit_is_a_failure` in `tests/settle.rs` angepasst. Der Zweig `taik/demo` zeigt jetzt auf einen eigenen Commit neben `base`, angelegt mit `git commit-tree`, und der Test erwartet weiter Status 2, eine einzeilige `adopt-failed.txt` und einen unveränderten Zweig. Danach habe ich in `tests/` und `src/` nach `taik/`, `"branch"`, `refs/heads`, `update-ref`, `adopt-failed`/`ADOPT_FAILED` und den Aufrufen von `adopt`/`settle` gesucht, weitere Stellen dieser Art gibt es nicht. Geprüft habe ich `tests/adopt.rs` (schon angepasst), `tests/adopt_forward.rs` (der Vorfahr wird dort absichtlich für den Erfolgsfall gesetzt), `tests/session.rs` (Abschnitt 6 schon angepasst, Abschnitte 1 und 7 legen keinen Zweig vorher an), die übrigen Tests in `tests/settle.rs`, `tests/orchestrator.rs` (nur `.taik/protected`) sowie `src/adopt.rs` mit seinem Modultest, `src/service.rs`, `src/main.rs`, `src/session.rs` und `src/orchestrator.rs`. Laufen lassen konnte ich die Tests nicht, das Ergebnis der Prüfung st
+continuation=The accepted state is commit 94800c69 in /Users/rainer/.local/state/taik-factory/work/ticket-016.
+advance=false
+end

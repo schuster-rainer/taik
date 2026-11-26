@@ -1,0 +1,3 @@
+round=1
+
+Die Übernahme in den Kern ist gescheitert: Die ganze Testsuite läuft dort, und tests/session.rs schlägt fehl. Abschnitt 6 dieses Tests („A failed settling is recorded …") legt den Zweig taik/besetzt auf HEAD des Ursprungs-Repositorys. Das ist ein Vorfahr des Commits der Sitzung, also rückt der Zweig jetzt nach und es entsteht keine adopt-failed.txt mehr. Bitte diesen Abschnitt so anpassen, dass taik/besetzt auf einen Commit zeigt, der kein Vorfahr des Sitzungs-Commits ist (zum Beispiel ein eigener Commit auf einem Seitenzweig des Ursprungs-Repositorys, der nach dem Anlegen der Kopie entsteht oder von dem die Kopie nicht abstammt), sodass die Übernahme weiter scheitert und der Abschnitt dasselbe zeigt wie bisher. Sonst nichts ändern.

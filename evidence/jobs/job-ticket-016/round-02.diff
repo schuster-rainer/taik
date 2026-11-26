@@ -1,0 +1,18 @@
+diff --git a/tests/session.rs b/tests/session.rs
+index 578c558..2a11faa 100644
+--- a/tests/session.rs
++++ b/tests/session.rs
+@@ -243,7 +243,12 @@ say '{{"type":"result","is_error":false,"result":"'"$text"'","usage":{{"output_t
+ 
+     // 6. A failed settling is recorded and changes neither the decision nor the rounds.
+     fs::write(&mode, "write").unwrap();
+-    git(&repo, &["branch", "taik/besetzt", "HEAD"]);
++    // A commit beside HEAD, from which the copy does not descend: no ancestor of the session commit.
++    let side = git(
++        &repo,
++        &["commit-tree", "-p", "HEAD", "-m", "besetzt", "HEAD^{tree}"],
++    );
++    git(&repo, &["branch", "taik/besetzt", side.trim()]);
+     let occupied = queue("besetzt");
+     let occupied_run = serve();
+     let accepted = fs::read_to_string(occupied.join("round-01.run"))

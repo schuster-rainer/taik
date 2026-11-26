@@ -1,0 +1,348 @@
+diff --git a/src/adopt.rs b/src/adopt.rs
+index ad462d8..c43e49c 100644
+--- a/src/adopt.rs
++++ b/src/adopt.rs
+@@ -1,6 +1,6 @@
+ //! Brings the accepted commit of a session job into the repository it came from, as branch
+-//! `taik/NAME`. The repository gets the objects and one new branch. Nothing is checked out,
+-//! merged or changed in its working files.
++//! `taik/NAME`. The repository gets the objects and one new branch, or an existing branch on an
++//! ancestor moves forward. Nothing is checked out, merged or changed in its working files.
+ 
+ use std::path::Path;
+ use std::process::Command;
+@@ -141,7 +141,84 @@ pub fn settle(state: &Path, job_name: &str) -> Result<Option<String>> {
+     }
+ }
+ 
++fn git_failed(what: &str, output: &std::process::Output) -> Box<dyn std::error::Error> {
++    format!(
++        "git {what}: {}",
++        String::from_utf8_lossy(&output.stderr).trim()
++    )
++    .into()
++}
++
++// Whether `reference` is checked out in the repository or in one of its worktrees.
++fn checked_out(repo: &Path, reference: &str) -> Result<bool> {
++    let output = git(repo, &["worktree", "list", "--porcelain"])?;
++    if !output.status.success() {
++        return Err(git_failed("worktree list", &output));
++    }
++    let wanted = format!("branch {reference}");
++    Ok(String::from_utf8_lossy(&output.stdout)
++        .lines()
++        .any(|line| line == wanted))
++}
++
++// Moves an existing branch from `current` forward to `commit`, never backwards or sideways,
++// and never while the branch is checked out.
++fn advance(
++    repo: &Path,
++    work: &str,
++    branch: &str,
++    reference: &str,
++    current: &str,
++    commit: &str,
++) -> Result<String> {
++    if checked_out(repo, reference)? {
++        return Err(format!(
++            "{branch} is checked out in {} and points at {current}, not at {commit}",
++            repo.display()
++        )
++        .into());
++    }
++    // Only the objects; no reference of the repository is written by this fetch.
++    let output = git(repo, &["fetch", "--quiet", "--no-tags", work, commit])?;
++    if !output.status.success() {
++        return Err(git_failed("fetch", &output));
++    }
++    let output = git(repo, &["merge-base", "--is-ancestor", current, commit])?;
++    match output.status.code() {
++        Some(0) => {}
++        Some(1) => {
++            return Err(format!(
++                "{branch} already points at {current}, which is not an ancestor of {commit}"
++            )
++            .into());
++        }
++        _ => return Err(git_failed("merge-base", &output)),
++    }
++    // The old value guards against a concurrent change of the branch.
++    let output = git(
++        repo,
++        &[
++            "update-ref",
++            "-m",
++            "taik adopt: fast-forward",
++            reference,
++            commit,
++            current,
++        ],
++    )?;
++    if !output.status.success() {
++        return Err(git_failed("update-ref", &output));
++    }
++    match branch_target(repo, reference)? {
++        Some(now) if now == commit => Ok(branch.to_owned()),
++        other => {
++            Err(format!("{branch} points at {other:?} after the update, not at {commit}").into())
++        }
++    }
++}
++
+ /// Returns the branch name `taik/NAME` once it points at the accepted commit.
++/// An existing branch on an ancestor of that commit moves forward to it, unless it is checked out.
+ pub fn adopt(state: &Path, job_name: &str) -> Result<String> {
+     let name = job_name
+         .strip_prefix("job-")
+@@ -178,16 +255,16 @@ pub fn adopt(state: &Path, job_name: &str) -> Result<String> {
+ 
+     let branch = format!("taik/{name}");
+     let reference = format!("refs/heads/{branch}");
+-    match branch_target(repo, &reference)? {
++    let existing = match branch_target(repo, &reference)? {
+         Some(current) if current == commit => return Ok(branch),
+-        Some(current) => {
+-            return Err(format!("{branch} already points at {current}, not at {commit}").into());
+-        }
+-        None => {}
+-    }
++        other => other,
++    };
+ 
+     let work = state.join("work").join(name).canonicalize()?;
+     let work = work.to_str().ok_or("work path is not UTF-8")?;
++    if let Some(current) = existing {
++        return advance(repo, work, &branch, &reference, &current, commit);
++    }
+     // No "+": the fetch never moves an existing branch backwards or sideways.
+     let output = git(
+         repo,
+diff --git a/tests/adopt.rs b/tests/adopt.rs
+index a24764d..ca26d0e 100644
+--- a/tests/adopt.rs
++++ b/tests/adopt.rs
+@@ -122,12 +122,17 @@ fn the_accepted_commit_becomes_a_branch_of_the_origin() {
+ #[test]
+ fn a_branch_on_another_commit_is_refused() {
+     let s = setup();
+-    git(&s.origin, &["branch", "taik/demo", &s.base]);
++    // A commit of the origin beside the accepted one: not its ancestor.
++    let side = git(
++        &s.origin,
++        &["commit-tree", "-p", &s.base, "-m", "side", "HEAD^{tree}"],
++    );
++    git(&s.origin, &["branch", "taik/demo", &side]);
+     let output = adopt(&s.state, "job-demo");
+     assert_eq!(output.status.code(), Some(2), "{output:?}");
+     assert_eq!(
+         git(&s.origin, &["rev-parse", "refs/heads/taik/demo"]),
+-        s.base
++        side
+     );
+ }
+ 
+diff --git a/tests/adopt_forward.rs b/tests/adopt_forward.rs
+new file mode 100644
+index 0000000..4223956
+--- /dev/null
++++ b/tests/adopt_forward.rs
+@@ -0,0 +1,197 @@
++//! `adopt` and `settle` move an existing branch `taik/NAME` forward to the newly accepted commit
++//! when it points at an ancestor, and never backwards, sideways or while it is checked out.
++
++use std::fs;
++use std::path::{Path, PathBuf};
++use std::process::{Command, Output};
++
++fn git(folder: &Path, arguments: &[&str]) -> String {
++    let output = Command::new("git")
++        .arg("-C")
++        .arg(folder)
++        .args([
++            "-c",
++            "user.name=Test",
++            "-c",
++            "user.email=test@example.invalid",
++            "-c",
++            "commit.gpgsign=false",
++            "-c",
++            "core.hooksPath=/dev/null",
++        ])
++        .args(arguments)
++        .output()
++        .unwrap();
++    assert!(output.status.success(), "git {arguments:?}: {output:?}");
++    String::from_utf8(output.stdout).unwrap().trim().to_owned()
++}
++
++fn run(command: &str, state: &Path, job: &str) -> Output {
++    Command::new(env!("CARGO_BIN_EXE_taik-seed"))
++        .arg(command)
++        .arg(state)
++        .arg(job)
++        .output()
++        .unwrap()
++}
++
++struct Setup {
++    _root: tempfile::TempDir,
++    state: PathBuf,
++    origin: PathBuf,
++    work: PathBuf,
++    job: PathBuf,
++    base: String,
++    commit: String,
++}
++
++const BRANCH: &str = "refs/heads/taik/demo";
++
++// An origin with one commit, its copy in STATE/work/demo with one more, and a job whose last
++// round accepts that commit.
++fn setup() -> Setup {
++    let root = tempfile::tempdir().unwrap();
++    let origin = root.path().join("origin");
++    fs::create_dir(&origin).unwrap();
++    git(&origin, &["init", "--quiet"]);
++    fs::write(origin.join("a.txt"), "a\n").unwrap();
++    git(&origin, &["add", "a.txt"]);
++    git(&origin, &["commit", "--quiet", "-m", "start"]);
++    let base = git(&origin, &["rev-parse", "HEAD"]);
++
++    let state = root.path().join("state");
++    let work = state.join("work").join("demo");
++    fs::create_dir_all(state.join("work")).unwrap();
++    git(
++        root.path(),
++        &[
++            "clone",
++            "--quiet",
++            "--local",
++            "--no-hardlinks",
++            origin.to_str().unwrap(),
++            work.to_str().unwrap(),
++        ],
++    );
++    git(&work, &["remote", "remove", "origin"]);
++    let job = state.join("jobs").join("job-demo");
++    fs::create_dir_all(&job).unwrap();
++    fs::write(job.join("session.repo"), format!("{}\n", origin.display())).unwrap();
++    let mut s = Setup {
++        _root: root,
++        state,
++        origin,
++        work,
++        job,
++        base,
++        commit: String::new(),
++    };
++    s.commit = accept(&s, 1, "b.txt");
++    s
++}
++
++// One more commit in the work copy, accepted as round NUMBER.
++fn accept(s: &Setup, number: u8, file: &str) -> String {
++    fs::write(s.work.join(file), format!("{file}\n")).unwrap();
++    git(&s.work, &["add", file]);
++    git(&s.work, &["commit", "--quiet", "-m", file]);
++    let commit = git(&s.work, &["rev-parse", "HEAD"]);
++    fs::write(
++        s.job.join(format!("round-{number:02}.run")),
++        format!("decision=accepted\nkind=software\ncommit={commit}\nend\n"),
++    )
++    .unwrap();
++    commit
++}
++
++// HEAD, checked-out commit and working files of the origin are as at the start.
++fn assert_origin_untouched(s: &Setup, head: &str) {
++    assert_eq!(git(&s.origin, &["symbolic-ref", "HEAD"]), head);
++    assert_eq!(git(&s.origin, &["rev-parse", "HEAD"]), s.base);
++    assert!(!s.origin.join("b.txt").exists());
++    assert!(!s.origin.join("c.txt").exists());
++    assert_eq!(git(&s.origin, &["status", "--porcelain"]), "");
++}
++
++#[test]
++fn without_a_branch_the_branch_is_created() {
++    let s = setup();
++    let head = git(&s.origin, &["symbolic-ref", "HEAD"]);
++    let output = run("adopt", &s.state, "job-demo");
++    assert_eq!(output.status.code(), Some(0), "{output:?}");
++    assert_eq!(output.stdout, b"taik/demo\n");
++    assert_eq!(git(&s.origin, &["rev-parse", BRANCH]), s.commit);
++    assert_origin_untouched(&s, &head);
++}
++
++#[test]
++fn a_branch_on_an_ancestor_moves_forward() {
++    let s = setup();
++    let head = git(&s.origin, &["symbolic-ref", "HEAD"]);
++    git(&s.origin, &["branch", "taik/demo", &s.base]);
++    let output = run("adopt", &s.state, "job-demo");
++    assert_eq!(output.status.code(), Some(0), "{output:?}");
++    assert_eq!(output.stdout, b"taik/demo\n");
++    assert_eq!(git(&s.origin, &["rev-parse", BRANCH]), s.commit);
++    assert_origin_untouched(&s, &head);
++}
++
++#[test]
++fn a_further_accepted_round_moves_the_settled_branch_forward() {
++    let s = setup();
++    let head = git(&s.origin, &["symbolic-ref", "HEAD"]);
++    let first = run("settle", &s.state, "job-demo");
++    assert_eq!(first.status.code(), Some(0), "{first:?}");
++    assert_eq!(first.stdout, b"taik/demo\n");
++    assert_eq!(git(&s.origin, &["rev-parse", BRANCH]), s.commit);
++    let adopted = fs::read(s.job.join("adopted.txt")).unwrap();
++    assert_eq!(adopted, b"taik/demo\n");
++
++    let next = accept(&s, 2, "c.txt");
++    let second = run("settle", &s.state, "job-demo");
++    assert_eq!(second.status.code(), Some(0), "{second:?}");
++    assert_eq!(second.stdout, b"taik/demo\n");
++    assert_eq!(git(&s.origin, &["rev-parse", BRANCH]), next);
++    assert_eq!(fs::read(s.job.join("adopted.txt")).unwrap(), adopted);
++    assert!(!s.job.join("adopt-failed.txt").exists());
++    assert_origin_untouched(&s, &head);
++}
++
++#[test]
++fn a_branch_on_a_commit_that_is_no_ancestor_is_refused() {
++    let s = setup();
++    let head = git(&s.origin, &["symbolic-ref", "HEAD"]);
++    let side = git(
++        &s.origin,
++        &["commit-tree", "-p", &s.base, "-m", "side", "HEAD^{tree}"],
++    );
++    git(&s.origin, &["branch", "taik/demo", &side]);
++    let output = run("adopt", &s.state, "job-demo");
++    assert_eq!(output.status.code(), Some(2), "{output:?}");
++    assert_eq!(git(&s.origin, &["rev-parse", BRANCH]), side);
++    assert_origin_untouched(&s, &head);
++
++    // A newer branch is never moved back to an older accepted commit either.
++    let newer = git(
++        &s.origin,
++        &["commit-tree", "-p", &side, "-m", "newer", "HEAD^{tree}"],
++    );
++    git(&s.origin, &["branch", "--force", "taik/demo", &newer]);
++    let output = run("settle", &s.state, "job-demo");
++    assert_eq!(output.status.code(), Some(2), "{output:?}");
++    assert_eq!(git(&s.origin, &["rev-parse", BRANCH]), newer);
++    assert!(!s.job.join("adopted.txt").exists());
++    assert!(s.job.join("adopt-failed.txt").exists());
++}
++
++#[test]
++fn a_checked_out_branch_is_refused_even_on_an_ancestor() {
++    let s = setup();
++    git(&s.origin, &["checkout", "--quiet", "-b", "taik/demo"]);
++    let output = run("adopt", &s.state, "job-demo");
++    assert_eq!(output.status.code(), Some(2), "{output:?}");
++    assert_eq!(git(&s.origin, &["rev-parse", BRANCH]), s.base);
++    assert_eq!(git(&s.origin, &["symbolic-ref", "HEAD"]), BRANCH);
++    assert!(!s.origin.join("b.txt").exists());
++    assert_eq!(git(&s.origin, &["status", "--porcelain"]), "");
++}

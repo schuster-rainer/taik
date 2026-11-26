@@ -1,0 +1,20 @@
+decision=rejected
+kind=software
+procedure=
+tags=
+identity=round-36
+intent=Der Zweig eines Auftrags rückt bei einer Folgerunde nach.
+baseline=taik-seed eb5ad2e5175f4c3946b4bda548559a2cf6940ba8bdb846d0af9b8cb49a6d6b88
+worker=opus-session-ticket-016
+decided_by=the installed taik-seed eb5ad2e5175f4c3946b4bda548559a2cf6940ba8bdb846d0af9b8cb49a6d6b88 at /Users/rainer/.local/state/taik-factory/taik-seed
+limits=99 rounds; gate 900s; candidate checks 10s each
+gate_sha256=76b41170f51fa7e1a5424ba01f903bcf2276b8f8f19e4d87f952e88d18b6b0ce
+gate_ms=
+checks=gate failed (exit status: 101): error: test failed, to rerun pass `--test session`
+evidence=round-36.checks.log
+artifact=
+artifact_sha256=
+rollback=
+continuation=The installed binary stays in place.
+advance=false
+end

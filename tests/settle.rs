@@ -193,10 +193,7 @@ fn a_branch_on_another_commit_is_a_failure() {
     assert_eq!(failed.lines().count(), 1, "{failed:?}");
     assert!(failed.ends_with('\n') && !failed.trim().is_empty());
     assert!(!s.job.join("adopted.txt").exists());
-    assert_eq!(
-        git(&s.origin, &["rev-parse", "refs/heads/taik/demo"]),
-        side
-    );
+    assert_eq!(git(&s.origin, &["rev-parse", "refs/heads/taik/demo"]), side);
 }
 
 #[test]

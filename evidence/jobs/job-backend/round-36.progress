@@ -1,0 +1,4 @@
+122	start	Die installierte Factory beurteilt ihren Nachfolger
+547	evaluate	Fixiertes Gate ausführen
+11941034	error	gate failed (exit status: 101): error: test failed, to rerun pass `--test session`
+11952214	rejected	The installed binary stays in place.

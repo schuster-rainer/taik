@@ -1,0 +1,115 @@
+   Compiling taik-seed v0.1.0 (/Users/rainer/projects/ideas/talk)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.84s
+     Running unittests src/main.rs (target/debug/deps/taik_seed-c3a5d7c891872f43)
+
+running 11 tests
+test adopt::tests::a_failure_is_one_nonempty_line ... ok
+test proposal::tests::an_answer_with_a_preface_or_a_fence_is_still_two_files ... ok
+test crew::tests::an_agent_definition_is_read_strictly ... ok
+test orchestrator::tests::a_failed_gate_agent_is_replaced ... ok
+test source::patch_tests::patches_apply_in_order_and_refuse_ambiguous_or_missing_text ... ok
+test procedure::tests::reference_rejects_a_changed_search_decision ... ok
+test procedure::tests::every_admitted_order_agrees_with_the_independent_reference ... ok
+test orchestrator::tests::a_plan_is_read_checked_and_kept ... ok
+test orchestrator::tests::the_failed_marker_is_written_and_removed ... ok
+test orchestrator::tests::another_agent_steps_in_for_a_gate_author_that_fails ... ok
+test talk::tests::a_conversation_is_kept_in_order_and_decides_who_is_next ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+     Running tests/adopt.rs (target/debug/deps/adopt-d0451ea73aeadc63)
+
+running 4 tests
+test a_last_round_that_is_not_accepted_is_refused ... ok
+test an_unknown_job_or_a_job_without_repository_is_refused ... ok
+test a_branch_on_another_commit_is_refused ... ok
+test the_accepted_commit_becomes_a_branch_of_the_origin ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.57s
+
+     Running tests/adopt_forward.rs (target/debug/deps/adopt_forward-1d3a92eb4bef68ce)
+
+running 5 tests
+test a_checked_out_branch_is_refused_even_on_an_ancestor ... ok
+test without_a_branch_the_branch_is_created ... ok
+test a_branch_on_an_ancestor_moves_forward ... ok
+test a_branch_on_a_commit_that_is_no_ancestor_is_refused ... ok
+test a_further_accepted_round_moves_the_settled_branch_forward ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.67s
+
+     Running tests/close.rs (target/debug/deps/close-da70b92440714011)
+
+running 3 tests
+test an_unknown_job_is_refused ... ok
+test a_job_is_closed_once_with_exactly_the_given_reason ... ok
+test the_reason_is_between_1_and_2000_bytes ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/factory.rs (target/debug/deps/factory-005f187fc64c1821)
+
+running 5 tests
+expected a regular file
+test accepted_records_reject_a_fifo_without_blocking ... ok
+test concurrent_publication_has_one_winner ... ok
+test invalid_proposal_and_staging_cannot_replace_or_seed_accepted_work ... ok
+test service_resumes_from_an_accepted_round_and_wakes_for_new_work ... ok
+test queued_source_repairs_an_assertion_and_resumes_from_saved_feedback ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.22s
+
+     Running tests/orchestrator.rs (target/debug/deps/orchestrator-67e22e59e2a52270)
+
+running 1 test
+test the_orchestrator_shows_products_protected_paths_and_failed_agents ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/plan_job.rs (target/debug/deps/plan_job-82a3ccff0184770a)
+
+running 3 tests
+test a_proposal_without_a_plan_is_approved_without_one ... ok
+test a_document_job_keeps_the_plan_of_its_proposal ... ok
+test a_session_job_keeps_the_plan_of_its_proposal ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s
+
+     Running tests/promote.rs (target/debug/deps/promote-6daf3c57489ac7a9)
+
+running 2 tests
+test a_running_service_leaves_the_next_job_to_a_replaced_binary ... ok
+test the_installed_binary_judges_installs_and_keeps_its_predecessor ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.11s
+
+     Running tests/proposal.rs (target/debug/deps/proposal-3653e09506941c19)
+
+running 4 tests
+test a_rejected_round_gets_a_short_analysis_once ... ok
+test a_proposed_job_waits_until_it_is_approved ... ok
+test a_request_of_the_user_becomes_a_proposal_and_keeps_what_was_said ... ok
+test the_orchestrator_plans_a_request_and_approval_follows_the_plan ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.05s
+
+     Running tests/session.rs (target/debug/deps/session-a28e4715a8954c21)
+
+running 1 test
+test an_agent_session_works_in_its_copy_and_is_judged_by_commit ... FAILED
+
+failures:
+
+---- an_agent_session_works_in_its_copy_and_is_judged_by_commit stdout ----
+
+thread 'an_agent_session_works_in_its_copy_and_is_judged_by_commit' (546352107) panicked at tests/session.rs:253:29:
+Output { status: ExitStatus(unix_wait_status(0)), stdout: "decision=accepted\nkind=software\nprocedure=\ntags=\nidentity=round-01\nintent=Eine Datei hello.txt anlegen\nbaseline=730ec48066a7664f64b10c537b66121156d8d019\nworker=claude-session\nworker_model=m\nworker_output_tokens=3\nworker_cache_read_tokens=7\nsession_listed_usd=0.02\nworker_failure=\nworker_duration_ms=349\nsession=25aef7e5-8195-4970-9049-0d7e19172973\nlimits=6 rounds and one per reply; lease 600s without ceiling; file tools only\ngate_sha256=a6196d5e9c81a90181e9decce74e93a6e5395655f273d690d88135edf7827fa6\ngate_ms=103\nchecks=PASS: hello.txt ist da\nartifact=7b592790e916e9b68d5b2550c4914686f5d622ec\ncommit=7b592790e916e9b68d5b2550c4914686f5d622ec\nfiles=hello.txt +1 -0\nsummary=Datei hello.txt angelegt. resumed=no\ncontinuation=The accepted state is commit 7b592790 in /private/tmp/taik-session-k4KRqO/state/work/besetzt.\nadvance=false\nend\n", stderr: "" }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    an_agent_session_works_in_its_copy_and_is_judged_by_commit
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.40s
+
+error: test failed, to rerun pass `--test session`

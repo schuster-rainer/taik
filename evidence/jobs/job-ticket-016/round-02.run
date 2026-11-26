@@ -1,0 +1,26 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-02
+intent=Der Zweig taik/NAME eines Auftrags rückt bei `adopt` und `settle` auf den neu angenommenen Commit vor, wenn er auf einen Vorfahren zeigt.
+baseline=ba113523c4c71bd70091ae4fea27f3d804f96791
+worker=claude-session
+worker_model=claude-opus-5-5
+worker_output_tokens=939
+worker_cache_read_tokens=107904
+session_listed_usd=0.4798924
+worker_failure=
+worker_duration_ms=31220
+session=c8aff36e-3fbe-44d3-8ff4-ea6cf2ebd5b0
+limits=6 rounds and one per reply; lease 600s without ceiling; file tools only
+gate_sha256=d3998de3f35e770d103e16ec84a1f1b1c4c8170688df34de81ec9f3ece2da2d9
+gate_ms=11963
+checks=PASS: Zweig rückt nur vorwärts nach, Abweisungen bleiben, Tests und clippy sauber
+artifact=a7680b29f2c6efd18e4a564a770d7d08934fa011
+commit=a7680b29f2c6efd18e4a564a770d7d08934fa011
+files=tests/session.rs +6 -1
+summary=Ich habe nur Abschnitt 6 in `tests/session.rs` geändert. `taik/besetzt` zeigt jetzt auf einen eigenen Commit neben HEAD des Ursprungs-Repositorys, angelegt mit `git commit-tree -p HEAD`. Die Kopie der Sitzung stammt nicht von diesem Commit ab, er ist also kein Vorfahr des Sitzungs-Commits. Damit sollte die Übernahme weiter scheitern und wieder eine `adopt-failed.txt` schreiben, und Arbeitsdateien und HEAD des Ursprungs bleiben dabei unverändert. Laufen lassen konnte ich den Test hier nicht, das Ergebnis der Prüfung steht also noch aus.
+continuation=The accepted state is commit a7680b29 in /Users/rainer/.local/state/taik-factory/work/ticket-016.
+advance=false
+end

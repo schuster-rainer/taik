@@ -1,0 +1,10 @@
+19777	start	Sitzung in /Users/rainer/.local/state/taik-factory/work/ticket-016
+21151	worker	Setzt fort: die Sitzung c8aff36e
+4957696	tool	Grep taik/
+9164230	tool	Grep "branch"|update-ref|refs/heads
+9690069	tool	Read tests/settle.rs
+16366966	tool	Edit tests/settle.rs
+21499841	tool	Grep adopt-failed|ADOPT_FAILED|adopt::|settle\(
+28621552	checks	1 Dateien geändert, Commit 94800c69
+28652401	evaluate	Gate prüft Commit 94800c69
+40244700	accepted	PASS: Zweig rückt nur vorwärts nach, Abweisungen bleiben, Tests und clippy sauber

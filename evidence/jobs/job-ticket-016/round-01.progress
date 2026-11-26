@@ -1,0 +1,18 @@
+874428	start	Sitzung in /Users/rainer/.local/state/taik-factory/work/ticket-016
+875098	worker	Beginnt die Sitzung c8aff36e
+4634030	tool	Read src/adopt.rs
+4651103	tool	Read tests/adopt.rs
+21651406	tool	Edit src/adopt.rs
+31202678	tool	Edit src/adopt.rs
+35208528	tool	Grep type (Result|Error)
+38123409	tool	Read src/main.rs
+42380117	tool	Edit src/adopt.rs
+46923475	tool	Edit src/adopt.rs
+48107945	tool	Edit src/adopt.rs
+55099922	tool	Grep "settle"|"adopt"
+60455992	tool	Edit tests/adopt.rs
+81400836	tool	Write tests/adopt_forward.rs
+85317535	tool	Grep \[\[test\]\]|autotests|tempfile
+93626138	checks	3 Dateien geändert, Commit 8d4b61aa
+93653857	evaluate	Gate prüft Commit 8d4b61aa
+104898176	accepted	PASS: Zweig rückt nur vorwärts nach, Abweisungen bleiben, Tests und clippy sauber
