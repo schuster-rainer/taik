@@ -308,7 +308,10 @@ assert(css.includes('#taik-live .thread'), 'style for the thread');
 
 // 14. One place for a job: the ticket. It holds the description, the conversation and the full history.
 assert.equal(count(/id="taik-ticket"/g) >= 1 && count(/<section id="taik-ticket"/g) <= 2, true, 'the ticket element');
-assert.doesNotMatch(html, /taik-live-job|aria-labelledby="taik-goal"|Software-Auftrag|data-ticket-close/, 'the separate job list, goal card and result card are gone');
+// Each removed building block is named in the finding, so that a worker who cannot read this gate knows what to avoid.
+for (const gone of ['taik-live-job', 'aria-labelledby="taik-goal"', 'Software-Auftrag', 'data-ticket-close']) {
+  assert(!html.includes(gone), `the document must not contain the removed name ${gone}`);
+}
 assert(html.indexOf('id="taik-ticket"') > 0 && html.indexOf('id="taik-ticket"') < html.indexOf('aria-label="Auftragsverlauf"'), 'the history is part of the ticket');
 assert.doesNotMatch(html, /<section aria-label="Auftragsverlauf"/, 'the history is no card of its own');
 assert(html.includes('class="ticket-brief"') && html.includes('class="round-checks"'), 'description and the full finding of the gate are shown');

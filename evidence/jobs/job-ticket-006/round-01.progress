@@ -1,0 +1,8 @@
+219	start	Factory hat den Auftrag übernommen
+1428	worker	Claude erhält Auftrag und akzeptierten Ausgangsstand
+20084844	worker	worker_model=claude-opus-5-5 worker_output_tokens=2218 worker_cost_usd=0.410824 worker_duration_ms=20083 worker_account_usage=seven_day allowed 0 
+20084955	worker	Lease durch laufende Ausgabe gehalten, 1 Herzschläge, zuletzt bei 1338 Zeichen
+20084971	evaluate	Unabhängiges, gespeichertes Prüfgate ausführen
+20086784	worker	Patch mit 6 Blöcken auf den angenommenen Stand angewendet
+20200909	checks	AssertionError [ERR_ASSERTION]: the separate job list, goal card and result card are gone
+20225550	rejected	Revise the retained source using the gate diagnosis, then run the same gate.

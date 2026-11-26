@@ -1,0 +1,25 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-05
+intent=Ändere die Ansicht so, dass ein wartendes Ticket geschlossen werden kann und geschlossene Aufträge als entschieden gelten.
+baseline=/Users/rainer/projects/ideas/talk/evidence/jobs/job-ticket-006/submission.seed.html
+worker=claude-cli
+worker_model=claude-opus-5-5
+worker_output_tokens=2714
+worker_cost_usd=0.422096
+worker_duration_ms=23558
+worker_account_usage=seven_day allowed 0
+limits=5 rounds; worker lease 60s without ceiling; verifier 15s; 512KiB source
+gate_sha256=5013bd2edfc1dfc83547261c628b2d396fb8e3319a68b15bb5e6295c89877373
+gate_ms=75
+patch_blocks=6
+checks=PASS: host contract, offline isolation, 32 token shadows without glow, contrast 5.12–13.04, lossless .run highlighting, token flow per round, one workpiece pane with live draft, animated flow, ticket board in one group at a time, crew with agents and harnesses, conversation in the ticket, one ticket with the full history, tickets opened in the viewer, the whole stock on the board, top-down state and changes, analysis of a rejection, dialog of an agent session, a reason for every waiting ticket, the orchestrator and its plans
+artifact=round-05.html
+rejected_candidate=
+feedback=
+follow_up=
+continuation=Retain the accepted artifact. No further work was authorized by this round.
+advance=false
+end

@@ -275,6 +275,28 @@ async function runDesignGate(requireOpen) {
       window.updateFactory(snapshot);
       await delayFrame();
     }
+    // Closing: a waiting ticket offers it, and a closed job is decided and no longer waits.
+    {
+      const waiting = structuredClone(snapshot);
+      const job = waiting.jobs.find(entry => entry.id === 'job-floorplanner');
+      job.rounds.at(-1).fields.decision = 'rejected';
+      job.rounds.at(-1).fields.checks = 'FAIL: keine Tür';
+      window.updateFactory(waiting);
+      await delayFrame();
+      await chooseTicket('job-floorplanner');
+      const close = find('#taik-ticket button[data-ticket-end]');
+      requireFact(rendered(close), 'A waiting ticket cannot be closed');
+      const before = Number(find('#taik-board-waiting').textContent);
+      job.closed = 'Wird nicht mehr gebraucht.';
+      window.updateFactory(waiting);
+      await delayFrame();
+      requireFact(Number(find('#taik-board-waiting').textContent) === before - 1, 'A closed job still waits for the user');
+      requireFact(!!find('#taik-board-decision button[data-ticket="job-floorplanner"]'), 'A closed job is not among the decided tickets');
+      requireFact(find('#taik-ticket').textContent.includes('Wird nicht mehr gebraucht.') && !find('#taik-ticket textarea'), 'A closed ticket does not show its reason or still takes replies');
+      window.updateFactory(snapshot);
+      await delayFrame();
+      await chooseTicket('job-floorplanner');
+    }
     // Crew: a new agent is typed while the snapshot refreshes. The draft and the focus survive.
     const crew = find('#taik-crew');
     if (crew) {

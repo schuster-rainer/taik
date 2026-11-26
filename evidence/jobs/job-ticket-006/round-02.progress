@@ -1,0 +1,9 @@
+589	start	Factory hat den Auftrag übernommen
+710	probe	Prüfbefund aus round-01.run: AssertionError [ERR_ASSERTION]: the separate job list, goal card and result card are gone
+1304	worker	Claude erhält Auftrag und akzeptierten Ausgangsstand
+27714180	worker	worker_model=claude-opus-5-5 worker_output_tokens=2705 worker_cost_usd=0.778876 worker_duration_ms=27712 worker_account_usage=seven_day allowed 0 
+27714284	worker	Lease durch laufende Ausgabe gehalten, 1 Herzschläge, zuletzt bei 1 Zeichen
+27714299	evaluate	Unabhängiges, gespeichertes Prüfgate ausführen
+27718498	worker	Patch mit 6 Blöcken auf den angenommenen Stand angewendet
+27904692	checks	AssertionError [ERR_ASSERTION]: the separate job list, goal card and result card are gone
+27918096	rejected	Revise the retained source using the gate diagnosis, then run the same gate.

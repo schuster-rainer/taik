@@ -1,0 +1,25 @@
+decision=rejected
+kind=software
+procedure=
+tags=
+identity=round-02
+intent=Prüfbefund aus round-01.run bearbeiten
+baseline=/Users/rainer/projects/ideas/talk/evidence/jobs/job-ticket-006/submission.seed.html
+worker=claude-cli
+worker_model=claude-opus-5-5
+worker_output_tokens=2705
+worker_cost_usd=0.778876
+worker_duration_ms=27712
+worker_account_usage=seven_day allowed 0
+limits=4 rounds; worker lease 60s without ceiling; verifier 15s; 512KiB source
+gate_sha256=5013bd2edfc1dfc83547261c628b2d396fb8e3319a68b15bb5e6295c89877373
+gate_ms=171
+patch_blocks=6
+checks=AssertionError [ERR_ASSERTION]: the separate job list, goal card and result card are gone
+artifact=
+rejected_candidate=round-02.rejected.txt
+feedback=round-01.run
+follow_up=
+continuation=Revise the retained source using the gate diagnosis, then run the same gate.
+advance=true
+end
