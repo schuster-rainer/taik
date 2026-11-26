@@ -122,12 +122,17 @@ fn the_accepted_commit_becomes_a_branch_of_the_origin() {
 #[test]
 fn a_branch_on_another_commit_is_refused() {
     let s = setup();
-    git(&s.origin, &["branch", "taik/demo", &s.base]);
+    // A commit of the origin beside the accepted one: not its ancestor.
+    let side = git(
+        &s.origin,
+        &["commit-tree", "-p", &s.base, "-m", "side", "HEAD^{tree}"],
+    );
+    git(&s.origin, &["branch", "taik/demo", &side]);
     let output = adopt(&s.state, "job-demo");
     assert_eq!(output.status.code(), Some(2), "{output:?}");
     assert_eq!(
         git(&s.origin, &["rev-parse", "refs/heads/taik/demo"]),
-        s.base
+        side
     );
 }
 

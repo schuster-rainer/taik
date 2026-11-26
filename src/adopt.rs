@@ -1,6 +1,6 @@
 //! Brings the accepted commit of a session job into the repository it came from, as branch
-//! `taik/NAME`. The repository gets the objects and one new branch. Nothing is checked out,
-//! merged or changed in its working files.
+//! `taik/NAME`. The repository gets the objects and one new branch, or an existing branch on an
+//! ancestor moves forward. Nothing is checked out, merged or changed in its working files.
 
 use std::path::Path;
 use std::process::Command;
@@ -141,7 +141,84 @@ pub fn settle(state: &Path, job_name: &str) -> Result<Option<String>> {
     }
 }
 
+fn git_failed(what: &str, output: &std::process::Output) -> Box<dyn std::error::Error> {
+    format!(
+        "git {what}: {}",
+        String::from_utf8_lossy(&output.stderr).trim()
+    )
+    .into()
+}
+
+// Whether `reference` is checked out in the repository or in one of its worktrees.
+fn checked_out(repo: &Path, reference: &str) -> Result<bool> {
+    let output = git(repo, &["worktree", "list", "--porcelain"])?;
+    if !output.status.success() {
+        return Err(git_failed("worktree list", &output));
+    }
+    let wanted = format!("branch {reference}");
+    Ok(String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .any(|line| line == wanted))
+}
+
+// Moves an existing branch from `current` forward to `commit`, never backwards or sideways,
+// and never while the branch is checked out.
+fn advance(
+    repo: &Path,
+    work: &str,
+    branch: &str,
+    reference: &str,
+    current: &str,
+    commit: &str,
+) -> Result<String> {
+    if checked_out(repo, reference)? {
+        return Err(format!(
+            "{branch} is checked out in {} and points at {current}, not at {commit}",
+            repo.display()
+        )
+        .into());
+    }
+    // Only the objects; no reference of the repository is written by this fetch.
+    let output = git(repo, &["fetch", "--quiet", "--no-tags", work, commit])?;
+    if !output.status.success() {
+        return Err(git_failed("fetch", &output));
+    }
+    let output = git(repo, &["merge-base", "--is-ancestor", current, commit])?;
+    match output.status.code() {
+        Some(0) => {}
+        Some(1) => {
+            return Err(format!(
+                "{branch} already points at {current}, which is not an ancestor of {commit}"
+            )
+            .into());
+        }
+        _ => return Err(git_failed("merge-base", &output)),
+    }
+    // The old value guards against a concurrent change of the branch.
+    let output = git(
+        repo,
+        &[
+            "update-ref",
+            "-m",
+            "taik adopt: fast-forward",
+            reference,
+            commit,
+            current,
+        ],
+    )?;
+    if !output.status.success() {
+        return Err(git_failed("update-ref", &output));
+    }
+    match branch_target(repo, reference)? {
+        Some(now) if now == commit => Ok(branch.to_owned()),
+        other => {
+            Err(format!("{branch} points at {other:?} after the update, not at {commit}").into())
+        }
+    }
+}
+
 /// Returns the branch name `taik/NAME` once it points at the accepted commit.
+/// An existing branch on an ancestor of that commit moves forward to it, unless it is checked out.
 pub fn adopt(state: &Path, job_name: &str) -> Result<String> {
     let name = job_name
         .strip_prefix("job-")
@@ -178,16 +255,16 @@ pub fn adopt(state: &Path, job_name: &str) -> Result<String> {
 
     let branch = format!("taik/{name}");
     let reference = format!("refs/heads/{branch}");
-    match branch_target(repo, &reference)? {
+    let existing = match branch_target(repo, &reference)? {
         Some(current) if current == commit => return Ok(branch),
-        Some(current) => {
-            return Err(format!("{branch} already points at {current}, not at {commit}").into());
-        }
-        None => {}
-    }
+        other => other,
+    };
 
     let work = state.join("work").join(name).canonicalize()?;
     let work = work.to_str().ok_or("work path is not UTF-8")?;
+    if let Some(current) = existing {
+        return advance(repo, work, &branch, &reference, &current, commit);
+    }
     // No "+": the fetch never moves an existing branch backwards or sideways.
     let output = git(
         repo,
