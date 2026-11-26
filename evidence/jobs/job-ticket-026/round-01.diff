@@ -1,0 +1,505 @@
+diff --git a/README.md b/README.md
+index a8a2904..8d22260 100644
+--- a/README.md
++++ b/README.md
+@@ -169,9 +169,9 @@ printf 'reason' | taik-seed decline STATE NAME
+ 
+ `decline` keeps the reason (1 to 2000 bytes from standard input) as `declined.md` in a waiting proposal, which then can no longer be approved. For a request without a proposal it writes `STATE/requests/NAME.withdrawn`: the service no longer plans the request, and `reply` to it is refused. Each happens once.
+ 
+-With `TAIK_AUTO_PROPOSE` set, the service reflects once after each finished software job, at most three times in 24 hours, and either writes a proposal or records why it stops. Waiting proposals appear in the viewer with an approve button.
++With `TAIK_AUTO_PROPOSE` set, the service reflects once after each finished software or session job, at most three times in 24 hours. The reflection calls no worker. It takes the oldest open intent of the Factory, the continuation of an observation record that nothing has taken up yet, and writes it as a request `STATE/requests/ticket-NNN.run` with the lines `origin=reflection` and `intent_from=RECORD`. That request goes through the orchestrator like a wish of the user, and its proposal waits for approval. `taik-seed reflect STATE job-NAME` does the same without the setting. Waiting proposals appear in the viewer with an approve button.
+ 
+-The reflection reads the open intents of the Factory: the continuation of every observation record that no reflection has taken up yet. It may also propose a change to a product. A product is a file `STATE/products/NAME.product` that names an accepted artifact, its pinned gate and what it is. Such a proposal carries only a brief, and the job starts from the accepted source under the product's own gate.
++`propose` reads the open intents as well. It may also propose a change to a product. A product is a file `STATE/products/NAME.product` that names an accepted artifact, its pinned gate and what it is. Such a proposal carries only a brief, and the job starts from the accepted source under the product's own gate.
+ 
+ `propose` asks the worker for a brief and a gate, derived from the continuation of a record. Both wait in `STATE/proposals/NAME`. Nothing runs until `approve` queues the job. The worker that later writes the candidate sees the brief and never the gate.
+ 
+@@ -248,6 +248,7 @@ taik-seed evaluate BASELINE.run OUTPUT.run ORDER
+ taik-seed source JOB BRIEF GATE [--attached[=WORKER]]
+ taik-seed promote JOB BRIEF GATE INSTALLED_BINARY WORKER
+ taik-seed propose STATE NAME RECORD.run
++taik-seed reflect STATE job-NAME
+ taik-seed approve STATE NAME
+ taik-seed decline STATE NAME
+ taik-seed orchestrator-prompt STATE REQUEST.run
+diff --git a/src/main.rs b/src/main.rs
+index 6a8d51c..dcb7232 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -60,6 +60,7 @@ const USAGE: &str = "usage: taik-seed seed OUTPUT.run
+        taik-seed analyse JOB
+        taik-seed queue-session STATE NAME BRIEF.md GATE.sh [REPOSITORY]
+        taik-seed propose STATE NAME RECORD.run
++       taik-seed reflect STATE job-NAME
+        taik-seed approve STATE NAME
+        taik-seed decline STATE NAME < REASON
+        taik-seed orchestrator-prompt STATE REQUEST.run
+@@ -485,6 +486,20 @@ fn run() -> Result<bool> {
+             Ok(true)
+         }
+         #[cfg(target_os = "macos")]
++        "reflect" if rest.len() == 1 => {
++            let name = rest[0].to_str().ok_or("job name must be ASCII")?;
++            if !name.starts_with("job-") || name.contains('/') || name.len() <= 4 {
++                return Err("name a job folder job-NAME under STATE/jobs".into());
++            }
++            let home = first.canonicalize()?;
++            let jobs = service::jobs_in(&home)?;
++            match proposal::reflect(&home, &jobs, &jobs.join(name))? {
++                Some(request) => println!("{request}"),
++                None => println!("nothing to reflect"),
++            }
++            Ok(true)
++        }
++        #[cfg(target_os = "macos")]
+         "orchestrator-prompt" if rest.len() == 1 => {
+             print!("{}", orchestrator::prompt(first, Path::new(&rest[0]))?);
+             Ok(true)
+diff --git a/src/proposal.rs b/src/proposal.rs
+index e89dc80..2f19be4 100644
+--- a/src/proposal.rs
++++ b/src/proposal.rs
+@@ -34,9 +34,18 @@ If the record justifies no further job, reply with exactly one line 'STOP: <reas
+ const LOOP: &str = "\n\nThe continuation of a round record that says no further work was authorized concerns that round alone. It is not a reason to stop. Choose the next job from the open intents listed below when one of them can be done as one job, and begin your reply with the line 'INTENT: <number>' when you take one.\n\nTo change a listed product instead of writing a new artifact, reply with the INTENT line if any, then the line '=== product <name> ===' and below it only the brief. Write no gate for a product: its own pinned gate applies. A product brief names exactly what changes and says that everything else stays as it is.\n\nReply 'STOP: <reason>' only when no open intent can be done as one job and the record justifies nothing else.";
+ 
+ /// What the Factory itself wrote down as justified next work and nobody has taken up yet: the
+-/// continuation of its observation records. Newest first.
+-fn open_intents(jobs: &Path) -> Vec<(String, String)> {
+-    let mut taken = Vec::new();
++/// continuation of its observation records. Newest first. An intent is taken up by a reflection
++/// beside its record or by a request in STATE/requests that names it.
++fn open_intents(jobs: &Path, requests: &Path) -> Vec<(String, String)> {
++    let mut taken: Vec<String> = request_records(requests)
++        .iter()
++        .flat_map(|(_, text)| {
++            text.lines()
++                .filter_map(|line| line.strip_prefix("intent_from="))
++                .map(str::to_owned)
++                .collect::<Vec<_>>()
++        })
++        .collect();
+     let mut found: Vec<(std::time::SystemTime, String, String)> = Vec::new();
+     for folder in fs::read_dir(jobs).into_iter().flatten().flatten() {
+         for file in fs::read_dir(folder.path()).into_iter().flatten().flatten() {
+@@ -81,6 +90,20 @@ fn open_intents(jobs: &Path) -> Vec<(String, String)> {
+         .collect()
+ }
+ 
++/// The requests STATE/requests/*.run with their text.
++fn request_records(requests: &Path) -> Vec<(PathBuf, String)> {
++    fs::read_dir(requests)
++        .into_iter()
++        .flatten()
++        .flatten()
++        .filter(|file| file.file_name().to_string_lossy().ends_with(".run"))
++        .filter_map(|file| {
++            let text = record::read_regular(&file.path(), record::MAX_RECORD_BYTES).ok()?;
++            Some((file.path(), text))
++        })
++        .collect()
++}
++
+ /// An existing artifact with its pinned gate that a job may build on, from STATE/products/NAME.product.
+ pub struct Product {
+     pub name: String,
+@@ -285,7 +308,7 @@ pub fn propose_planned(
+     let origin_brief =
+         record::read_regular(&job.join("submission.brief.md"), record::MAX_RECORD_BYTES)
+             .unwrap_or_default();
+-    let intents = open_intents(&state.join("jobs"));
++    let intents = open_intents(&state.join("jobs"), &state.join("requests"));
+     let products = products(&state);
+     let mut listing =
+         String::from("\n\nOPEN INTENTS OF THE FACTORY, from its own observation records:\n");
+@@ -526,8 +549,16 @@ pub fn propose_planned(
+ const DAILY_REFLECTIONS: usize = 3;
+ pub const AUTO: &str = "TAIK_AUTO_PROPOSE";
+ 
+-// After a job reached its final decision the service asks once what follows from it.
+-pub fn reflect(state: &Path, jobs: &Path, job: &Path) -> Result<()> {
++/// After a job reached its final decision the Factory takes up its oldest open intent as a request
++/// in STATE/requests, the way a wish of the user arrives. The service derives a proposal from it.
++/// Returns the name of the request, or None when nothing was written.
++pub fn reflect(state: &Path, jobs: &Path, job: &Path) -> Result<Option<String>> {
++    job.file_name()
++        .and_then(|name| name.to_str())
++        .and_then(|name| name.strip_prefix("job-"))
++        .filter(|name| !name.is_empty())
++        .ok_or("job without a name")?;
++    let requests = state.join("requests");
+     let recent = |path: &Path| {
+         path.metadata()
+             .and_then(|metadata| metadata.modified())
+@@ -535,32 +566,35 @@ pub fn reflect(state: &Path, jobs: &Path, job: &Path) -> Result<()> {
+             .and_then(|modified| modified.elapsed().ok())
+             .is_some_and(|age| age < Duration::from_secs(24 * 60 * 60))
+     };
+-    let reflections = fs::read_dir(jobs)?
++    let reflections = fs::read_dir(jobs)
++        .into_iter()
++        .flatten()
+         .flatten()
+         .filter_map(|entry| fs::read_dir(entry.path()).ok())
+         .flat_map(|files| files.flatten())
+         .filter(|file| {
+-            file.file_name()
+-                .to_string_lossy()
+-                .starts_with("reflection-")
+-                && recent(&file.path())
++            let name = file.file_name().to_string_lossy().into_owned();
++            name.starts_with("reflection-") && name.ends_with(".run") && recent(&file.path())
+         })
+         .count();
+-    if reflections >= DAILY_REFLECTIONS {
+-        return Ok(());
++    let reflected = request_records(&requests)
++        .iter()
++        .filter(|(path, text)| text.lines().any(|line| line == "origin=reflection") && recent(path))
++        .count();
++    if reflections + reflected >= DAILY_REFLECTIONS {
++        return Ok(None);
+     }
+-    let label = job
+-        .file_name()
+-        .and_then(|name| name.to_str())
+-        .and_then(|name| name.strip_prefix("job-"))
+-        .ok_or("job without a name")?;
+-    let name = format!("{}-next", &label[..label.len().min(27)]);
+-    let last = (1..=4)
+-        .rev()
+-        .map(|number| job.join(format!("round-{number:02}.run")))
+-        .find(|path| path.is_file())
+-        .ok_or("job without a round record")?;
+-    propose(state, &name, &last).map(|_| ())
++    // Newest first: the last one is the oldest.
++    let Some((from, intent)) = open_intents(jobs, &requests).pop() else {
++        return Ok(None);
++    };
++    let title: String = intent.chars().take(80).collect();
++    let name = service::request_with(
++        state,
++        &format!("Vorhaben der Factory: {title}\n{intent}"),
++        &format!("origin=reflection\nintent_from={from}\n"),
++    )?;
++    Ok(Some(name))
+ }
+ 
+ /// The reason a proposal was declined with. A declined proposal is never approved.
+diff --git a/src/service.rs b/src/service.rs
+index 247595e..3e3dbd7 100644
+--- a/src/service.rs
++++ b/src/service.rs
+@@ -20,7 +20,7 @@ const DEFAULT_PARALLEL: usize = 3;
+ #[cfg(target_os = "macos")]
+ use crate::source::FOLLOW_UP_SUFFIX;
+ 
+-fn jobs_in(state: &Path) -> Result<PathBuf> {
++pub(crate) fn jobs_in(state: &Path) -> Result<PathBuf> {
+     let jobs = state.join("jobs");
+     fs::DirBuilder::new()
+         .recursive(true)
+@@ -128,6 +128,13 @@ pub fn reply(state: &Path, name: &str, text: &str) -> Result<PathBuf> {
+ /// A request of the user in plain words. The service derives a proposal from it.
+ #[cfg(target_os = "macos")]
+ pub fn request(state: &Path, text: &str) -> Result<String> {
++    request_with(state, text, "")
++}
++
++/// A request with further record lines before its closing line `end`. The reflection of the
++/// Factory names its origin there; a request of the user has none.
++#[cfg(target_os = "macos")]
++pub(crate) fn request_with(state: &Path, text: &str, extra: &str) -> Result<String> {
+     let text = text.trim();
+     if text.is_empty() || text.len() > crate::talk::MAX_MESSAGE_BYTES / 2 {
+         return Err("a request is between 1 and 4096 bytes".into());
+@@ -147,7 +154,7 @@ pub fn request(state: &Path, text: &str) -> Result<String> {
+     record::publish_text(
+         &requests.join(format!("{name}.run")),
+         &format!(
+-            "decision=observed\nidentity={name}\nintent={}\nobservation={}\ncontinuation=Derive one job that fulfils this request of the user. Stop if the request is unclear or cannot be checked by a gate.\nend\n",
++            "decision=observed\nidentity={name}\nintent={}\nobservation={}\ncontinuation=Derive one job that fulfils this request of the user. Stop if the request is unclear or cannot be checked by a gate.\n{extra}end\n",
+             crate::source::single_line(title),
+             // The whole request on one line. It is not cut: the worker must read all of it.
+             rest.trim()
+@@ -623,6 +630,13 @@ fn run_source_job(home: &Path, jobs: &Path, job: &Path) -> Result<bool> {
+         {
+             eprintln!("{}: analysis: {error}", job.display());
+         }
++        // A session job that reached its decision is reflected like any other job.
++        if outcome.is_some()
++            && std::env::var_os(crate::proposal::AUTO).is_some()
++            && let Err(error) = crate::proposal::reflect(home, jobs, job)
++        {
++            eprintln!("{}: reflection: {error}", job.display());
++        }
+         return Ok(outcome.unwrap_or(true));
+     }
+     let (mut outcome, follow_up) = crate::source::run_queued(job, agent.as_ref())?;
+diff --git a/tests/reflect.rs b/tests/reflect.rs
+new file mode 100644
+index 0000000..180eb6b
+--- /dev/null
++++ b/tests/reflect.rs
+@@ -0,0 +1,262 @@
++#![cfg(target_os = "macos")]
++
++use std::fs;
++use std::io::Write;
++use std::os::unix::fs::PermissionsExt;
++use std::path::{Path, PathBuf};
++use std::process::{Command, Output, Stdio};
++use std::time::{Duration, SystemTime};
++
++struct Factory {
++    _root: tempfile::TempDir,
++    root: PathBuf,
++    state: PathBuf,
++}
++
++impl Factory {
++    fn new() -> Self {
++        let root = tempfile::Builder::new()
++            .prefix("taik-reflect-")
++            .tempdir_in("/tmp")
++            .unwrap();
++        let path = root.path().canonicalize().unwrap();
++        let state = path.join("state");
++        fs::create_dir_all(state.join("jobs/job-origin")).unwrap();
++        // A worker that leaves a mark when anyone calls it.
++        let worker = path.join("worker");
++        fs::write(
++            &worker,
++            format!("#!/bin/sh\ntouch '{}'\nexit 1\n", path.join("called").display()),
++        )
++        .unwrap();
++        fs::set_permissions(&worker, fs::Permissions::from_mode(0o700)).unwrap();
++        Factory {
++            _root: root,
++            root: path,
++            state,
++        }
++    }
++
++    fn command(&self) -> Command {
++        let mut command = Command::new(env!("CARGO_BIN_EXE_taik-seed"));
++        let worker = self.root.join("worker");
++        command
++            .env("TAIK_LEAD_WORKER", &worker)
++            .env("TAIK_WORKER", &worker)
++            .env("TAIK_ORCHESTRATOR_WORKER", &worker)
++            .env_remove("TAIK_AUTO_PROPOSE");
++        command
++    }
++
++    fn reflect(&self) -> Output {
++        let output = self
++            .command()
++            .arg("reflect")
++            .arg(&self.state)
++            .arg("job-origin")
++            .output()
++            .unwrap();
++        assert_eq!(output.status.code(), Some(0), "{output:?}");
++        assert!(
++            !self.root.join("called").exists(),
++            "reflect called a worker"
++        );
++        output
++    }
++
++    fn request(&self, text: &str) -> String {
++        let mut child = self
++            .command()
++            .arg("request")
++            .arg(&self.state)
++            .stdin(Stdio::piped())
++            .stdout(Stdio::piped())
++            .spawn()
++            .unwrap();
++        child
++            .stdin
++            .take()
++            .unwrap()
++            .write_all(text.as_bytes())
++            .unwrap();
++        let output = child.wait_with_output().unwrap();
++        assert_eq!(output.status.code(), Some(0), "{output:?}");
++        String::from_utf8(output.stdout).unwrap().trim().to_owned()
++    }
++
++    /// An observation record with an open intent, changed `age` ago.
++    fn observation(&self, job: &str, file: &str, intent: &str, age: Duration) -> PathBuf {
++        let folder = self.state.join("jobs").join(job);
++        fs::create_dir_all(&folder).unwrap();
++        let path = folder.join(file);
++        fs::write(
++            &path,
++            format!("decision=observed\nidentity={job}\ncontinuation={intent}\nend\n"),
++        )
++        .unwrap();
++        age_file(&path, age);
++        path
++    }
++
++    fn requests(&self) -> Vec<String> {
++        let mut names: Vec<String> = fs::read_dir(self.state.join("requests"))
++            .into_iter()
++            .flatten()
++            .flatten()
++            .map(|entry| entry.file_name().to_string_lossy().into_owned())
++            .collect();
++        names.sort();
++        names
++    }
++
++    fn read_request(&self, name: &str) -> String {
++        fs::read_to_string(self.state.join("requests").join(format!("{name}.run"))).unwrap()
++    }
++}
++
++fn age_file(path: &Path, age: Duration) {
++    fs::File::options()
++        .write(true)
++        .open(path)
++        .unwrap()
++        .set_modified(SystemTime::now() - age)
++        .unwrap();
++}
++
++const HOUR: Duration = Duration::from_secs(60 * 60);
++
++#[test]
++fn the_oldest_open_intent_becomes_a_request_of_the_factory() {
++    let factory = Factory::new();
++    let intent: String = format!("{} und dann noch mehr Text am Ende", "ä".repeat(78));
++    let old = factory.observation("job-alt", "observation.run", &intent, HOUR * 5);
++    factory.observation("job-neu", "summary.run", "Ein neueres Vorhaben", HOUR);
++    let output = factory.reflect();
++    assert_eq!(String::from_utf8_lossy(&output.stdout).trim(), "ticket-001");
++    assert_eq!(factory.requests(), ["ticket-001.run"]);
++    let title: String = intent.chars().take(80).collect();
++    assert_eq!(
++        factory.read_request("ticket-001"),
++        format!(
++            "decision=observed\nidentity=ticket-001\nintent=Vorhaben der Factory: {title}\nobservation={intent}\ncontinuation=Derive one job that fulfils this request of the user. Stop if the request is unclear or cannot be checked by a gate.\norigin=reflection\nintent_from={}\nend\n",
++            old.display()
++        )
++    );
++    assert!(!factory.state.join("proposals").exists());
++}
++
++#[test]
++fn a_request_of_the_user_keeps_its_format_and_the_next_free_name_is_taken() {
++    let factory = Factory::new();
++    assert_eq!(factory.request("Ein Titel\nMehr dazu.\n"), "ticket-001");
++    assert_eq!(
++        factory.read_request("ticket-001"),
++        "decision=observed\nidentity=ticket-001\nintent=Ein Titel\nobservation=Mehr dazu.\ncontinuation=Derive one job that fulfils this request of the user. Stop if the request is unclear or cannot be checked by a gate.\nend\n"
++    );
++    factory.observation("job-a", "observation.run", "Etwas verbessern", HOUR);
++    factory.reflect();
++    let reflected = factory.read_request("ticket-002");
++    assert!(reflected.contains("\norigin=reflection\n"), "{reflected}");
++    assert!(!factory.read_request("ticket-001").contains("origin="));
++}
++
++#[test]
++fn an_intent_taken_up_by_a_request_or_a_reflection_is_not_taken_again() {
++    let factory = Factory::new();
++    let first = factory.observation("job-a", "observation.run", "Erstes Vorhaben", HOUR * 3);
++    let second = factory.observation("job-b", "observation.run", "Zweites Vorhaben", HOUR * 2);
++    let third = factory.observation("job-c", "summary.run", "Drittes Vorhaben", HOUR);
++    // A reflection beside a record has taken up the second intent, long ago.
++    let note = factory.state.join("jobs/job-c/reflection-alt.run");
++    fs::write(
++        &note,
++        format!(
++            "decision=observed\nidentity=reflection-alt\nintent_from={}\nend\n",
++            second.display()
++        ),
++    )
++    .unwrap();
++    age_file(&note, HOUR * 48);
++    factory.reflect();
++    assert!(
++        factory
++            .read_request("ticket-001")
++            .contains(&format!("\nintent_from={}\n", first.display()))
++    );
++    factory.reflect();
++    assert!(
++        factory
++            .read_request("ticket-002")
++            .contains(&format!("\nintent_from={}\n", third.display()))
++    );
++    let output = factory.reflect();
++    assert_eq!(
++        String::from_utf8_lossy(&output.stdout).trim(),
++        "nothing to reflect"
++    );
++    assert_eq!(factory.requests(), ["ticket-001.run", "ticket-002.run"]);
++}
++
++#[test]
++fn without_an_open_intent_nothing_is_written() {
++    let factory = Factory::new();
++    // Not an observation, and an observation without a continuation.
++    fs::write(
++        factory.state.join("jobs/job-origin/round-01.run"),
++        "decision=accepted\ncontinuation=Weiter.\nend\n",
++    )
++    .unwrap();
++    fs::write(
++        factory.state.join("jobs/job-origin/observation.run"),
++        "decision=observed\nidentity=x\nend\n",
++    )
++    .unwrap();
++    let output = factory.reflect();
++    assert_eq!(
++        String::from_utf8_lossy(&output.stdout).trim(),
++        "nothing to reflect"
++    );
++    assert!(factory.requests().is_empty(), "{:?}", factory.requests());
++    assert!(!factory.state.join("proposals").exists());
++}
++
++#[test]
++fn three_reflections_in_a_day_are_the_limit() {
++    let factory = Factory::new();
++    factory.observation("job-a", "observation.run", "Ein Vorhaben", HOUR);
++    // Old reflections do not count.
++    for number in 1..=3 {
++        let old = factory
++            .state
++            .join(format!("jobs/job-origin/reflection-old-{number}.run"));
++        fs::write(&old, "decision=observed\nend\n").unwrap();
++        age_file(&old, HOUR * 30);
++    }
++    // Two young reflections beside records and one young request of the Factory make three.
++    for number in 1..=2 {
++        fs::write(
++            factory
++                .state
++                .join(format!("jobs/job-origin/reflection-young-{number}.run")),
++            "decision=observed\nend\n",
++        )
++        .unwrap();
++    }
++    fs::create_dir_all(factory.state.join("requests")).unwrap();
++    let young = factory.state.join("requests/ticket-001.run");
++    fs::write(
++        &young,
++        "decision=observed\nidentity=ticket-001\norigin=reflection\nintent_from=/nirgends\nend\n",
++    )
++    .unwrap();
++    let output = factory.reflect();
++    assert_eq!(
++        String::from_utf8_lossy(&output.stdout).trim(),
++        "nothing to reflect"
++    );
++    assert_eq!(factory.requests(), ["ticket-001.run"]);
++    // Once the request is older than a day, there is room for one more.
++    age_file(&young, HOUR * 25);
++    factory.reflect();
++    assert_eq!(factory.requests(), ["ticket-001.run", "ticket-002.run"]);
++}

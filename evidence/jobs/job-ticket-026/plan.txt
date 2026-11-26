@@ -1,0 +1,6 @@
+kind=sitzung
+repo=taik
+repo_path=/Users/rainer/projects/ideas/talk
+gate=pruefer
+work=standard
+reason=Bestehender Rust-Code im Repo taik (reflect, open_intents, request) muss gelesen und geändert werden; pruefer liest als Claude-Gate zuerst den Code, standard arbeitet.

@@ -1,0 +1,20 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-44
+intent=Die eigenen Vorhaben der Factory gehen über den Orchestrator.
+baseline=taik-seed d9eeb237ebe79d7137721456db72b88fd2f4a000c76b6fffc6f15083bedc65df
+worker=opus-session-ticket-026
+decided_by=the installed taik-seed d9eeb237ebe79d7137721456db72b88fd2f4a000c76b6fffc6f15083bedc65df at /Users/rainer/.local/state/taik-factory/taik-seed
+limits=99 rounds; gate 900s; candidate checks 10s each
+gate_sha256=76b41170f51fa7e1a5424ba01f903bcf2276b8f8f19e4d87f952e88d18b6b0ce
+gate_ms=53589
+checks=PASS: Rust tests, Clippy with warnings denied, release build; candidate seeded, rejected an invalid procedure without touching the accepted record, and extended it
+evidence=round-44.checks.log
+artifact=round-44-taik-seed
+artifact_sha256=79176a1eafd7277b72742dfe240552d5731e8823d9c9a364f6589fc60ad0c012
+rollback=round-44.rollback-taik-seed
+continuation=Restart the service so that it runs the accepted binary.
+advance=false
+end

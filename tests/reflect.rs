@@ -26,7 +26,10 @@ impl Factory {
         let worker = path.join("worker");
         fs::write(
             &worker,
-            format!("#!/bin/sh\ntouch '{}'\nexit 1\n", path.join("called").display()),
+            format!(
+                "#!/bin/sh\ntouch '{}'\nexit 1\n",
+                path.join("called").display()
+            ),
         )
         .unwrap();
         fs::set_permissions(&worker, fs::Permissions::from_mode(0o700)).unwrap();

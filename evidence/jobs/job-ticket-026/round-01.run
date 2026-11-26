@@ -1,0 +1,26 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=Die Reflexion der Factory legt ihr nächstes Vorhaben als Wunsch in STATE/requests an, statt propose direkt aufzurufen.
+baseline=0e151b1826bc48cf291a4fa09745777030026c13
+worker=claude-session
+worker_model=claude-opus-5-5
+worker_output_tokens=17236
+worker_cache_read_tokens=755739
+session_listed_usd=0.9884358
+worker_failure=
+worker_duration_ms=200865
+session=aa409ee9-3ddd-4b59-b6af-f8c811190b06
+limits=6 rounds and one per reply; lease 600s without ceiling; file tools only
+gate_sha256=3aa793130fabb3cab00d81a43f613c314ba902df4b1e4d1e340a6136c6e0f93d
+gate_ms=21113
+checks=PASS: reflect creates requests through the orchestrator path, limits and tests hold
+artifact=dc8c673da3b6c3a239844a2540b452a40ac8ca19
+commit=dc8c673da3b6c3a239844a2540b452a40ac8ca19
+files=README.md +3 -2; src/main.rs +15 -0; src/proposal.rs +59 -25; src/service.rs +16 -2; tests/reflect.rs +262 -0
+summary=Ich habe `reflect` in `src/proposal.rs` umgebaut: Es ruft weder `propose` noch einen Worker auf, nimmt das älteste offene Vorhaben und legt daraus mit derselben Funktion wie `taik-seed request` einen Wunsch `ticket-NNN` an. Nur dieser Wunsch bekommt vor `end` die Zeilen `origin=reflection` und `intent_from=…`, ein Wunsch des Nutzers bleibt Byte für Byte gleich. `open_intents` erkennt ein aufgegriffenes Vorhaben jetzt auch an diesem Wunsch in `STATE/requests`, und die Grenze von drei in 24 Stunden zählt beide Arten von Reflexionen zusammen. Neu sind der Befehl `taik-seed reflect STATE job-NAME` (nur macOS, auch in `USAGE` und README), der Aufruf nach fertigen Sitzungsaufträgen in `run_source_job` und `tests/reflect.rs` mit fünf Tests für die Punkte 1 bis 5. Kein bestehender Test hat das alte Verhalten von `reflect` geprüft, deshalb musste ich keinen anpassen; einen Sandbox-Test für den Sitzungszweig habe ich nicht geschrieben. Ich konnte nichts bauen oder testen, und ein Vorhaben, dessen Wunsch länger als 4096
+continuation=The accepted state is commit dc8c673d in /Users/rainer/.local/state/taik-factory/work/ticket-026.
+advance=false
+end
