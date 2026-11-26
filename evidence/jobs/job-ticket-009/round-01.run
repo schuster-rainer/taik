@@ -1,0 +1,26 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=Der Orchestrator in taik soll Produkte, geschützte Pfade und ausgefallene Agenten kennen und seinen Auftragssatz mit `taik-seed orchestrator-prompt STATE REQUEST.run` sichtbar machen.
+baseline=6a39adbdac5742ff6aa87570aeb3c6b024a2fb8f
+worker=claude-session
+worker_model=claude-opus-5-5
+worker_output_tokens=19016
+worker_cache_read_tokens=1230532
+session_listed_usd=1.1448824000000002
+worker_failure=
+worker_duration_ms=220576
+session=57912072-4da5-416d-94da-5fbbf399dbbe
+limits=6 rounds and one per reply; lease 600s without ceiling; file tools only
+gate_sha256=e9e224c768d4cd63a20179c790daf7759a511a5c70d533cc9d4bba1a30960cdf
+gate_ms=15166
+checks=PASS: orchestrator-prompt, Produkte, geschützte Pfade, Ausfallmarken und Tests sind in Ordnung
+artifact=5422f2818ee96a516e143466c855b68a16e4e69a
+commit=5422f2818ee96a516e143466c855b68a16e4e69a
+files=README.md +6 -0; src/main.rs +6 -0; src/orchestrator.rs +195 -13; src/proposal.rs +11 -4; tests/orchestrator.rs +167 -0
+summary=Ich habe alle vier Punkte umgesetzt, die Ausfallmarke eingebaut und die Tests angelegt. Gebaut und getestet habe ich nichts, das Ergebnis kommt erst vom Gate. Der neue Befehl `taik-seed orchestrator-prompt STATE REQUEST.run` gibt den Auftragssatz aus, ohne einen Worker aufzurufen oder in STATE zu schreiben; `plan()` baut ihn mit derselben Funktion, und der Befehl steht in `USAGE` und im README. Der Auftragssatz zeigt jetzt die Produkte über das öffentlich gemachte `products()` aus `src/proposal.rs`, die Zeile `  protected:` unter jedem Repository und `(failed recently)` für Agenten mit einer `.failed`-Datei jünger als sechs Stunden. `parse()` gibt das Gate eines solchen Agenten an den ersten anderen, nicht ausgefallenen Agenten der Crew, der nicht die Arbeit macht, und nennt beide mit `@` im Grund. `propose_planned` schreibt `STATE/crew/NAME.failed`, wenn der Aufruf eines benannten Gate-Autors scheitert, und löscht die Datei erst, wenn derselbe Agent einen Vorschlag mit Gate abgeliefert hat; eine STOP-Antwort
+continuation=The accepted state is commit 5422f281 in /Users/rainer/.local/state/taik-factory/work/ticket-009.
+advance=false
+end

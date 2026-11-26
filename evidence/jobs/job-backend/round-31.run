@@ -1,0 +1,20 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-31
+intent=Der Orchestrator kennt Produkte, geschützte Pfade und ausgefallene Agenten, und sein Auftragssatz ist einsehbar.
+baseline=taik-seed c790729d0050355d45344bf44b9a66bcd7aa870283c3c05d66821c84ed7c4ac7
+worker=opus-session-ticket-009
+decided_by=the installed taik-seed c790729d0050355d45344bf44b9a66bcd7aa870283c3c05d66821c84ed7c4ac7 at /Users/rainer/.local/state/taik-factory/taik-seed
+limits=99 rounds; gate 900s; candidate checks 10s each
+gate_sha256=76b41170f51fa7e1a5424ba01f903bcf2276b8f8f19e4d87f952e88d18b6b0ce
+gate_ms=42217
+checks=PASS: Rust tests, Clippy with warnings denied, release build; candidate seeded, rejected an invalid procedure without touching the accepted record, and extended it
+evidence=round-31.checks.log
+artifact=round-31-taik-seed
+artifact_sha256=0399adbb5151e087039a17d2b2fe4ea7fc28fcc1d6e38300f9c51647af284215
+rollback=round-31.rollback-taik-seed
+continuation=Restart the service so that it runs the accepted binary.
+advance=false
+end

@@ -414,7 +414,10 @@ mod tests {
             &[],
         )
         .unwrap();
-        assert_eq!((kept.gate.as_str(), kept.reason.as_str()), ("carl", "Ein Dokument."));
+        assert_eq!(
+            (kept.gate.as_str(), kept.reason.as_str()),
+            ("carl", "Ein Dokument.")
+        );
 
         // Without another agent the choice of the worker stays.
         let alone = [member(STANDARD, true), failed("anna")];
@@ -424,7 +427,10 @@ mod tests {
             &[],
         )
         .unwrap();
-        assert_eq!((stays.gate.as_str(), stays.reason.as_str()), ("anna", "Ein Dokument."));
+        assert_eq!(
+            (stays.gate.as_str(), stays.reason.as_str()),
+            ("anna", "Ein Dokument.")
+        );
     }
 
     #[test]

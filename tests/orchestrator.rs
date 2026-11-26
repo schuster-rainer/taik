@@ -60,8 +60,16 @@ fn the_orchestrator_shows_products_protected_paths_and_failed_agents() {
     let open = root.join("open");
     fs::create_dir_all(open.join(".git")).unwrap();
     fs::write(open.join("README.md"), "Open repository.\n").unwrap();
-    fs::write(state.join("repos/guarded.repo"), format!("{}\n", guarded.display())).unwrap();
-    fs::write(state.join("repos/open.repo"), format!("{}\n", open.display())).unwrap();
+    fs::write(
+        state.join("repos/guarded.repo"),
+        format!("{}\n", guarded.display()),
+    )
+    .unwrap();
+    fs::write(
+        state.join("repos/open.repo"),
+        format!("{}\n", open.display()),
+    )
+    .unwrap();
 
     let request = state.join("requests/ticket-001.run");
     fs::write(
@@ -119,7 +127,10 @@ fn the_orchestrator_shows_products_protected_paths_and_failed_agents() {
             .position(|line| line.starts_with(&format!("- {name}: ")))
             .unwrap_or_else(|| panic!("no line for {name}:\n{text}"))
     };
-    assert_eq!(lines[repository("guarded")], "- guarded: Guarded repository. ");
+    assert_eq!(
+        lines[repository("guarded")],
+        "- guarded: Guarded repository. "
+    );
     assert_eq!(
         lines[repository("guarded") + 1],
         "  protected: SPEC.md, tools/gate.sh, .taik/"
@@ -130,7 +141,10 @@ fn the_orchestrator_shows_products_protected_paths_and_failed_agents() {
             && text.contains("A session may not change the protected paths"),
         "{text}"
     );
-    assert!(text.ends_with("intent=Die Uhr bekommt Sekunden\nend\n"), "{text}");
+    assert!(
+        text.ends_with("intent=Die Uhr bekommt Sekunden\nend\n"),
+        "{text}"
+    );
 
     // Products: valid ones are listed, invalid ones not.
     fs::write(
