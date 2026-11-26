@@ -654,7 +654,7 @@
       let finished = false;
       let failed = -1;
       if (proposal) {
-        actors = { 2: proposal.plan?.gate, 4: proposal.plan?.work };
+        actors = { 2: proposal.plan?.gate, 4: proposal.worker || proposal.plan?.work };
         if (proposal.state === 'declined' || proposal.state === 'failed') { finished = true; failed = 1; }
         else if (proposal.state === 'asks') active = 1;
         else if (proposal.state === 'deriving') active = proposal.plan ? 2 : 1;
@@ -1083,6 +1083,26 @@
       if (!trimmed || !(trimmed.startsWith('/') || trimmed.startsWith('~'))) return 'Pfad: absolut oder mit ~ beginnend';
       return '';
     }
+
+    // The workers the user may choose for a waiting proposal: "standard" first, then the usable agents in order.
+    // The author of the gate never works on it; a session needs a claude harness.
+    function workerChoices(proposal, agents) {
+      if (!proposal || !proposal.plan || proposal.state) return [];
+      const gate = proposal.plan.gate;
+      const session = proposal.plan.kind === 'sitzung';
+      const names = ['standard'];
+      for (const agent of Array.isArray(agents) ? agents : []) {
+        if (!agent || agent.error) continue;
+        if (session && agent.harness !== 'claude') continue;
+        names.push(agent.name);
+      }
+      return names.filter(name => name !== gate);
+    }
+
+    // Who works on a proposal: the user's choice, otherwise the planned worker, otherwise the standard.
+    function plannedWorker(proposal) {
+      return proposal?.worker || proposal?.plan?.work || 'standard';
+    }
     /*CREW_END*/
 
     function renderCrew() {
@@ -1190,7 +1210,11 @@
       const agents = crewOf(snapshot).agents.filter(agent => !agent.error);
       const chooser = job ? `<label class="ticket-agent">Agent der nächsten Runde<select data-ticket-agent="${escape(job.id)}">
           <option value="">Standard des Dienstes</option>${agents.map(agent => `<option value="${escape(agent.name)}"${job.agent === agent.name ? ' selected' : ''}>@${escape(agent.name)} · ${escape(agentLine(agent))}</option>`).join('')}</select></label>` : '';
-      return `<div class="ticket-detail" data-detail="${escape(entry.key)}">${chooser}
+      const choices = entry.proposal && entry.item ? workerChoices(entry.item, crewOf(snapshot).agents) : [];
+      const planned = entry.item ? plannedWorker(entry.item) : '';
+      const assign = choices.length ? `<label class="ticket-agent">Arbeit macht<select data-assign="${escape(entry.proposal)}">${choices.map(name =>
+          `<option value="${escape(name)}"${name === planned ? ' selected' : ''}>${escape(name === 'standard' ? 'Standard' : '@' + name)}</option>`).join('')}</select></label>` : '';
+      return `<div class="ticket-detail" data-detail="${escape(entry.key)}">${chooser}${assign}
         <textarea aria-label="Kommentar zu ${escape(entry.key)}" placeholder="Antwort oder Frage an die Factory. Mit @name übernimmt ein Agent die nächste Runde.">${escape(draft)}</textarea>
         <div class="actions">${entry.proposal ? ticketActions(entry.item ?? (snapshot.proposals ?? []).find(candidate => candidate.name === entry.proposal)
             ?? { state: entry.asks ? 'asks' : undefined }).map(action => action === 'Freigeben'
@@ -1430,7 +1454,7 @@
           <div class="section-heading"><h2>Ticket</h2><span class="sub">${escape(proposal.name)} · ${proposal.state ? proposalState[proposal.state] ?? escape(proposal.state) : 'Vorschlag der Factory, wartet auf deine Freigabe'}</span></div>
           <div class="ticket-top"><h3 class="ticket-title">${escape(ticketTitle(proposal.intent))}</h3></div>
           ${proposal.note ? `<p class="round-checks">${escape(proposal.note)}</p>` : ''}
-          ${proposal.plan ? `<dl class="ticket-state"><div><dt>Plan</dt><dd>${escape(planLine(proposal.plan))}</dd></div><div><dt>Grund</dt><dd>${escape(proposal.plan.reason)}</dd></div></dl>` : ''}
+          ${proposal.plan ? `<dl class="ticket-state"><div><dt>Plan</dt><dd>${escape(planLine(proposal.worker ? { ...proposal.plan, work: proposal.worker } : proposal.plan))}</dd></div><div><dt>Grund</dt><dd>${escape(proposal.plan.reason)}</dd></div></dl>` : ''}
           ${proposal.brief ? `<details class="ticket-brief" data-round="${escape(proposalKey)}" data-initial-open="${proposalOpen}"${proposalOpen ? ' open' : ''}><summary>Beschreibung</summary><pre>${escape(proposal.brief)}</pre></details>` : ''}
           ${gateText ? `<details class="ticket-brief ticket-gate" data-round="${escape(gateKey)}" data-initial-open="${gateOpen}"${gateOpen ? ' open' : ''}><summary>Gate (${gateLines} Zeilen)</summary><pre>${escape(gateText)}</pre></details>` : ''}
           <div class="thread" aria-label="Auftragsverlauf">${(proposal.messages ?? []).length ? `<ol class="rounds">${proposal.messages.map(item =>
@@ -1524,6 +1548,10 @@
         return;
       }
       if (event.target.id === 'taik-agent-effort' && agentDraft) { agentDraft.effort = event.target.value; return; }
+      if (event.target.dataset?.assign) {
+        window.webkit?.messageHandlers?.assignWorker?.postMessage({ name: String(event.target.dataset.assign).replace(/^proposal:/, ''), agent: event.target.value });
+        return;
+      }
       if (event.target.dataset?.ticketAgent) {
         window.webkit?.messageHandlers?.setJobAgent?.postMessage({ job: event.target.dataset.ticketAgent, agent: event.target.value });
         return;

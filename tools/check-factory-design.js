@@ -326,7 +326,7 @@ async function runDesignGate(requireOpen) {
     {
       const sent = [];
       // WebKit protects window.webkit itself. A handler of the page's own name can be put on its list.
-      const names = ['newTicket', 'approveProposal', 'declineTicket', 'commentTicket', 'closeTicket', 'landJob', 'setJobAgent'];
+      const names = ['newTicket', 'approveProposal', 'declineTicket', 'commentTicket', 'closeTicket', 'landJob', 'setJobAgent', 'assignWorker'];
       const handlers = window.webkit?.messageHandlers;
       requireFact(!!handlers, 'This WebKit view has no message handlers to record on');
       const kept = {};
@@ -345,7 +345,7 @@ async function runDesignGate(requireOpen) {
       done.id = 'job-fertig'; done.goal = 'Fertige Sitzung'; done.rounds.at(-1).fields.decision = 'accepted'; done.landable = true;
       acting.jobs.push(done);
       acting.proposals = [
-        { name: 'ticket-801', intent: 'Ein Vorschlag', origin: 'requests', brief: 'Ein Vorschlag', messages: [] },
+        { name: 'ticket-801', intent: 'Ein Vorschlag', origin: 'requests', brief: 'Ein Vorschlag', messages: [], plan: { kind: 'dokument', repo: '', gate: 'pruefer', work: 'standard', reason: 'Ein Dokument.' } },
         { name: 'ticket-802', intent: 'Eine Frage', origin: '', brief: 'Eine Frage', messages: [{ author: 'agent', round: 0, text: 'Was genau?' }], state: 'asks' },
       ];
       window.updateFactory(acting);
@@ -357,6 +357,15 @@ async function runDesignGate(requireOpen) {
 
       const open = async key => { find('button[data-board-tab="open"]').click(); await delayFrame(); find('#taik-board button[data-ticket="' + key + '"]').click(); await delayFrame(); };
       await open('proposal:ticket-801');
+      const choice = find('#taik-ticket select[data-assign="ticket-801"]');
+      requireFact(rendered(choice) && choice.value === 'standard', 'A planned proposal does not offer the choice of its worker');
+      requireFact(![...choice.options].some(option => option.value === 'pruefer'), 'The author of the gate can be chosen for the work');
+      const other = [...choice.options].map(option => option.value).find(value => value !== 'standard');
+      if (other) {
+        choice.value = other;
+        choice.dispatchEvent(new Event('change', { bubbles: true }));
+        requireFact(last() === JSON.stringify(['assignWorker', { name: 'ticket-801', agent: other }]), 'Choosing a worker sends ' + last());
+      }
       find('#taik-ticket button[data-proposal="ticket-801"]').click();
       requireFact(last() === JSON.stringify(['approveProposal', 'ticket-801']), 'Freigeben sends ' + last());
       type(find('#taik-ticket textarea'), 'Lieber nicht');

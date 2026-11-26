@@ -1,0 +1,25 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=Die Ansicht der Factory soll im Ticket eines wartenden Vorschlags eine Auswahl für den Arbeiter zeigen, die vor der Freigabe den Agenten wählen lässt.
+baseline=/Users/rainer/projects/ideas/talk/evidence/jobs/job-ticket-031/submission.seed.html
+worker=claude-cli
+worker_model=claude-opus-5-5
+worker_output_tokens=2874
+worker_cost_usd=0.48292
+worker_duration_ms=25519
+worker_account_usage=seven_day allowed 0
+limits=4 rounds; worker lease 60s without ceiling; verifier 15s; 512KiB source
+gate_sha256=1b4eb05b45845bd89e800c091bb02d2c298b6e471171aaf9e381a1e4cb55cff5
+gate_ms=73
+patch_blocks=5
+checks=PASS: host contract, offline isolation, 35 token shadows without glow, contrast 5.12–13.04, lossless .run highlighting, token flow per round, one workpiece pane with live draft, animated flow, ticket board in one group at a time, crew with agents and harnesses, conversation in the ticket, one ticket with the full history, tickets opened in the viewer, the whole stock on the board, top-down state and changes, analysis of a rejection, dialog of an agent session, a reason for every waiting ticket, the orchestrator and its plans
+artifact=round-01.html
+rejected_candidate=
+feedback=
+follow_up=
+continuation=Retain the accepted artifact. No further work was authorized by this round.
+advance=false
+end

@@ -721,3 +721,53 @@ assert.equal(
   "Ist der Auftrag übernehmbar und nicht in Übernahme, muss ticketState als Nächstes die Übernahme ins Repository nennen."
 );
 })();
+// TAIK: check added by job ticket-031
+await (async () => {
+  const { default: assert } = await import('node:assert/strict');
+  const { readFileSync } = await import('node:fs');
+  const html = readFileSync(process.argv[2], 'utf8');
+  void readFileSync;
+const m = html.match(/\/\*CREW_BEGIN\*\/([\s\S]*?)\/\*CREW_END\*\//);
+assert.ok(m, 'Der Block CREW zwischen /*CREW_BEGIN*/ und /*CREW_END*/ fehlt.');
+const api = new Function(m[1] + `
+return {
+  workerChoices: typeof workerChoices === 'function' ? workerChoices : undefined,
+  plannedWorker: typeof plannedWorker === 'function' ? plannedWorker : undefined,
+};`)();
+assert.equal(typeof api.workerChoices, 'function', 'Die Funktion workerChoices(proposal, agents) fehlt im Block CREW.');
+assert.equal(typeof api.plannedWorker, 'function', 'Die Funktion plannedWorker(proposal) fehlt im Block CREW.');
+const { workerChoices, plannedWorker } = api;
+
+const freeze = o => { if (o && typeof o === 'object') { Object.values(o).forEach(freeze); Object.freeze(o); } return o; };
+const agents = () => freeze([
+  { name: 'a', harness: 'claude' },
+  { name: 'b', harness: 'codex' },
+  { name: 'c', harness: 'claude', error: 'kaputt' },
+  { name: 'd', harness: 'claude' },
+]);
+
+assert.deepEqual(
+  workerChoices(freeze({ plan: { kind: 'dokument', gate: 'a', work: 'b' } }), agents()),
+  ['standard', 'b', 'd'],
+  'workerChoices muss "standard" und die Agenten ohne Fehler in Reihenfolge liefern, ohne den Gate-Agenten.');
+
+assert.deepEqual(
+  workerChoices(freeze({ plan: { kind: 'sitzung', gate: 'a', work: 'b' } }), agents()),
+  ['standard', 'd'],
+  'Bei kind "sitzung" dürfen nur "standard" und claude-Agenten (ohne Gate-Agent, ohne Fehler) erscheinen.');
+
+assert.deepEqual(
+  workerChoices(freeze({ plan: { kind: 'dokument', gate: 'standard', work: 'b' } }), agents()),
+  ['a', 'b', 'd'],
+  'Ist das Gate "standard", darf "standard" nicht in der Liste stehen.');
+
+assert.deepEqual(workerChoices(freeze({ intent: 'x' }), agents()), [], 'Ohne Plan muss die Liste leer sein.');
+assert.deepEqual(
+  workerChoices(freeze({ state: 'deriving', plan: { kind: 'dokument', gate: 'a', work: 'b' } }), agents()), [],
+  'Mit gesetztem state muss die Liste leer sein.');
+
+assert.equal(plannedWorker({ worker: 'd', plan: { work: 'b' } }), 'd', 'plannedWorker muss proposal.worker bevorzugen.');
+assert.equal(plannedWorker({ plan: { work: 'b' } }), 'b', 'plannedWorker muss sonst plan.work liefern.');
+assert.equal(plannedWorker({ plan: {} }), 'standard', 'plannedWorker muss ohne work "standard" liefern.');
+assert.equal(plannedWorker({}), 'standard', 'plannedWorker muss auch ohne plan "standard" liefern.');
+})();

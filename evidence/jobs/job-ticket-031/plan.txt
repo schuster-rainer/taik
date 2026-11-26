@@ -1,0 +1,6 @@
+kind=dokument
+repo=
+repo_path=
+gate=pruefer
+work=standard
+reason=Änderung am Produkt ansicht ist ein Dokumentauftrag; pruefer schreibt laut Beschreibung Gates und prüft Verhalten, standard erledigt die Arbeit mangels besser passendem Agenten.
