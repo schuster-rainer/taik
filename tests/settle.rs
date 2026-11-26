@@ -181,7 +181,12 @@ fn a_failed_adoption_is_recorded_in_one_line() {
 #[test]
 fn a_branch_on_another_commit_is_a_failure() {
     let s = setup();
-    git(&s.origin, &["branch", "taik/demo", &s.base]);
+    // A commit of the origin beside the accepted one: not its ancestor.
+    let side = git(
+        &s.origin,
+        &["commit-tree", "-p", &s.base, "-m", "side", "HEAD^{tree}"],
+    );
+    git(&s.origin, &["branch", "taik/demo", &side]);
     let output = settle(&s.state, "job-demo");
     assert_eq!(output.status.code(), Some(2), "{output:?}");
     let failed = fs::read_to_string(s.job.join("adopt-failed.txt")).unwrap();
@@ -190,7 +195,7 @@ fn a_branch_on_another_commit_is_a_failure() {
     assert!(!s.job.join("adopted.txt").exists());
     assert_eq!(
         git(&s.origin, &["rev-parse", "refs/heads/taik/demo"]),
-        s.base
+        side
     );
 }
 
