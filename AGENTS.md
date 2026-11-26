@@ -32,6 +32,18 @@ launchctl kickstart -k "gui/$(id -u)/local.taik.factory"
 tools/release-view.sh evidence/jobs/job-NAME
 ```
 
+Work the Factory does itself goes through its orchestrator:
+
+```sh
+tools/factory/wish.sh WISH.md      # send a request in plain words; prints the ticket and the orchestrator's plan
+"$state/taik-seed" approve "$state" ticket-NNN
+tools/factory/watch.sh ticket-NNN  # until the job is accepted, asks, or stops
+printf 'answer' | "$state/taik-seed" reply "$state" job-ticket-NNN
+tools/factory/land.sh ticket-NNN BRIEF.md "Commit subject"   # a session on this repository: merge, lint, promote, commit
+```
+
+A viewer job (product `ansicht`) is released by the service itself. A rejected promotion is told to the agent with `reply`; it corrects its work in the next round.
+
 A brief names its intent in the first line and the observation that justifies it. `WORKER` names whoever supplied the candidate.
 
 ## Facts that are easy to get wrong
