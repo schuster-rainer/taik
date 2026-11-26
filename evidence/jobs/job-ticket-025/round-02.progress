@@ -1,0 +1,7 @@
+255	start	Factory hat den Auftrag übernommen
+1544	worker	Claude erhält Auftrag und akzeptierten Ausgangsstand
+8330379	worker	worker_model=claude-opus-5-5 worker_output_tokens=465 worker_cost_usd=0.427356 worker_duration_ms=8328 worker_account_usage=seven_day allowed 0 
+8330482	evaluate	Unabhängiges, gespeichertes Prüfgate ausführen
+8332033	worker	Patch mit 1 Blöcken auf den angenommenen Stand angewendet
+8443123	checks	PASS: host contract, offline isolation, 35 token shadows without glow, contrast 5.12–13.04, lossless .run highlighting, token flow per round, one workpiece pane with live draft, animated flow, ticket board in one group at a time, crew with agents and harnesses, conversation in the ticket, one ticket with the full history, tickets opened in the viewer, the whole stock on the board, top-down state and changes, analysis of a rejection, dialog of an agent session, a reason for every waiting ticket, the orchestrator and its plans
+8460217	accepted	Retain the accepted artifact. No further work was authorized by this round.

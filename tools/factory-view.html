@@ -229,6 +229,9 @@
   #taik-live .diff { flex: 1; min-height: 0; overflow: auto; padding: 12px 14px; border-radius: 15px; box-shadow: var(--nm-inset); }
   #taik-live .diff[hidden] { display: none; }
   #taik-live .diff pre { white-space: pre; }
+  /* The patch of a session wraps at the edge of the card: spaces and indentation stay, nothing is cut off. */
+  #taik-live #taik-result-session { overflow-x: hidden; overflow-y: auto; }
+  #taik-live #taik-result-session pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: normal; max-width: 100%; min-width: 0; }
   #taik-live .diff-add { color: var(--good); }
   #taik-live .diff-del { color: var(--bad); }
   #taik-live .diff-same, #taik-live .diff-gap { color: var(--quiet); }
