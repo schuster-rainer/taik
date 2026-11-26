@@ -771,3 +771,54 @@ assert.equal(plannedWorker({ plan: { work: 'b' } }), 'b', 'plannedWorker muss so
 assert.equal(plannedWorker({ plan: {} }), 'standard', 'plannedWorker muss ohne work "standard" liefern.');
 assert.equal(plannedWorker({}), 'standard', 'plannedWorker muss auch ohne plan "standard" liefern.');
 })();
+// TAIK: check added by job ticket-033
+await (async () => {
+  const { default: assert } = await import('node:assert/strict');
+  const { readFileSync } = await import('node:fs');
+  const html = readFileSync(process.argv[2], 'utf8');
+  void readFileSync;
+const m = html.match(/\/\*BOARD_BEGIN\*\/([\s\S]*?)\/\*BOARD_END\*\//);
+assert.ok(m, 'Der Block BOARD zwischen /*BOARD_BEGIN*/ und /*BOARD_END*/ fehlt.');
+const api = new Function(m[1] + '\nreturn { feedParts: typeof feedParts === "function" ? feedParts : null, orchestratorFeed };')();
+assert.ok(api.feedParts, 'Im Block BOARD fehlt die Funktion feedParts(feed).');
+const { feedParts, orchestratorFeed } = api;
+
+const feed = [
+  { key: 'a', title: 'A', line: 'Abgelehnt', reason: 'x' },
+  { key: 'b', title: 'B', line: 'Der Orchestrator fragt.', reason: 'q' },
+  { key: 'c', title: 'C', line: 'Fehlgeschlagen', reason: 'y' },
+  { key: 'd', title: 'D', line: 'Dokument · Gate @a · Arbeit @b', reason: 'r' },
+  { key: 'e', title: 'E', line: 'Abgelehnt.', reason: '' },
+  { key: 'f', title: 'F', line: 'abgelehnt', reason: '' },
+  { key: 'g', title: 'G', line: 'Abgelehnt', reason: 'z' },
+  { key: 'h', title: 'H', line: 'Der Orchestrator plant.', reason: '' },
+];
+const copy = JSON.stringify(feed);
+feed.forEach(Object.freeze);
+Object.freeze(feed);
+
+const parts = feedParts(feed);
+assert.ok(parts && Array.isArray(parts.open) && Array.isArray(parts.done), 'feedParts muss { open, done } mit zwei Arrays liefern.');
+assert.deepEqual(parts.done.map(e => e.key), ['a', 'c', 'g'], 'done muss genau die Einträge mit der Zeile „Abgelehnt" oder „Fehlgeschlagen" in Eingabereihenfolge enthalten.');
+assert.deepEqual(parts.open.map(e => e.key), ['b', 'd', 'e', 'f', 'h'], 'open muss alle anderen Einträge in Eingabereihenfolge enthalten (auch „Abgelehnt." mit Punkt oder anderer Schreibweise).');
+assert.ok(parts.done[0] === feed[0] && parts.open[0] === feed[1], 'Die Einträge müssen unverändert (dieselben Objekte) übernommen werden.');
+assert.equal(JSON.stringify(feed), copy, 'feedParts darf die Eingabe nicht verändern.');
+
+const empty = feedParts([]);
+assert.deepEqual([empty.open, empty.done], [[], []], 'Bei leerer Liste müssen open und done leere Arrays sein.');
+
+const onlyOpen = feedParts([{ key: 'x', title: 'X', line: 'Der Orchestrator plant.', reason: '' }]);
+assert.equal(onlyOpen.open.length, 1, 'Ein offener Eintrag muss in open stehen.');
+assert.equal(onlyOpen.done.length, 0, 'Ohne erledigte Einträge muss done leer sein.');
+
+// Zusammenspiel mit orchestratorFeed
+const snap = { proposals: [
+  { name: 'p1', intent: 'Eins', state: 'declined', note: 'nein' },
+  { name: 'p2', intent: 'Zwei', state: 'asks', messages: [{ author: 'agent', text: 'Was?' }] },
+  { name: 'p3', intent: 'Drei', state: 'failed', note: '' },
+  { name: 'p4', intent: 'Vier', state: 'deriving' },
+] };
+const real = feedParts(orchestratorFeed(snap));
+assert.deepEqual(real.done.map(e => e.key), ['proposal:p3', 'proposal:p1'], 'Mit echten Daten müssen abgelehnte und fehlgeschlagene Wünsche in done stehen, neueste zuerst.');
+assert.deepEqual(real.open.map(e => e.key), ['proposal:p4', 'proposal:p2'], 'Mit echten Daten müssen planende und fragende Wünsche in open stehen, neueste zuerst.');
+})();

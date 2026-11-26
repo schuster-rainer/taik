@@ -922,6 +922,19 @@
       }).reverse();
     }
 
+    // Splits the feed of the orchestrator into open entries and entries that are done (declined or failed).
+    // Both keep the order of the feed; the entries themselves are taken over unchanged.
+    function feedParts(feed) {
+      const open = [];
+      const done = [];
+      for (const entry of Array.isArray(feed) ? feed : []) {
+        const line = entry?.line;
+        if (line === 'Abgelehnt' || line === 'Fehlgeschlagen') done.push(entry);
+        else open.push(entry);
+      }
+      return { open, done };
+    }
+
     // The ticket shown before the user chose one: the first of the group that is shown.
     function firstTicket(columns, chosen) {
       return columns[boardTab(columns, chosen)][0]?.key ?? null;
@@ -1193,15 +1206,22 @@
           <input id="taik-board-search" type="search" aria-label="Tickets durchsuchen" placeholder="Suchen" value="${escape(boardSearch)}"></div>${lists}</div></section>`;
       // A declined or failed request shows its line in the colour of rejections.
       const endedPlan = key => ['declined', 'failed'].includes((snapshot.proposals ?? []).find(proposal => 'proposal:' + proposal.name === key)?.state);
+      const planItem = entry => `<li><button type="button" class="ticket" data-ticket="${escape(entry.key)}" data-job="">
+          <span class="plan-title">${escape(entry.title)}</span><span class="why${endedPlan(entry.key) ? ' rejected' : ''}">${escape(entry.line)}</span>
+          ${entry.reason ? `<span class="plan-reason">${escape(entry.reason)}</span>` : ''}</button></li>`;
+      const parts = feedParts(orchestratorFeed(snapshot));
+      const doneKey = 'orchestrator/done';
+      const doneOpen = openRounds.get(doneKey) ?? false;
+      const plans = (parts.open.length ? `<ol class="plans">${parts.open.slice(0, 5).map(planItem).join('')}</ol>` : '')
+        + (parts.done.length ? `<details data-round="${escape(doneKey)}" data-initial-open="${doneOpen}"${doneOpen ? ' open' : ''}>
+          <summary>Abgelehnt und zurückgezogen (${parts.done.length})</summary><ol class="plans">${parts.done.slice(0, 10).map(planItem).join('')}</ol></details>` : '');
       // The orchestrator comes first, the tickets after it.
       return `<section id="taik-orchestrator" aria-label="Orchestrator"><div class="section-heading"><h2>Orchestrator</h2><span class="sub">verteilt, du gibst frei</span></div>
         <div class="ticket-detail new-ticket" data-detail="new">
           <textarea aria-label="Nachricht an den Orchestrator" placeholder="Sag dem Orchestrator, was entstehen soll. Die erste Zeile wird der Titel.">${escape(ticketDrafts.get('new') ?? '')}</textarea>
           <div class="actions"><span class="sub" id="taik-new-ticket-note">${newTicketNote}</span>
           <button type="button" class="send" id="taik-new-ticket">Senden</button></div></div>
-        ${(feed => feed.length ? `<ol class="plans">${feed.slice(0, 5).map(entry => `<li><button type="button" class="ticket" data-ticket="${escape(entry.key)}" data-job="">
-          <span class="plan-title">${escape(entry.title)}</span><span class="why${endedPlan(entry.key) ? ' rejected' : ''}">${escape(entry.line)}</span>
-          ${entry.reason ? `<span class="plan-reason">${escape(entry.reason)}</span>` : ''}</button></li>`).join('')}</ol>` : '')(orchestratorFeed(snapshot))}</section>${tickets}`;
+        ${plans}</section>${tickets}`;
     }
 
     function ticketDetail(entry) {
