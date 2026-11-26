@@ -198,7 +198,16 @@ private struct StockEntry: Codable {
     let rounds: Int
 }
 
+// A repository the user made known to the orchestrator.
+private struct Repository: Codable {
+    let name: String
+    let path: String
+    // Paths a session may not change there, from its .taik/protected.
+    let protected: [String]
+}
+
 private struct Snapshot: Codable {
+    let repos: [Repository]
     let index: [StockEntry]
     let crew: String?
     let parallel: Int
@@ -232,6 +241,7 @@ private final class FactoryMonitor {
             watchPath(state.appendingPathComponent("service-error.log"))
             watchPath(state.appendingPathComponent("proposals", isDirectory: true))
             watchPath(state.appendingPathComponent("requests", isDirectory: true))
+            watchPath(state.appendingPathComponent("repos", isDirectory: true))
             watchPath(state.appendingPathComponent("agents", isDirectory: true))
             watchPath(state.appendingPathComponent("crew", isDirectory: true))
         }
@@ -244,6 +254,7 @@ private final class FactoryMonitor {
             let retained = Set(jobURLs + workFiles + [state, queue, state.appendingPathComponent("service-error.log"),
                 state.appendingPathComponent("proposals", isDirectory: true),
                 state.appendingPathComponent("requests", isDirectory: true),
+                state.appendingPathComponent("repos", isDirectory: true),
                 state.appendingPathComponent("agents", isDirectory: true),
                 state.appendingPathComponent("crew", isDirectory: true)])
             for url in Array(directories.keys) where !retained.contains(url) { stopWatching(url) }
@@ -252,7 +263,7 @@ private final class FactoryMonitor {
         let pid = runningService()
         if watch { watchServiceExit(pid) }
         let snapshot = Snapshot(
-            index: stock(in: queue), crew: crewOverview(), parallel: parallelSlots(), agents: recentAgents(), proposals: waitingProposals(), spent: recentWorkerCost(in: queue), jobs: jobs, pending: jobs.filter(\.pending).count,
+            repos: repositories(), index: stock(in: queue), crew: crewOverview(), parallel: parallelSlots(), agents: recentAgents(), proposals: waitingProposals(), spent: recentWorkerCost(in: queue), jobs: jobs, pending: jobs.filter(\.pending).count,
             service: state == defaultState ? (pid == nil ? "offline" : "running") : "unmanaged", pid: pid
         )
         let encoder = JSONEncoder()
@@ -264,6 +275,17 @@ private final class FactoryMonitor {
     }
 
     // The overview that `taik-seed crew` wrote: harnesses, sign-in state and the defined agents.
+    private func repositories() -> [Repository] {
+        let directory = state.appendingPathComponent("repos", isDirectory: true)
+        let entries = (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])) ?? []
+        return entries.filter { $0.pathExtension == "repo" }.sorted { $0.lastPathComponent < $1.lastPathComponent }.compactMap { url in
+            guard let path = (try? String(contentsOf: url, encoding: .utf8))?.trimmingCharacters(in: .whitespacesAndNewlines), !path.isEmpty else { return nil }
+            let protected = ((try? String(contentsOf: URL(fileURLWithPath: path).appendingPathComponent(".taik/protected"), encoding: .utf8)) ?? "")
+                .split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty && !$0.hasPrefix("#") }
+            return Repository(name: url.deletingPathExtension().lastPathComponent, path: path, protected: protected)
+        }
+    }
+
     private func crewOverview() -> String? {
         let url = state.appendingPathComponent("crew", isDirectory: true).appendingPathComponent("overview.json")
         guard let data = try? Data(contentsOf: url), data.count < 262_144 else { return nil }
@@ -745,6 +767,7 @@ private final class FactoryWindow: NSObject, NSApplicationDelegate, WKNavigation
         configuration.userContentController.add(self, name: "showJob")
         configuration.userContentController.add(self, name: "closeTicket")
         configuration.userContentController.add(self, name: "declineTicket")
+        configuration.userContentController.add(self, name: "addRepo")
         configuration.userContentController.add(self, name: "setParallel")
         for name in ["saveAgent", "deleteAgent", "setJobAgent", "refreshCrew", "attention"] {
             configuration.userContentController.add(self, name: name)
@@ -870,6 +893,19 @@ private final class FactoryWindow: NSObject, NSApplicationDelegate, WKNavigation
             approval.executableURL = state.appendingPathComponent("taik-seed")
             approval.arguments = ["approve", state.path, name]
             try? approval.run()
+            return
+        }
+        if message.name == "addRepo", let body = message.body as? [String: String],
+           let name = body["name"], name.range(of: #"^[a-z0-9-]{1,32}$"#, options: .regularExpression) != nil,
+           let given = body["path"], given.hasPrefix("/") || given.hasPrefix("~"), given.utf8.count <= 1024 {
+            // The user names a repository on this machine. Only a folder that is a Git repository is taken.
+            let path = URL(fileURLWithPath: (given as NSString).expandingTildeInPath).standardizedFileURL.path
+            var isDirectory: ObjCBool = false
+            guard FileManager.default.fileExists(atPath: path + "/.git", isDirectory: &isDirectory) else { return }
+            let directory = state.appendingPathComponent("repos", isDirectory: true)
+            try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+            try? (path + "\n").write(to: directory.appendingPathComponent(name + ".repo"), atomically: true, encoding: .utf8)
+            monitor.refresh(watch: true)
             return
         }
         if message.name == "declineTicket", let body = message.body as? [String: String],
