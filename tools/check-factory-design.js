@@ -322,6 +322,71 @@ async function runDesignGate(requireOpen) {
       await delayFrame();
       await chooseTicket('job-floorplanner');
     }
+    // Every button sends the message the app expects. The app's side is tested by tools/check-app-handlers.sh.
+    {
+      const sent = [];
+      // WebKit protects window.webkit itself. A handler of the page's own name can be put on its list.
+      const names = ['newTicket', 'approveProposal', 'declineTicket', 'commentTicket', 'closeTicket', 'landJob', 'setJobAgent'];
+      const handlers = window.webkit?.messageHandlers;
+      requireFact(!!handlers, 'This WebKit view has no message handlers to record on');
+      const kept = {};
+      for (const name of names) {
+        kept[name] = Object.getOwnPropertyDescriptor(handlers, name);
+        Object.defineProperty(handlers, name, { value: { postMessage: body => sent.push([name, body]) }, configurable: true, writable: true });
+      }
+      requireFact(handlers.newTicket && typeof handlers.newTicket.postMessage === 'function', 'The messages of the page cannot be recorded in this view');
+      const type = (field, text) => { field.value = text; field.dispatchEvent(new Event('input', { bubbles: true })); };
+      const last = () => JSON.stringify(sent.at(-1));
+      const acting = structuredClone(snapshot);
+      const job = acting.jobs.find(entry => entry.id === 'job-floorplanner');
+      job.rounds.at(-1).fields.decision = 'rejected';
+      job.rounds.at(-1).fields.checks = 'FAIL: keine Tür';
+      const done = structuredClone(job);
+      done.id = 'job-fertig'; done.goal = 'Fertige Sitzung'; done.rounds.at(-1).fields.decision = 'accepted'; done.landable = true;
+      acting.jobs.push(done);
+      acting.proposals = [
+        { name: 'ticket-801', intent: 'Ein Vorschlag', origin: 'requests', brief: 'Ein Vorschlag', messages: [] },
+        { name: 'ticket-802', intent: 'Eine Frage', origin: '', brief: 'Eine Frage', messages: [{ author: 'agent', round: 0, text: 'Was genau?' }], state: 'asks' },
+      ];
+      window.updateFactory(acting);
+      await delayFrame();
+
+      type(find('.new-ticket textarea'), 'Ein neuer Wunsch');
+      find('#taik-new-ticket').click();
+      requireFact(last() === JSON.stringify(['newTicket', { text: 'Ein neuer Wunsch' }]), 'The orchestrator field sends ' + last());
+
+      const open = async key => { find('button[data-board-tab="open"]').click(); await delayFrame(); find('#taik-board button[data-ticket="' + key + '"]').click(); await delayFrame(); };
+      await open('proposal:ticket-801');
+      find('#taik-ticket button[data-proposal="ticket-801"]').click();
+      requireFact(last() === JSON.stringify(['approveProposal', 'ticket-801']), 'Freigeben sends ' + last());
+      type(find('#taik-ticket textarea'), 'Lieber nicht');
+      find('#taik-ticket button[data-ticket-decline]').click();
+      requireFact(last() === JSON.stringify(['declineTicket', { name: 'ticket-801', text: 'Lieber nicht' }]), 'Ablehnen sends ' + last());
+
+      await open('proposal:ticket-802');
+      type(find('#taik-ticket textarea'), 'Die Farbe');
+      find('#taik-ticket button[data-ticket-send]').click();
+      requireFact(last() === JSON.stringify(['commentTicket', { name: 'ticket-802', text: 'Die Farbe' }]), 'An answer to the orchestrator sends ' + last());
+
+      await open('job-floorplanner');
+      type(find('#taik-ticket textarea'), 'Bitte mit Tür');
+      find('#taik-ticket button[data-ticket-send]').click();
+      requireFact(last() === JSON.stringify(['commentTicket', { name: 'job-floorplanner', text: 'Bitte mit Tür' }]), 'A reply to a job sends ' + last());
+      window.updateFactory(acting);
+      await delayFrame();
+      type(find('#taik-ticket textarea'), 'Wird nicht gebraucht');
+      find('#taik-ticket button[data-ticket-end]').click();
+      requireFact(last() === JSON.stringify(['closeTicket', { job: 'job-floorplanner', text: 'Wird nicht gebraucht' }]), 'Schließen sends ' + last());
+
+      await chooseTicket('job-fertig');
+      find('#taik-ticket button[data-land]').click();
+      requireFact(last() === JSON.stringify(['landJob', 'job-fertig']), 'Übernehmen sends ' + last());
+
+      for (const name of names) { if (kept[name]) Object.defineProperty(handlers, name, kept[name]); else delete handlers[name]; }
+      window.updateFactory(snapshot);
+      await delayFrame();
+      await chooseTicket('job-floorplanner');
+    }
     // Crew: a new agent is typed while the snapshot refreshes. The draft and the focus survive.
     const crew = find('#taik-crew');
     if (crew) {
