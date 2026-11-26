@@ -34,9 +34,18 @@ If the record justifies no further job, reply with exactly one line 'STOP: <reas
 const LOOP: &str = "\n\nThe continuation of a round record that says no further work was authorized concerns that round alone. It is not a reason to stop. Choose the next job from the open intents listed below when one of them can be done as one job, and begin your reply with the line 'INTENT: <number>' when you take one.\n\nTo change a listed product instead of writing a new artifact, reply with the INTENT line if any, then the line '=== product <name> ===' and below it only the brief. Write no gate for a product: its own pinned gate applies. A product brief names exactly what changes and says that everything else stays as it is.\n\nReply 'STOP: <reason>' only when no open intent can be done as one job and the record justifies nothing else.";
 
 /// What the Factory itself wrote down as justified next work and nobody has taken up yet: the
-/// continuation of its observation records. Newest first.
-fn open_intents(jobs: &Path) -> Vec<(String, String)> {
-    let mut taken = Vec::new();
+/// continuation of its observation records. Newest first. An intent is taken up by a reflection
+/// beside its record or by a request in STATE/requests that names it.
+fn open_intents(jobs: &Path, requests: &Path) -> Vec<(String, String)> {
+    let mut taken: Vec<String> = request_records(requests)
+        .iter()
+        .flat_map(|(_, text)| {
+            text.lines()
+                .filter_map(|line| line.strip_prefix("intent_from="))
+                .map(str::to_owned)
+                .collect::<Vec<_>>()
+        })
+        .collect();
     let mut found: Vec<(std::time::SystemTime, String, String)> = Vec::new();
     for folder in fs::read_dir(jobs).into_iter().flatten().flatten() {
         for file in fs::read_dir(folder.path()).into_iter().flatten().flatten() {
@@ -78,6 +87,20 @@ fn open_intents(jobs: &Path) -> Vec<(String, String)> {
         .filter(|(_, path, _)| !taken.contains(path))
         .map(|(_, path, text)| (path, text))
         .take(25)
+        .collect()
+}
+
+/// The requests STATE/requests/*.run with their text.
+fn request_records(requests: &Path) -> Vec<(PathBuf, String)> {
+    fs::read_dir(requests)
+        .into_iter()
+        .flatten()
+        .flatten()
+        .filter(|file| file.file_name().to_string_lossy().ends_with(".run"))
+        .filter_map(|file| {
+            let text = record::read_regular(&file.path(), record::MAX_RECORD_BYTES).ok()?;
+            Some((file.path(), text))
+        })
         .collect()
 }
 
@@ -285,7 +308,7 @@ pub fn propose_planned(
     let origin_brief =
         record::read_regular(&job.join("submission.brief.md"), record::MAX_RECORD_BYTES)
             .unwrap_or_default();
-    let intents = open_intents(&state.join("jobs"));
+    let intents = open_intents(&state.join("jobs"), &state.join("requests"));
     let products = products(&state);
     let mut listing =
         String::from("\n\nOPEN INTENTS OF THE FACTORY, from its own observation records:\n");
@@ -526,8 +549,16 @@ pub fn propose_planned(
 const DAILY_REFLECTIONS: usize = 3;
 pub const AUTO: &str = "TAIK_AUTO_PROPOSE";
 
-// After a job reached its final decision the service asks once what follows from it.
-pub fn reflect(state: &Path, jobs: &Path, job: &Path) -> Result<()> {
+/// After a job reached its final decision the Factory takes up its oldest open intent as a request
+/// in STATE/requests, the way a wish of the user arrives. The service derives a proposal from it.
+/// Returns the name of the request, or None when nothing was written.
+pub fn reflect(state: &Path, jobs: &Path, job: &Path) -> Result<Option<String>> {
+    job.file_name()
+        .and_then(|name| name.to_str())
+        .and_then(|name| name.strip_prefix("job-"))
+        .filter(|name| !name.is_empty())
+        .ok_or("job without a name")?;
+    let requests = state.join("requests");
     let recent = |path: &Path| {
         path.metadata()
             .and_then(|metadata| metadata.modified())
@@ -535,32 +566,35 @@ pub fn reflect(state: &Path, jobs: &Path, job: &Path) -> Result<()> {
             .and_then(|modified| modified.elapsed().ok())
             .is_some_and(|age| age < Duration::from_secs(24 * 60 * 60))
     };
-    let reflections = fs::read_dir(jobs)?
+    let reflections = fs::read_dir(jobs)
+        .into_iter()
+        .flatten()
         .flatten()
         .filter_map(|entry| fs::read_dir(entry.path()).ok())
         .flat_map(|files| files.flatten())
         .filter(|file| {
-            file.file_name()
-                .to_string_lossy()
-                .starts_with("reflection-")
-                && recent(&file.path())
+            let name = file.file_name().to_string_lossy().into_owned();
+            name.starts_with("reflection-") && name.ends_with(".run") && recent(&file.path())
         })
         .count();
-    if reflections >= DAILY_REFLECTIONS {
-        return Ok(());
+    let reflected = request_records(&requests)
+        .iter()
+        .filter(|(path, text)| text.lines().any(|line| line == "origin=reflection") && recent(path))
+        .count();
+    if reflections + reflected >= DAILY_REFLECTIONS {
+        return Ok(None);
     }
-    let label = job
-        .file_name()
-        .and_then(|name| name.to_str())
-        .and_then(|name| name.strip_prefix("job-"))
-        .ok_or("job without a name")?;
-    let name = format!("{}-next", &label[..label.len().min(27)]);
-    let last = (1..=4)
-        .rev()
-        .map(|number| job.join(format!("round-{number:02}.run")))
-        .find(|path| path.is_file())
-        .ok_or("job without a round record")?;
-    propose(state, &name, &last).map(|_| ())
+    // Newest first: the last one is the oldest.
+    let Some((from, intent)) = open_intents(jobs, &requests).pop() else {
+        return Ok(None);
+    };
+    let title: String = intent.chars().take(80).collect();
+    let name = service::request_with(
+        state,
+        &format!("Vorhaben der Factory: {title}\n{intent}"),
+        &format!("origin=reflection\nintent_from={from}\n"),
+    )?;
+    Ok(Some(name))
 }
 
 /// The reason a proposal was declined with. A declined proposal is never approved.

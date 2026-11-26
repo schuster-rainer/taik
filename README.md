@@ -169,9 +169,9 @@ printf 'reason' | taik-seed decline STATE NAME
 
 `decline` keeps the reason (1 to 2000 bytes from standard input) as `declined.md` in a waiting proposal, which then can no longer be approved. For a request without a proposal it writes `STATE/requests/NAME.withdrawn`: the service no longer plans the request, and `reply` to it is refused. Each happens once.
 
-With `TAIK_AUTO_PROPOSE` set, the service reflects once after each finished software job, at most three times in 24 hours, and either writes a proposal or records why it stops. Waiting proposals appear in the viewer with an approve button.
+With `TAIK_AUTO_PROPOSE` set, the service reflects once after each finished software or session job, at most three times in 24 hours. The reflection calls no worker. It takes the oldest open intent of the Factory, the continuation of an observation record that nothing has taken up yet, and writes it as a request `STATE/requests/ticket-NNN.run` with the lines `origin=reflection` and `intent_from=RECORD`. That request goes through the orchestrator like a wish of the user, and its proposal waits for approval. `taik-seed reflect STATE job-NAME` does the same without the setting. Waiting proposals appear in the viewer with an approve button.
 
-The reflection reads the open intents of the Factory: the continuation of every observation record that no reflection has taken up yet. It may also propose a change to a product. A product is a file `STATE/products/NAME.product` that names an accepted artifact, its pinned gate and what it is. Such a proposal carries only a brief, and the job starts from the accepted source under the product's own gate.
+`propose` reads the open intents as well. It may also propose a change to a product. A product is a file `STATE/products/NAME.product` that names an accepted artifact, its pinned gate and what it is. Such a proposal carries only a brief, and the job starts from the accepted source under the product's own gate.
 
 `propose` asks the worker for a brief and a gate, derived from the continuation of a record. Both wait in `STATE/proposals/NAME`. Nothing runs until `approve` queues the job. The worker that later writes the candidate sees the brief and never the gate.
 
@@ -248,6 +248,7 @@ taik-seed evaluate BASELINE.run OUTPUT.run ORDER
 taik-seed source JOB BRIEF GATE [--attached[=WORKER]]
 taik-seed promote JOB BRIEF GATE INSTALLED_BINARY WORKER
 taik-seed propose STATE NAME RECORD.run
+taik-seed reflect STATE job-NAME
 taik-seed approve STATE NAME
 taik-seed decline STATE NAME
 taik-seed orchestrator-prompt STATE REQUEST.run

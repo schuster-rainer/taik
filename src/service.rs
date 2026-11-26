@@ -20,7 +20,7 @@ const DEFAULT_PARALLEL: usize = 3;
 #[cfg(target_os = "macos")]
 use crate::source::FOLLOW_UP_SUFFIX;
 
-fn jobs_in(state: &Path) -> Result<PathBuf> {
+pub(crate) fn jobs_in(state: &Path) -> Result<PathBuf> {
     let jobs = state.join("jobs");
     fs::DirBuilder::new()
         .recursive(true)
@@ -128,6 +128,13 @@ pub fn reply(state: &Path, name: &str, text: &str) -> Result<PathBuf> {
 /// A request of the user in plain words. The service derives a proposal from it.
 #[cfg(target_os = "macos")]
 pub fn request(state: &Path, text: &str) -> Result<String> {
+    request_with(state, text, "")
+}
+
+/// A request with further record lines before its closing line `end`. The reflection of the
+/// Factory names its origin there; a request of the user has none.
+#[cfg(target_os = "macos")]
+pub(crate) fn request_with(state: &Path, text: &str, extra: &str) -> Result<String> {
     let text = text.trim();
     if text.is_empty() || text.len() > crate::talk::MAX_MESSAGE_BYTES / 2 {
         return Err("a request is between 1 and 4096 bytes".into());
@@ -147,7 +154,7 @@ pub fn request(state: &Path, text: &str) -> Result<String> {
     record::publish_text(
         &requests.join(format!("{name}.run")),
         &format!(
-            "decision=observed\nidentity={name}\nintent={}\nobservation={}\ncontinuation=Derive one job that fulfils this request of the user. Stop if the request is unclear or cannot be checked by a gate.\nend\n",
+            "decision=observed\nidentity={name}\nintent={}\nobservation={}\ncontinuation=Derive one job that fulfils this request of the user. Stop if the request is unclear or cannot be checked by a gate.\n{extra}end\n",
             crate::source::single_line(title),
             // The whole request on one line. It is not cut: the worker must read all of it.
             rest.trim()
@@ -622,6 +629,13 @@ fn run_source_job(home: &Path, jobs: &Path, job: &Path) -> Result<bool> {
             && let Err(error) = crate::analysis::of_last_round(job)
         {
             eprintln!("{}: analysis: {error}", job.display());
+        }
+        // A session job that reached its decision is reflected like any other job.
+        if outcome.is_some()
+            && std::env::var_os(crate::proposal::AUTO).is_some()
+            && let Err(error) = crate::proposal::reflect(home, jobs, job)
+        {
+            eprintln!("{}: reflection: {error}", job.display());
         }
         return Ok(outcome.unwrap_or(true));
     }

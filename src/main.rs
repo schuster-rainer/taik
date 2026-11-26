@@ -60,6 +60,7 @@ const USAGE: &str = "usage: taik-seed seed OUTPUT.run
        taik-seed analyse JOB
        taik-seed queue-session STATE NAME BRIEF.md GATE.sh [REPOSITORY]
        taik-seed propose STATE NAME RECORD.run
+       taik-seed reflect STATE job-NAME
        taik-seed approve STATE NAME
        taik-seed decline STATE NAME < REASON
        taik-seed orchestrator-prompt STATE REQUEST.run
@@ -481,6 +482,20 @@ fn run() -> Result<bool> {
             match proposal::propose(first, name, Path::new(&rest[1]))? {
                 Some(path) => println!("{}", path.display()),
                 None => println!("stop"),
+            }
+            Ok(true)
+        }
+        #[cfg(target_os = "macos")]
+        "reflect" if rest.len() == 1 => {
+            let name = rest[0].to_str().ok_or("job name must be ASCII")?;
+            if !name.starts_with("job-") || name.contains('/') || name.len() <= 4 {
+                return Err("name a job folder job-NAME under STATE/jobs".into());
+            }
+            let home = first.canonicalize()?;
+            let jobs = service::jobs_in(&home)?;
+            match proposal::reflect(&home, &jobs, &jobs.join(name))? {
+                Some(request) => println!("{request}"),
+                None => println!("nothing to reflect"),
             }
             Ok(true)
         }
