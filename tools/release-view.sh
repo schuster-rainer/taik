@@ -46,7 +46,13 @@ cp tools/factory-view.html "$job/rollback.$stem.html"
 cp "$artifact" tools/factory-view.html
 pkill -x factory-view 2>/dev/null || true
 sleep 1
-./tools/open-factory-view.sh
+# The app has a gate of its own. If it refuses the new viewer, the previous one comes back.
+if ! ./tools/open-factory-view.sh; then
+  cp "$job/rollback.$stem.html" tools/factory-view.html
+  ./tools/open-factory-view.sh || true
+  finish rejected "the app refused to install with this viewer, see evidence/app. The previous viewer was restored." "rollback.$stem.html"
+  exit 1
+fi
 sleep 4
 cmp -s "$app/Resources/factory-view.html" "$artifact" || { finish rejected "the installed bytes differ from the accepted artifact" "rollback.$stem.html"; exit 1; }
 "$app/MacOS/factory-view" --snapshot > "$work/after.html"

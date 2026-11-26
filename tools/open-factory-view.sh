@@ -46,6 +46,31 @@ cat > "$bundle/Contents/Info.plist" <<'PLIST'
 </dict></plist>
 PLIST
 
+# The gate of the app: the freshly built host must hand the viewer well-formed data, and the viewer
+# must pass its contract with it. Otherwise the installed app stays as it is. The decision is recorded.
+records="$source_dir/../evidence/app"
+mkdir -p "$records"
+number=1
+while [ -e "$records/$(printf 'release-%03d.run' "$number")" ]; do number=$((number + 1)); done
+record="$records/$(printf 'release-%03d.run' "$number")"
+snapshot="$staging/snapshot.html"
+"$bundle/Contents/MacOS/factory-view" --snapshot > "$snapshot"
+data=$(node "$source_dir/check-app.mjs" "$bundle/Contents/Resources/factory-view.html" < "$snapshot" 2>&1 | grep -E '^PASS|Assertion' | head -1 || true)
+view=$(/usr/bin/swift "$source_dir/check-factory-design.swift" --require-open < "$snapshot" 2>&1 | tail -1 || true)
+rm -f "$snapshot"
+case "$data$view" in
+  PASS*PASS*) decision=accepted ;;
+  *) decision=rejected ;;
+esac
+printf 'decision=%s\nkind=release\nidentity=app-release-%03d\nsource_sha256=%s\nviewer_sha256=%s\nreleased_by=tools/open-factory-view.sh\nchecks=data: %s viewer: %s\nend\n' \
+  "$decision" "$number" "$(shasum -a 256 "$source_dir/factory-view.swift" | cut -d' ' -f1)" \
+  "$(shasum -a 256 "$source_dir/factory-view.html" | cut -d' ' -f1)" "$data" "$view" > "$record"
+if [ "$decision" != accepted ]; then
+  cat "$record" >&2
+  rm -rf "$bundle"
+  exit 1
+fi
+
 if [ -d "$app" ]; then
   mv "$app" "$staging/previous.app"
 fi
