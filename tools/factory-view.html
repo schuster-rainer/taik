@@ -304,9 +304,9 @@
   #taik-live .ticket-agent select { flex: 1; min-width: 0; font-size: .8rem; padding: 5px 30px 5px 11px; }
 
   /* Flow of a round */
-  #taik-live .flow { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }
-  #taik-live .flow-node { position: relative; display: flex; flex-direction: column; min-height: 86px; margin: 0 10px; padding: 9px 12px 10px; border-radius: 14px; box-shadow: var(--nm-raised-sm); min-width: 0; }
-  #taik-live .flow-node + .flow-node::before { content: ""; position: absolute; left: -20px; top: 50%; width: 20px; height: 3px; margin-top: -1.5px;
+  #taik-live .flow { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  #taik-live .flow-node { position: relative; display: flex; flex-direction: column; min-height: 74px; margin: 0 5px; padding: 7px 8px 8px; border-radius: 12px; box-shadow: var(--nm-raised-sm); min-width: 0; }
+  #taik-live .flow-node + .flow-node::before { content: ""; position: absolute; left: -10px; top: 50%; width: 10px; height: 3px; margin-top: -1.5px;
     border-radius: 2px; background: var(--nm-shade); }
   #taik-live .flow-node.done + .flow-node::before { background: var(--active); }
   #taik-live .flow-node.done + .flow-node.active::before { background: repeating-linear-gradient(90deg, var(--active) 0 5px, transparent 5px 10px);
@@ -315,29 +315,31 @@
   @media (prefers-reduced-motion: reduce) { #taik-live .flow-node.done + .flow-node.active::before { animation: none; } }
   #taik-live .flow-node.active { box-shadow: var(--nm-inset); animation: taik-breathe 2.4s ease-in-out infinite; }
   @keyframes taik-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.03); } }
-  #taik-live .flow-dot { position: absolute; left: -20px; top: 50%; width: 4px; height: 4px; margin-top: -2px; border-radius: 50%; background: var(--active); opacity: 0; animation: taik-travel 1.5s linear infinite; }
+  #taik-live .flow-dot { position: absolute; left: -10px; top: 50%; width: 4px; height: 4px; margin-top: -2px; border-radius: 50%; background: var(--active); opacity: 0; animation: taik-travel 1.5s linear infinite; }
   #taik-live .flow-dot:nth-of-type(2) { animation-delay: .5s; }
   #taik-live .flow-dot:nth-of-type(3) { animation-delay: 1s; }
-  @keyframes taik-travel { 0% { transform: translateX(0); opacity: 0; } 20% { opacity: 1; } 80% { opacity: 1; } 100% { transform: translateX(20px); opacity: 0; } }
+  @keyframes taik-travel { 0% { transform: translateX(0); opacity: 0; } 20% { opacity: 1; } 80% { opacity: 1; } 100% { transform: translateX(6px); opacity: 0; } }
   #taik-live .flow-node.done .flow-op { animation: taik-op-done .6s ease-out 1; }
   @keyframes taik-op-done { from { color: var(--quiet); } to { color: var(--active); } }
-  #taik-live .flow-op { display: block; font: 600 .7rem var(--mono); letter-spacing: .1em; color: var(--quiet); }
+  #taik-live .flow-op { display: block; font: 600 .66rem var(--mono); letter-spacing: .06em; color: var(--quiet); overflow-wrap: anywhere; }
   #taik-live .flow-node.done .flow-op, #taik-live .flow-node.active .flow-op { color: var(--active); }
   #taik-live .flow-node.failed .flow-op { color: var(--bad); }
-  #taik-live .flow-name { display: flex; align-items: center; gap: 7px; font-size: .86rem; font-weight: 620; margin-top: 2px; min-height: 1.35em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  #taik-live .flow-node.active .flow-name::after { content: ""; width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--active);
+  #taik-live .flow-name { display: flex; align-items: center; gap: 5px; font-size: .78rem; font-weight: 620; line-height: 1.2; min-height: 1.2em; overflow-wrap: break-word; }
+  #taik-live .flow-node.active .flow-name::after { content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; border: 2px solid var(--active);
     border-right-color: transparent; animation: taik-working .9s linear infinite; }
-  #taik-live .flow-detail { display: block; margin-top: 1px; color: var(--quiet); font-size: .72rem; line-height: 1.3;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #taik-live .flow-detail { display: block; margin-top: 2px; color: var(--quiet); font-size: .7rem; line-height: 1.25; overflow-wrap: anywhere; }
   #taik-live .flow-pane { gap: 10px; padding-bottom: 14px; }
+  /* Separators that make "Station · @name · Zustand" one readable line for screen readers and copied text. */
+  #taik-live .flow-sep { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  #taik-live .flow-state { margin-top: auto; padding-top: 4px; }
 
   /* Right column */
   #taik-live taik-artifact-preview { flex: 1; min-height: 0; }
   #taik-live .preview p { line-height: 1.5; overflow-wrap: anywhere; }
 
-  /* The pane, not the window, decides when five nodes no longer fit. */
-  @container (max-width: 560px) {
-    #taik-live .flow { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 0; }
+  /* The pane, not the window, decides when six nodes no longer fit. */
+  @container (max-width: 540px) {
+    #taik-live .flow { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 0; }
     #taik-live .flow-node + .flow-node::before, #taik-live .flow-dot { display: none; }
   }
   @media (max-width: 800px) {
@@ -529,13 +531,13 @@
       }
     }
 
-    function renderPreview(selectedJob) {
+    function renderPreview(selectedJob, ticketProposal) {
       const shown = selectedJob && (selectedJob.draft || selectedJob.preview) ? selectedJob
         : snapshot.jobs.find(job => workpieceState(job, 'view').show === 'accepted') ?? selectedJob;
       const state = workpieceState(shown, workpieceMode);
       setWorkpieceModes(workpieceMode);
       const key = JSON.stringify([shown?.id, state.show, state.unverified, workpieceMode, shown?.draft, shown?.preview, shown?.previous]);
-      if (key === workpieceKey) { renderFlow(selectedJob); return; }
+      if (key === workpieceKey) { renderFlow(selectedJob, ticketProposal); return; }
       workpieceKey = key;
       resultViewport.hidden = state.show !== 'accepted';
       draftViewport.hidden = state.show !== 'draft';
@@ -570,41 +572,70 @@
         const artifact = latestAccepted(shown)?.fields.artifact ?? '';
         resultLabel.textContent = `${shown.id.replace(/^job-/, '')} · freigegeben${artifact ? ' · ' + artifact : ''}`;
       }
-      renderFlow(selectedJob);
+      renderFlow(selectedJob, ticketProposal);
     }
 
     const flowEl = document.getElementById('taik-flow');
     const flowLabel = document.getElementById('taik-flow-label');
     let flowKey = '';
-    function renderFlow(job) {
-      const round = Object.keys(job?.progress ?? {}).sort().at(-1);
-      const events = job?.progress?.[round] ?? [];
-      const last = events.at(-1);
-      const record = job?.rounds.at(-1)?.fields ?? {};
-      const running = !!job && isPending(job) && !['accepted', 'retained', 'rejected', 'error'].includes(last?.kind);
-      const reached = !job ? -1 : !last ? (job.rounds.length ? 4 : 0)
-        : ({ start: 0, evaluate: 2, checks: 2, compare: 2, accepted: 4, retained: 4, rejected: 4, error: 4 })[last.kind] ?? 1;
-      const failed = !running && (record.decision === 'rejected' || last?.kind === 'error');
-      const software = job?.baseline.fields.kind === 'software';
-      const worker = (record.worker_model ?? '').replace(/^(?:subq|claude)-/, '') || record.worker || (software ? 'Code-Worker' : 'lokale Suche');
-      const cost = money(record.worker_cost_usd) ? ` · ${money(record.worker_cost_usd)}` : '';
-      const draftCount = job?.draft ? `${tokenCount(job.draft.length)} Zeichen` : '';
-      const startedAt = Number(job?.sourceStartedAt) || 0;
-      const nodes = [
-        ['STRUCTURE', 'Auftrag', job ? job.id.replace(/^job-/, '') : 'kein Auftrag'],
-        ['ADD', 'Worker', running && job?.draft ? draftCount : running && reached === 1 ? (last.detail ?? '') : worker + cost],
-        ['REDUCE', 'Gate', record.gate_ms ? `${record.gate_ms} ms` : software ? 'fixiertes Prüfgate' : 'feste Prüfungen'],
-        ['REFLECT', 'Entscheidung', running ? 'steht aus' : failed ? 'abgelehnt' : record.decision === 'accepted' ? 'angenommen' : (record.decision ?? 'steht aus')],
-        ['RETAIN', 'Bestand', job ? `${job.rounds.length} ${job.rounds.length === 1 ? 'Protokoll' : 'Protokolle'}` : ''],
-      ];
-      const html = nodes.map(([operation, name, detail], index) => {
-        const state = index < reached || (!running && index <= reached) ? 'done' : index === reached && running ? 'active' : '';
-        const tone = failed && index === 3 ? ' failed' : '';
+    /*FLOW_BEGIN*/
+    const flowNames = ['Wunsch', 'Plan des Orchestrators', 'Gate', 'Freigabe', 'Arbeit', 'Urteil'];
+
+    // Who carries out a station: "@name" when it is known, otherwise "Standard".
+    function flowActor(name) {
+      const value = String(name ?? '').trim().replace(/^@+/, '');
+      return value ? '@' + value : 'Standard';
+    }
+
+    // The six stations of a ticket in order, each with who carries it out and its state.
+    // At most one station is "aktiv"; a finished or declined ticket has every station "erledigt".
+    function flowStations(job, proposal) {
+      let actors = {};
+      let active = -1;
+      let finished = false;
+      let failed = -1;
+      if (proposal) {
+        actors = { 2: proposal.plan?.gate, 4: proposal.plan?.work };
+        if (proposal.state === 'declined' || proposal.state === 'failed') { finished = true; failed = 1; }
+        else if (proposal.state === 'deriving') active = proposal.plan ? 2 : 1;
+        else active = 3;
+      } else if (job) {
+        const rounds = job.rounds ?? [];
+        const worker = [...rounds].reverse().map(round => round.fields?.worker).find(value => String(value ?? '').trim());
+        actors = { 2: job.agent, 4: worker };
+        const said = job.messages?.at(-1);
+        const waiting = said?.author === 'agent' || (said?.author === 'user' && said.round >= rounds.length);
+        finished = rounds.length > 0 && !job.sourceActive && !job.sourceQueued && !isPending(job) && !waiting;
+        if (finished && rounds.at(-1).fields?.decision === 'rejected') failed = 5;
+        if (!finished) {
+          const round = Object.keys(job.progress ?? {}).sort().at(-1);
+          const last = job.progress?.[round]?.at(-1);
+          active = job.sourceActive && ['evaluate', 'checks', 'compare'].includes(last?.kind) ? 5 : 4;
+        }
+      }
+      return flowNames.map((name, index) => ({ name, actor: flowActor(actors[index]),
+        state: finished ? 'erledigt' : active < 0 || index > active ? 'offen' : index === active ? 'aktiv' : 'erledigt',
+        failed: index === failed }));
+    }
+    /*FLOW_END*/
+
+    function renderFlow(job, proposal) {
+      const stations = flowStations(job, proposal);
+      const html = stations.map((station, index) => {
+        const state = station.state === 'erledigt' ? 'done' : station.state === 'aktiv' ? 'active' : '';
         const dots = state === 'active' && index > 0 ? '<i class="flow-dot"></i><i class="flow-dot"></i><i class="flow-dot"></i>' : '';
-        const live = index === 0 && running && startedAt ? ` <time data-started="${startedAt}"></time>` : '';
-        return `<li class="flow-node ${state}${tone}">${dots}<span class="flow-op">${operation}</span><span class="flow-name">${name}</span><span class="flow-detail" title="${escape(detail)}">${escape(detail)}${live}</span></li>`;
+        const text = `${station.name} · ${station.actor} · ${station.state}`;
+        return `<li class="flow-node ${state}${station.failed ? ' failed' : ''}" title="${escape(text)}">${dots}<span class="flow-name">${escape(station.name)}</span><span class="flow-sep"> · </span><span class="flow-detail">${escape(station.actor)}</span><span class="flow-sep"> · </span><span class="flow-op flow-state">${escape(station.state)}</span></li>`;
       }).join('');
-      const label = !job ? '' : running ? `Runde ${job.rounds.length + 1} läuft` : job.rounds.length ? `Runde ${job.rounds.length} abgeschlossen` : 'eingereiht';
+      let label = '';
+      if (proposal) {
+        label = ({ deriving: 'wird abgeleitet', declined: 'abgelehnt', failed: 'fehlgeschlagen' })[proposal.state] ?? 'wartet auf Freigabe';
+      } else if (job) {
+        const round = Object.keys(job.progress ?? {}).sort().at(-1);
+        const last = job.progress?.[round]?.at(-1);
+        const running = isPending(job) && !['accepted', 'retained', 'rejected', 'error'].includes(last?.kind);
+        label = running ? `Runde ${job.rounds.length + 1} läuft` : job.rounds.length ? `Runde ${job.rounds.length} abgeschlossen` : 'eingereiht';
+      }
       if (html + label === flowKey) return;
       flowKey = html + label;
       flowEl.innerHTML = html;
@@ -994,18 +1025,19 @@
         class="${key === 'open' && waiting ? 'wait' : ''}">${label}<span>${columns[key].length}</span></button>`).join('');
       const lists = groups.map(([key, , label, empty]) => `<section class="board-column" id="taik-board-${key}" aria-label="${label}"${tab === key ? '' : ' hidden'}>
         <ul class="board-list">${columns[key].length ? columns[key].map(ticket).join('') : `<li class="board-empty">${empty}</li>`}</ul></section>`).join('');
-      return `<section id="taik-board" aria-label="Tickets"><div class="section-heading"><h2>Tickets</h2>
+      const tickets = `<section id="taik-board" aria-label="Tickets"><div class="section-heading"><h2>Tickets</h2>
         <span class="sub"><span id="taik-board-waiting">${waiting}</span> ${waiting === 1 ? 'wartet' : 'warten'} auf dich</span></div>
         <div class="board"><div class="board-tabs" role="group" aria-label="Gruppe">${tabs}
-          <input id="taik-board-search" type="search" aria-label="Tickets durchsuchen" placeholder="Suchen" value="${escape(boardSearch)}"></div>${lists}</div></section>
-        <section id="taik-orchestrator" aria-label="Orchestrator"><div class="section-heading"><h2>Orchestrator</h2><span class="sub">verteilt, du gibst frei</span></div>
+          <input id="taik-board-search" type="search" aria-label="Tickets durchsuchen" placeholder="Suchen" value="${escape(boardSearch)}"></div>${lists}</div></section>`;
+      // The orchestrator comes first, the tickets after it.
+      return `<section id="taik-orchestrator" aria-label="Orchestrator"><div class="section-heading"><h2>Orchestrator</h2><span class="sub">verteilt, du gibst frei</span></div>
         <div class="ticket-detail new-ticket" data-detail="new">
           <textarea aria-label="Nachricht an den Orchestrator" placeholder="Sag dem Orchestrator, was entstehen soll. Die erste Zeile wird der Titel.">${escape(ticketDrafts.get('new') ?? '')}</textarea>
           <div class="actions"><span class="sub" id="taik-new-ticket-note">${newTicketNote}</span>
           <button type="button" class="send" id="taik-new-ticket">Senden</button></div></div>
         ${(feed => feed.length ? `<ol class="plans">${feed.slice(0, 5).map(entry => `<li><button type="button" class="ticket" data-ticket="${escape(entry.key)}" data-job="">
           <span class="plan-title">${escape(entry.title)}</span><span class="why">${escape(entry.line)}</span>
-          ${entry.reason ? `<span class="plan-reason">${escape(entry.reason)}</span>` : ''}</button></li>`).join('')}</ol>` : '')(orchestratorFeed(snapshot))}</section>`;
+          ${entry.reason ? `<span class="plan-reason">${escape(entry.reason)}</span>` : ''}</button></li>`).join('')}</ol>` : '')(orchestratorFeed(snapshot))}</section>${tickets}`;
     }
 
     function ticketDetail(entry) {
@@ -1194,7 +1226,7 @@
       const working = agents ? `<section aria-label="Sitzungen"><div class="section-heading"><h2>Sitzungen</h2>
           <span class="sub">gemeldet über Hooks, ohne Modellaufruf</span></div><ul class="agents">${agents}</ul></section>` : '';
       const accepted = latestAccepted(job);
-      renderPreview(job);
+      renderPreview(job, proposal);
       const initialOrder = order(job.baseline.fields.procedure);
       const currentOrder = order(accepted.fields.procedure);
       const steps = currentOrder.map((operation, index) => `<li${initialOrder[index] !== operation ? ' class="changed"' : ''}>${escape(labels[operation] ?? operation)}</li>`).join('');

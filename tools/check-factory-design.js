@@ -44,7 +44,13 @@ function renderFacts(mode) {
   requireFact(!!history.querySelector('.rounds .round'), 'The visible history contains no completed rounds');
   requireFact(result.srcdoc.includes('<canvas'), 'The accepted result no longer contains the Floorplanner canvas');
   requireFact(result.getAttribute('sandbox') === 'allow-scripts', 'The accepted result lost its preview isolation');
-  requireFact(flow.querySelectorAll('.flow-node').length === 5, 'The flow does not show its five stations');
+  // The flow is the workflow of the chosen ticket: six stations, each with who carries it out and its state.
+  const stations = [...flow.querySelectorAll('.flow-node')].map(node => node.querySelector('.flow-name')?.textContent.trim());
+  requireFact(JSON.stringify(stations) === JSON.stringify(['Wunsch', 'Plan des Orchestrators', 'Gate', 'Freigabe', 'Arbeit', 'Urteil']), 'The flow does not show the six stations of a ticket: ' + stations.join(', '));
+  requireFact(flow.querySelectorAll('.flow-node.active').length <= 1, 'More than one station of the flow is active');
+  // The orchestrator comes first in the left column, then the tickets, then the ticket.
+  const order = ['#taik-orchestrator', '#taik-board', '#taik-ticket'].map(id => find(id)?.getBoundingClientRect().top ?? NaN);
+  requireFact(order[0] < order[1] && order[1] < order[2], 'The left column is not ordered orchestrator, tickets, ticket: ' + order.join(', '));
   const rect = el => el.getBoundingClientRect().toJSON();
   const facts = {
     mode, viewport: innerWidth, scrollWidth: document.documentElement.scrollWidth,

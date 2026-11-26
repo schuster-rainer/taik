@@ -1,0 +1,3 @@
+round=1
+
+Die Freigabeprüfung der Ansicht hat deinen Stand abgelehnt: Die Karte „Ablauf" ist zu hoch geworden, weil die sechs Stationen in zwei Reihen stehen. Dadurch bleibt für das Werkstück darunter bei einem Fenster von 1300 x 820 nur 344 px Höhe, verlangt sind mindestens 45 Prozent der Fensterhöhe (369 px). Bitte die sechs Stationen bei Desktop-Breite in einer Reihe zeigen und so kompakt halten, dass die Karte „Ablauf" nicht höher ist als vorher mit fünf Stationen (etwa 86 px für die Stationsreihe). Namen, Ausführende und Zustand bleiben lesbar und werden nicht abgeschnitten; „Plan des Orchestrators" darf umbrechen. In der schmalen Ansicht dürfen die Stationen umbrechen. Sonst nichts ändern.

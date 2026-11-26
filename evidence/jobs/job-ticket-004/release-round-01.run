@@ -1,0 +1,9 @@
+decision=rejected
+kind=release
+identity=release-round-01
+artifact=round-01.html
+artifact_sha256=a2ca6a911b475cf2260877777c707138ce40b7e4aff3a50a115856c9ba6333d9
+released_by=tools/release-view.sh
+checks=candidate: FAIL: Error: The flow does not show its five stations
+rollback=
+end
