@@ -247,6 +247,8 @@ pub struct Handover<'a> {
     pub agent: Option<&'a str>,
     pub said: &'a [crate::talk::Message],
     pub plan: Option<&'a Path>,
+    /// The content of the file `worker` of the proposal, when the user assigned the work agent.
+    pub worker: Option<&'a str>,
 }
 
 #[cfg(target_os = "macos")]
@@ -262,6 +264,7 @@ pub fn queue_source(
         agent,
         said: conversation,
         plan,
+        worker,
     } = handover;
     if name.is_empty()
         || name.len() > 48
@@ -321,6 +324,14 @@ pub fn queue_source(
     if let Some(plan) = plan {
         let text = record::read_regular(plan, MAX_RECORD_BYTES)?;
         record::publish_text(&job.path().join("plan.txt"), &text, MAX_RECORD_BYTES)?;
+    }
+    // The work agent the user assigned travels with the job, before the service sees it.
+    if let Some(worker) = worker {
+        record::publish_text(
+            &job.path().join(crate::proposal::WORKER),
+            worker,
+            MAX_RECORD_BYTES,
+        )?;
     }
     record::publish(&job.path().join("request.run"), crate::source::REQUEST)?;
     publish_job(job, jobs.join(destination))

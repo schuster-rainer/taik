@@ -32,6 +32,7 @@ For this repository `.taik/land.sh NAME` takes the work in. It merges the job's 
 ### Four commands
 
 - `taik-seed close STATE job-NAME` closes a job for good with the reason from standard input, and no reply gives it another round.
+- `taik-seed assign STATE NAME AGENT` sets, before `approve`, which agent works a waiting proposal instead of the one its plan names: `standard` or an agent of `STATE/crew`. It writes `STATE/proposals/NAME/worker`, which travels with the job. The agent that wrote the gate is refused, and a session takes only an agent on the Claude harness or `standard`.
 - `taik-seed decline STATE NAME` declines a waiting proposal, or withdraws a request that has none, with the reason from standard input.
 - `taik-seed orchestrator-prompt STATE REQUEST.run` prints the text the orchestrator would send for a request and calls no worker.
 - `taik-seed reflect STATE job-NAME` turns the oldest open intent of the Factory into a request that goes through the orchestrator like a wish of the user.
@@ -282,6 +283,7 @@ taik-seed source JOB BRIEF GATE [--attached[=WORKER]]
 taik-seed promote JOB BRIEF GATE INSTALLED_BINARY WORKER
 taik-seed propose STATE NAME RECORD.run
 taik-seed reflect STATE job-NAME
+taik-seed assign STATE NAME AGENT
 taik-seed approve STATE NAME
 taik-seed decline STATE NAME
 taik-seed orchestrator-prompt STATE REQUEST.run

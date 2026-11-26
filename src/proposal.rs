@@ -655,6 +655,53 @@ pub fn decline(state: &Path, name: &str, reason: &[u8]) -> Result<PathBuf> {
     Ok(target)
 }
 
+/// The work agent the user assigned to a waiting proposal: STATE/proposals/NAME/worker.
+pub const WORKER: &str = "worker";
+const MAX_WORKER_BYTES: usize = 64;
+
+/// Assigns the agent that works a waiting proposal once it is approved, instead of the one its plan
+/// names. Nothing is written when the name, the state of the proposal or the agent does not allow it.
+pub fn assign(state: &Path, name: &str, agent: &str) -> Result<PathBuf> {
+    let name = crate::worker_name(name).ok_or("invalid proposal name")?;
+    let proposal = state.join("proposals").join(name);
+    if !proposal
+        .symlink_metadata()
+        .is_ok_and(|metadata| metadata.is_dir())
+    {
+        return Err(format!("no waiting proposal named {name}").into());
+    }
+    if proposal.join("approved.txt").symlink_metadata().is_ok() {
+        return Err("the proposal is already approved".into());
+    }
+    if proposal.join(DECLINED).symlink_metadata().is_ok() {
+        return Err("the proposal is already declined".into());
+    }
+    let plan = crate::orchestrator::Plan::read(&proposal.join("plan.txt"));
+    if agent != crate::orchestrator::STANDARD {
+        let loaded = crate::crew::load(state, agent)?;
+        if plan.as_ref().is_some_and(|plan| plan.session)
+            && loaded.harness != crate::crew::Harness::Claude
+        {
+            return Err("a session needs an agent on the Claude harness".into());
+        }
+    }
+    // Nobody judges their own work.
+    if plan.as_ref().is_some_and(|plan| plan.gate == agent) {
+        return Err("the agent that wrote the gate cannot do the work".into());
+    }
+    use std::io::Write;
+    let target = proposal.join(WORKER);
+    let mut pending = tempfile::Builder::new()
+        .prefix(".taik-")
+        .suffix(".pending")
+        .tempfile_in(&proposal)?;
+    pending.write_all(format!("{agent}\n").as_bytes())?;
+    pending.as_file().sync_all()?;
+    // Replaces an earlier choice in one step.
+    pending.persist(&target).map_err(|error| error.error)?;
+    Ok(target)
+}
+
 pub fn approve(state: &Path, name: &str) -> Result<PathBuf> {
     let name = crate::worker_name(name).ok_or("invalid proposal name")?;
     let proposal = state.canonicalize()?.join("proposals").join(name);
@@ -662,10 +709,18 @@ pub fn approve(state: &Path, name: &str) -> Result<PathBuf> {
         return Err("a declined proposal cannot be approved".into());
     }
     let plan = crate::orchestrator::Plan::read(&proposal.join("plan.txt"));
-    let worker = plan
-        .as_ref()
-        .map(|plan| plan.work.as_str())
-        .filter(|name| *name != crate::orchestrator::STANDARD);
+    // The work agent the user assigned counts instead of the one the plan names.
+    let assigned = proposal.join(WORKER);
+    let assigned = if assigned.symlink_metadata().is_ok() {
+        Some(record::read_regular(&assigned, MAX_WORKER_BYTES)?)
+    } else {
+        None
+    };
+    let worker = match &assigned {
+        Some(text) => Some(text.trim()),
+        None => plan.as_ref().map(|plan| plan.work.as_str()),
+    }
+    .filter(|name| *name != crate::orchestrator::STANDARD);
     let said = crate::talk::read(&proposal);
     // The plan file is copied as it is, so that the job still names who wrote its gate.
     let plan_file = proposal.join("plan.txt");
@@ -688,6 +743,7 @@ pub fn approve(state: &Path, name: &str) -> Result<PathBuf> {
                 agent: worker,
                 said: &said,
                 plan: plan_file,
+                worker: assigned.as_deref(),
             },
         )?
     } else {
@@ -704,6 +760,7 @@ pub fn approve(state: &Path, name: &str) -> Result<PathBuf> {
                 // What the user said about the proposal starts the conversation of the job.
                 said: &said,
                 plan: plan_file,
+                worker: assigned.as_deref(),
             },
         )?
     };

@@ -78,7 +78,12 @@ pub fn queue(
     repo: Option<&Path>,
     handover: crate::service::Handover<'_>,
 ) -> Result<PathBuf> {
-    let crate::service::Handover { agent, said, plan } = handover;
+    let crate::service::Handover {
+        agent,
+        said,
+        plan,
+        worker,
+    } = handover;
     let name = crate::worker_name(name).ok_or("invalid job name")?;
     let brief = record::read_regular(brief, record::MAX_RECORD_BYTES)?;
     source::intent(&brief)?;
@@ -121,6 +126,14 @@ pub fn queue(
         record::publish_text(
             &staged.path().join("plan.txt"),
             &text,
+            record::MAX_RECORD_BYTES,
+        )?;
+    }
+    // The work agent the user assigned travels with the job, before the service sees it.
+    if let Some(worker) = worker {
+        record::publish_text(
+            &staged.path().join(crate::proposal::WORKER),
+            worker,
             record::MAX_RECORD_BYTES,
         )?;
     }

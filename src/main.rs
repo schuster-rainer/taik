@@ -61,6 +61,7 @@ const USAGE: &str = "usage: taik-seed seed OUTPUT.run
        taik-seed queue-session STATE NAME BRIEF.md GATE.sh [REPOSITORY]
        taik-seed propose STATE NAME RECORD.run
        taik-seed reflect STATE job-NAME
+       taik-seed assign STATE NAME AGENT
        taik-seed approve STATE NAME
        taik-seed decline STATE NAME < REASON
        taik-seed orchestrator-prompt STATE REQUEST.run
@@ -508,6 +509,13 @@ fn run() -> Result<bool> {
         "approve" if rest.len() == 1 => {
             let name = rest[0].to_str().ok_or("proposal name must be ASCII")?;
             println!("{}", proposal::approve(first, name)?.display());
+            Ok(true)
+        }
+        #[cfg(target_os = "macos")]
+        "assign" if rest.len() == 2 => {
+            let name = rest[0].to_str().ok_or("proposal name must be ASCII")?;
+            let agent = rest[1].to_str().ok_or("agent name must be ASCII")?;
+            println!("{}", proposal::assign(first, name, agent)?.display());
             Ok(true)
         }
         #[cfg(target_os = "macos")]
