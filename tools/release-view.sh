@@ -52,7 +52,14 @@ cmp -s "$app/Resources/factory-view.html" "$artifact" || { finish rejected "the 
 "$app/MacOS/factory-view" --snapshot > "$work/after.html"
 after=$(swift tools/check-factory-design.swift --require-open < "$work/after.html" 2>&1 | tail -1)
 case "$after" in
-  PASS*) finish accepted "candidate: $before installed: $after" "rollback.$stem.html" ;;
+  PASS*) finish accepted "candidate: $before installed: $after" "rollback.$stem.html"
+     # A check that a job added for the new behaviour stays with the product: later jobs must keep it green.
+     gate="$job/submission.gate.mjs"
+     if [ -f "$gate" ] && grep -q '^// TAIK: check added by job ' "$gate" \
+        && node "$gate" tools/factory-view.html initial >/dev/null 2>&1; then
+       cp tools/factory-view-product/verify.mjs "$job/rollback.$stem.product-gate.mjs"
+       cp "$gate" tools/factory-view-product/verify.mjs
+     fi ;;
   *) cp "$job/rollback.$stem.html" tools/factory-view.html
      pkill -x factory-view 2>/dev/null || true; sleep 1; ./tools/open-factory-view.sh
      finish rejected "installed: $after. The previous viewer was restored." "rollback.$stem.html"; exit 1 ;;

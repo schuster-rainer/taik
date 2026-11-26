@@ -525,3 +525,118 @@ fn the_orchestrator_plans_a_request_and_approval_follows_the_plan() {
         "the standard worker needs no agent file"
     );
 }
+
+#[test]
+fn a_planned_product_change_gets_a_check_that_is_red_on_the_current_source() {
+    use std::io::Write;
+    use std::process::Stdio;
+    let root = tempfile::Builder::new()
+        .prefix("taik-check-")
+        .tempdir_in("/tmp")
+        .unwrap();
+    let root = root.path().canonicalize().unwrap();
+    let factory = || Command::new(env!("CARGO_BIN_EXE_taik-seed"));
+    let state = root.join("state");
+    fs::create_dir_all(state.join("jobs")).unwrap();
+    fs::create_dir_all(state.join("products")).unwrap();
+    let page = root.join("page.html");
+    fs::write(&page, "<!doctype html><p>alt</p>\n").unwrap();
+    let gate = root.join("product.mjs");
+    fs::write(&gate, "console.log('PASS: the product as it was');\n").unwrap();
+    fs::write(
+        state.join("products/seite.product"),
+        format!(
+            "about=Eine Seite\nseed={}\ngate={}\nend\n",
+            page.display(),
+            gate.display()
+        ),
+    )
+    .unwrap();
+    let reply = |text: &str| {
+        serde_json::json!({"type": "result", "is_error": false, "result": text,
+            "usage": {"output_tokens": 1}, "total_cost_usd": 0.01, "modelUsage": {"m": {}}})
+        .to_string()
+    };
+    fs::write(root.join("plan.json"), reply("Art: dokument\nRepo: -\nGate: standard\nArbeit: standard\nGrund: Ein Produkt wird geändert.")).unwrap();
+    fs::write(
+        root.join("product.json"),
+        reply("=== product seite ===\nDie Seite bekommt eine Überschrift\n\nMehr.\n"),
+    )
+    .unwrap();
+    let worker = root.join("lead");
+    fs::write(
+        &worker,
+        format!(
+            "#!/bin/sh\ncase \"$*\" in *'orchestrator of a software factory'*) cat '{0}/plan.json';; *'CURRENT SOURCE OF THE PRODUCT'*) cat '{0}/check.json';; *) cat '{0}/product.json';; esac\n",
+            root.display()
+        ),
+    )
+    .unwrap();
+    fs::set_permissions(&worker, fs::Permissions::from_mode(0o700)).unwrap();
+    let home = state.to_str().unwrap();
+    let wish = |check: &str| {
+        fs::write(root.join("check.json"), reply(check)).unwrap();
+        let mut asked = factory()
+            .args(["request", home])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .spawn()
+            .unwrap();
+        asked
+            .stdin
+            .take()
+            .unwrap()
+            .write_all(b"Eine Ueberschrift fuer die Seite")
+            .unwrap();
+        let name = String::from_utf8_lossy(&asked.wait_with_output().unwrap().stdout)
+            .trim()
+            .to_owned();
+        let served = factory()
+            .arg("drain")
+            .arg(&state)
+            .env("TAIK_LEAD_WORKER", &worker)
+            .env_remove("TAIK_SECOND_WORKER")
+            .env_remove("TAIK_AUTO_PROPOSE")
+            .output()
+            .unwrap();
+        let proposal = state.join("proposals").join(&name);
+        let gate = fs::read_to_string(proposal.join("verify.mjs"))
+            .unwrap_or_else(|_| panic!("{served:?}"));
+        (gate, fs::read_to_string(proposal.join("brief.md")).unwrap())
+    };
+
+    // A check that fails on the current source is appended, and the revised brief replaces the first.
+    let (gate, brief) = wish(
+        "=== brief.md ===\nDie Seite bekommt eine Überschrift\n\nSie steht in einem h1-Element.\n=== check.mjs ===\nassert(html.includes('<h1>'), 'die Überschrift in einem h1-Element fehlt');\n",
+    );
+    assert!(
+        gate.starts_with("console.log('PASS: the product as it was');\n"),
+        "{gate}"
+    );
+    assert!(
+        gate.contains("// TAIK: check added by job ticket-001\n")
+            && gate.contains("die Überschrift in einem h1-Element fehlt"),
+        "{gate}"
+    );
+    assert!(brief.contains("Sie steht in einem h1-Element."), "{brief}");
+
+    // A check that already passes proves nothing and is left out. So is one that is no JavaScript,
+    // one with an import statement and a revised brief with another intent.
+    for useless in [
+        "=== brief.md ===\nDie Seite bekommt eine Überschrift\n=== check.mjs ===\nassert(html.includes('<p>'), 'x');\n",
+        "=== brief.md ===\nDie Seite bekommt eine Überschrift\n=== check.mjs ===\nassert(((\n",
+        "=== brief.md ===\nDie Seite bekommt eine Überschrift\n=== check.mjs ===\nimport fs from 'node:fs';\nassert(false, 'x');\n",
+        "=== brief.md ===\nEtwas ganz anderes\n=== check.mjs ===\nassert(false, 'x');\n",
+        "NONE",
+    ] {
+        let (gate, brief) = wish(useless);
+        assert_eq!(
+            gate, "console.log('PASS: the product as it was');\n",
+            "{useless}"
+        );
+        assert_eq!(
+            brief, "Die Seite bekommt eine Überschrift\n\nMehr.\n",
+            "{useless}"
+        );
+    }
+}

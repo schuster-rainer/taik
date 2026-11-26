@@ -1,0 +1,20 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-39
+intent=Eine geplante Produktänderung bekommt eine eigene Prüfung für das Neue, die auf dem alten Stand scheitern muss.
+baseline=taik-seed 511d2540601fdd2b735eace715d63537fa1381195308cd719c9b114733bad074
+worker=claude-fable
+decided_by=the installed taik-seed 511d2540601fdd2b735eace715d63537fa1381195308cd719c9b114733bad074 at /Users/rainer/.local/state/taik-factory/taik-seed
+limits=99 rounds; gate 900s; candidate checks 10s each
+gate_sha256=76b41170f51fa7e1a5424ba01f903bcf2276b8f8f19e4d87f952e88d18b6b0ce
+gate_ms=39274
+checks=PASS: Rust tests, Clippy with warnings denied, release build; candidate seeded, rejected an invalid procedure without touching the accepted record, and extended it
+evidence=round-39.checks.log
+artifact=round-39-taik-seed
+artifact_sha256=ba4355a9af95458d22a741fa5bf80ae65846b3d0cca4cddd4e1fafcc68aab584
+rollback=round-39.rollback-taik-seed
+continuation=Restart the service so that it runs the accepted binary.
+advance=false
+end

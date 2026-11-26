@@ -135,6 +135,104 @@ pub fn propose(state: &Path, name: &str, record_path: &Path) -> Result<Option<Pa
     propose_planned(state, name, record_path, None)
 }
 
+const CHECK_CONTRACT: &str = "A job will change a product of the TAIK Factory, a single text document. You see the brief of the job and the current source of the product. Write the acceptance check for what the brief newly demands, and revise the brief so that it names everything your check uses.
+
+Reply with exactly two parts in this form and nothing else:
+
+=== brief.md ===
+<the complete revised brief>
+=== check.mjs ===
+<the check>
+
+The check is the body of an async function in a Node.js ES module that runs after the product's existing checks. Available names: `assert` (node:assert/strict), `html` (the candidate document as one string) and `readFileSync`. Write no import statement; use `await import(...)` if you need another module. It has no network and 15 seconds.
+
+Rules: check behaviour, not the presence of words. The document keeps its logic in pure functions between marker comments such as /*BOARD_BEGIN*/ and /*BOARD_END*/. Take a block out with a regular expression, evaluate it with `new Function(block + '\\nreturn { name };')()` and call the functions with test data. If the new behaviour needs a new pure function, name it and its block in the brief with its exact inputs and outputs, then test it. Require only what the revised brief states. The check must fail on the current source and pass once the brief is fulfilled. Each assertion carries a message in plain words that says what is missing: the worker reads that message and never this check. Never forbid a name the brief does not forbid. The revised brief keeps the first line and every demand of the original.
+
+If the brief demands nothing that can be checked this way, reply with the single word NONE.";
+
+// The marker that opens a check a job added to the gate of a product.
+const ADDED_CHECK: &str = "// TAIK: check added by job ";
+
+// Asks the author of the gate for a check of the new behaviour of a product change. The check is
+// appended to the product's gate when it is valid JavaScript, when the gate alone passes on the
+// current source and when the gate with the check fails on it: red before green.
+fn product_check(
+    name: &str,
+    author: Option<&crate::crew::Agent>,
+    scratch: &Path,
+    job: &Path,
+    brief: &str,
+    source_text: &str,
+    gate: &str,
+) -> Option<(String, String)> {
+    let workspace = scratch.join("check-author");
+    fs::create_dir(&workspace).ok()?;
+    let prompt = format!(
+        "{CHECK_CONTRACT}\n\nBRIEF:\n{brief}\nCURRENT SOURCE OF THE PRODUCT:\n{source_text}"
+    );
+    let answer = match author {
+        Some(agent) => source::call_agent(
+            agent,
+            &workspace,
+            job,
+            &prompt,
+            &mut Progress::silent(),
+            |_| {},
+        ),
+        None => source::ask(&workspace, job, &prompt, &mut Progress::silent()).0,
+    };
+    let (answer, _) = answer
+        .map_err(|error| eprintln!("proposal {name}: no check for the product: {error}"))
+        .ok()?;
+    let (revised, body) = split(&answer, "check.mjs")?;
+    let body = body
+        .trim()
+        .trim_start_matches("```js")
+        .trim_start_matches("```javascript");
+    let body = body.trim_start_matches("```").trim();
+    if body.len() > 12_000
+        || revised.len() > record::MAX_RECORD_BYTES
+        || revised.lines().next() != brief.lines().next()
+        || body
+            .lines()
+            .any(|line| line.trim_start().starts_with("import "))
+    {
+        eprintln!("proposal {name}: the check for the product broke its contract");
+        return None;
+    }
+    let extended = format!(
+        "{}\n{ADDED_CHECK}{name}\nawait (async () => {{\n  const {{ default: assert }} = await import('node:assert/strict');\n  const {{ readFileSync }} = await import('node:fs');\n  const html = readFileSync(process.argv[2], 'utf8');\n  void readFileSync;\n{body}\n}})();\n",
+        gate.trim_end()
+    );
+    let trial = scratch.join("check-trial");
+    fs::create_dir(&trial).ok()?;
+    fs::write(trial.join("seed.html"), source_text).ok()?;
+    let passes = |file: &str, text: &str| -> Option<bool> {
+        fs::write(trial.join(file), text).ok()?;
+        let mut run = source::sandbox(&trial, job, "node", false).ok()?;
+        run.args([file, "seed.html", "initial"]);
+        let ran = source::run_child(&mut run, Duration::from_secs(15), |_| {}).ok()?;
+        Some(ran.status.success())
+    };
+    fs::write(trial.join("extended.mjs"), &extended).ok()?;
+    let mut check = source::sandbox(&trial, job, "node", false).ok()?;
+    check.args(["--check", "extended.mjs"]);
+    let syntax = source::run_child(&mut check, CHECK_TIMEOUT, |_| {}).ok()?;
+    if !syntax.status.success() {
+        eprintln!("proposal {name}: the check for the product is not valid JavaScript");
+        return None;
+    }
+    if passes("base.mjs", gate) != Some(true) {
+        eprintln!("proposal {name}: the gate of the product fails on its own source");
+        return None;
+    }
+    if passes("extended.mjs", &extended) != Some(false) {
+        eprintln!("proposal {name}: the check passes on the current source and proves nothing");
+        return None;
+    }
+    Some((revised, extended))
+}
+
 const SESSION_CONTRACT: &str = "You prepare a job of the TAIK Factory that an agent will do in a session on a repository. Write a brief and an independent gate. Another agent will later see only the brief, work in a copy of the repository with file tools and no shell, and never see the gate.
 
 Reply with exactly two files in this form and nothing else:
@@ -345,6 +443,20 @@ pub fn propose_planned(
         let (brief, gate) = split(&answer, "verify.mjs")
             .ok_or("the worker did not return brief.md and verify.mjs")?;
         (brief, gate, None)
+    };
+    // A planned change to a product gets a check of its own for what is new.
+    let (brief, gate) = match (&seed, plan) {
+        (Some((_, source_text)), Some(_)) => product_check(
+            name,
+            author.as_ref(),
+            &scratch,
+            job,
+            &brief,
+            source_text,
+            &gate,
+        )
+        .unwrap_or((brief, gate)),
+        _ => (brief, gate),
     };
     source::intent(&brief)?;
     if brief.len() > record::MAX_RECORD_BYTES
