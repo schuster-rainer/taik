@@ -1,0 +1,14 @@
+166097	start	Sitzung in /Users/rainer/.local/state/taik-factory/work/ticket-027
+166451	worker	Beginnt die Sitzung d2448c98
+3405545	tool	Glob **/*
+5767997	tool	Read README.md
+28885500	tool	Write Cargo.toml
+29884793	tool	Write Cargo.lock
+49551829	tool	Write src/lib.rs
+53650058	tool	Write src/main.rs
+71028697	tool	Write tests/cli.rs
+75161101	tool	Write .gitignore
+81751078	tool	Write README.md
+87476274	checks	7 Dateien geändert, Commit d0c2d011
+87539522	evaluate	Gate prüft Commit d0c2d011
+90401301	accepted	PASS: auftragsbericht baut, Tests laufen, Verhalten und README stimmen

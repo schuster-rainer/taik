@@ -1,0 +1,26 @@
+decision=rejected
+kind=software
+procedure=
+tags=
+identity=round-02
+intent=Im Repository auftragsbericht entsteht ein Rust-Kommandozeilenprogramm, das die Auftragsordner einer Factory zusammenfasst.
+baseline=7c4c67ca2efd08a566b2c05aaadc46c627af2196
+worker=claude-session
+worker_model=claude-opus-5-5
+worker_output_tokens=4283
+worker_cache_read_tokens=79603
+session_listed_usd=0.47231119999999993
+worker_failure=
+worker_duration_ms=42672
+session=d2448c98-a758-48fc-8b5b-7ba40b551374
+limits=6 rounds and one per reply; lease 600s without ceiling; file tools only
+gate_sha256=82eeeba9fa7ea0cadb7f811cb1c83356df9a5a5ff77cdb0a3cf683ad6c750093
+gate_ms=3169
+checks=gate failed (exit status: 1):         auftragsbericht --offen ORDNER
+artifact=
+commit=67248edff3db5c7f29ba154d523f30da576304fa
+files=README.md +14 -1; src/lib.rs +8 -0; src/main.rs +29 -5; tests/cli.rs +59 -0
+summary=Ich habe die Option `--offen` hinzugefügt: Sie gibt nur Aufträge aus, deren letzte Entscheidung nicht `accepted` ist, und auch die Zeile `gesamt` zählt nur diese; ohne die Option bleibt die Ausgabe wie bisher. Das betrifft `src/main.rs` (Argumente lesen) und `src/lib.rs` (die neue Funktion `nur_offene`). Bei einer unbekannten Option, auch bei `--offen=ja` oder `-x`, endet das Programm mit Status 2 und der Aufrufzeile `Aufruf: auftragsbericht ORDNER`, die eine zweite Zeile für `--offen ORDNER` ergänzt. Aufträge ohne Runde (`-`) gelten als offen, die dritte Spalte der Zeile `gesamt` ist bei `--offen` immer 0, und ein Ordner, dessen Name mit `-` beginnt, lässt sich nach `--` angeben. README und `tests/cli.rs` habe ich ergänzt, aber ohne Shell nichts gebaut oder getestet; ob alles durchläuft, zeigt erst die Prüfung.
+continuation=The copy keeps the rejected state. The next round continues the session with this finding.
+advance=false
+end

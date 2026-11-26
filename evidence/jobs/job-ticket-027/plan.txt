@@ -1,0 +1,6 @@
+kind=sitzung
+repo=auftragsbericht
+repo_path=/Users/rainer/.local/state/taik-factory/repositories/auftragsbericht
+gate=pruefer
+work=standard
+reason=Das Cargo-Projekt entsteht im vorhandenen Repository auftragsbericht neben der README; pruefer liest es zuerst und prüft das Verhalten, standard baut es.

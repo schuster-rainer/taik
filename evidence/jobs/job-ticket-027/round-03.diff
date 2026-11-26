@@ -1,0 +1,27 @@
+diff --git a/src/main.rs b/src/main.rs
+index e558eab..2be10d2 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -67,6 +67,5 @@ fn main() -> ExitCode {
+ 
+ fn aufruf() -> ExitCode {
+     eprintln!("Aufruf: auftragsbericht ORDNER");
+-    eprintln!("        auftragsbericht --offen ORDNER");
+     ExitCode::from(2)
+ }
+diff --git a/tests/cli.rs b/tests/cli.rs
+index a0cd6e5..65f172b 100644
+--- a/tests/cli.rs
++++ b/tests/cli.rs
+@@ -159,7 +159,10 @@ fn leerer_ordner() {
+ fn falscher_aufruf() {
+     let aus = starte(&[]);
+     assert_eq!(aus.status.code(), Some(2));
+-    assert!(String::from_utf8_lossy(&aus.stderr).contains("Aufruf: auftragsbericht ORDNER"));
++    assert_eq!(
++        String::from_utf8_lossy(&aus.stderr),
++        "Aufruf: auftragsbericht ORDNER\n"
++    );
+ 
+     let a = std::ffi::OsStr::new("a");
+     let b = std::ffi::OsStr::new("b");

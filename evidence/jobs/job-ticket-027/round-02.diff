@@ -1,0 +1,186 @@
+diff --git a/README.md b/README.md
+index 9a45d5d..0e5d42d 100644
+--- a/README.md
++++ b/README.md
+@@ -8,8 +8,13 @@ letzte Entscheidung und die angefallenen Kosten, dazu eine Gesamtzeile.
+ 
+ ```
+ auftragsbericht ORDNER
++auftragsbericht --offen ORDNER
+ ```
+ 
++Mit `--offen` erscheinen nur die Aufträge, deren letzte Entscheidung nicht
++`accepted` ist (also auch Aufträge ohne Runde, `-`); die Zeile `gesamt` zählt
++dann nur diese Aufträge. Ohne die Option werden alle Aufträge ausgegeben.
++
+ `ORDNER` enthält die Auftragsordner, deren Name mit `job-` beginnt. Andere
+ Ordner und Dateien direkt in `ORDNER` werden übergangen.
+ 
+@@ -40,12 +45,20 @@ job-b	1	rejected	0.50
+ gesamt	2	1	4.25
+ ```
+ 
++Dasselbe mit `auftragsbericht --offen ORDNER`:
++
++```
++job-b	1	rejected	0.50
++gesamt	1	0	0.50
++```
++
+ ## Fehler und Rückgabewerte
+ 
+ - `0`: Erfolg (auch bei leerem `ORDNER`; dann erscheint nur
+   `gesamt	0	0	0.00`).
+ - `1`: `ORDNER` fehlt, ist kein Ordner oder kann nicht gelesen werden.
+-- `2`: falscher Aufruf; es erscheint `Aufruf: auftragsbericht ORDNER`.
++- `2`: falscher Aufruf (kein oder mehr als ein `ORDNER`, unbekannte Option);
++  es erscheint die Aufrufzeile `Aufruf: auftragsbericht ORDNER`.
+ 
+ ## Bauen und Testen
+ 
+diff --git a/src/lib.rs b/src/lib.rs
+index 4e219e1..305da49 100644
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -144,6 +144,14 @@ pub fn zaehle_ordner(ordner: &Path) -> io::Result<Vec<Auftrag>> {
+     Ok(auftraege)
+ }
+ 
++/// Behält nur die Aufträge, deren letzte Entscheidung nicht `accepted` ist.
++pub fn nur_offene(auftraege: Vec<Auftrag>) -> Vec<Auftrag> {
++    auftraege
++        .into_iter()
++        .filter(|a| a.entscheidung != "accepted")
++        .collect()
++}
++
+ /// Erzeugt den Bericht einschließlich der Zeile `gesamt`.
+ pub fn bericht(auftraege: &[Auftrag]) -> String {
+     let mut aus = String::new();
+diff --git a/src/main.rs b/src/main.rs
+index 8db47e0..e558eab 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -5,12 +5,29 @@ use std::path::PathBuf;
+ use std::process::ExitCode;
+ 
+ fn main() -> ExitCode {
+-    let args: Vec<_> = env::args_os().skip(1).collect();
+-    if args.len() != 1 {
+-        eprintln!("Aufruf: auftragsbericht ORDNER");
+-        return ExitCode::from(2);
++    let mut offen = false;
++    let mut ordner_args = Vec::new();
++    let mut nur_noch_ordner = false;
++    for arg in env::args_os().skip(1) {
++        if nur_noch_ordner {
++            ordner_args.push(arg);
++            continue;
++        }
++        let als_text = arg.to_string_lossy().into_owned();
++        if als_text == "--offen" {
++            offen = true;
++        } else if als_text == "--" {
++            nur_noch_ordner = true;
++        } else if als_text.starts_with('-') && als_text != "-" {
++            return aufruf();
++        } else {
++            ordner_args.push(arg);
++        }
++    }
++    if ordner_args.len() != 1 {
++        return aufruf();
+     }
+-    let ordner = PathBuf::from(&args[0]);
++    let ordner = PathBuf::from(&ordner_args[0]);
+ 
+     match fs::metadata(&ordner) {
+         Ok(m) if m.is_dir() => {}
+@@ -32,6 +49,7 @@ fn main() -> ExitCode {
+     }
+ 
+     let auftraege = match auftragsbericht::zaehle_ordner(&ordner) {
++        Ok(a) if offen => auftragsbericht::nur_offene(a),
+         Ok(a) => a,
+         Err(e) => {
+             eprintln!("auftragsbericht: Lesefehler: {}", e);
+@@ -46,3 +64,9 @@ fn main() -> ExitCode {
+     }
+     ExitCode::SUCCESS
+ }
++
++fn aufruf() -> ExitCode {
++    eprintln!("Aufruf: auftragsbericht ORDNER");
++    eprintln!("        auftragsbericht --offen ORDNER");
++    ExitCode::from(2)
++}
+diff --git a/tests/cli.rs b/tests/cli.rs
+index 8cba25d..a0cd6e5 100644
+--- a/tests/cli.rs
++++ b/tests/cli.rs
+@@ -88,6 +88,65 @@ fn zaehlung_und_ausgabe() {
+     );
+ }
+ 
++#[test]
++fn option_offen() {
++    let t = TempOrdner::neu();
++    let w = &t.0;
++    schreibe(
++        &w.join("job-a/round-01.run"),
++        "decision=accepted\nworker_cost_usd=3.75\n",
++    );
++    schreibe(
++        &w.join("job-b/round-01.run"),
++        "decision=rejected\nworker_cost_usd=0.5\n",
++    );
++    schreibe(&w.join("job-c/sonst.run"), "worker_cost_usd=1\n");
++
++    let offen = std::ffi::OsStr::new("--offen");
++    let aus = starte(&[offen, w.as_os_str()]);
++    assert_eq!(aus.status.code(), Some(0), "{:?}", aus);
++    assert_eq!(
++        String::from_utf8(aus.stdout).unwrap(),
++        "job-b\t1\trejected\t0.50\n\
++         job-c\t0\t-\t1.00\n\
++         gesamt\t2\t0\t1.50\n"
++    );
++
++    // ohne Option unverändert
++    let aus = starte(&[w.as_os_str()]);
++    assert_eq!(
++        String::from_utf8(aus.stdout).unwrap(),
++        "job-a\t1\taccepted\t3.75\n\
++         job-b\t1\trejected\t0.50\n\
++         job-c\t0\t-\t1.00\n\
++         gesamt\t3\t1\t5.25\n"
++    );
++}
++
++#[test]
++fn offen_leerer_ordner() {
++    let t = TempOrdner::neu();
++    let offen = std::ffi::OsStr::new("--offen");
++    let aus = starte(&[offen, t.0.as_os_str()]);
++    assert_eq!(aus.status.code(), Some(0));
++    assert_eq!(String::from_utf8(aus.stdout).unwrap(), "gesamt\t0\t0\t0.00\n");
++}
++
++#[test]
++fn unbekannte_option() {
++    let t = TempOrdner::neu();
++    for opt in ["--zu", "-x", "--offen=ja"] {
++        let o = std::ffi::OsStr::new(opt);
++        let aus = starte(&[o, t.0.as_os_str()]);
++        assert_eq!(aus.status.code(), Some(2), "{}", opt);
++        assert!(aus.stdout.is_empty());
++        assert!(String::from_utf8_lossy(&aus.stderr).contains("Aufruf: auftragsbericht ORDNER"));
++    }
++    // nur die Option, kein Ordner
++    let aus = starte(&[std::ffi::OsStr::new("--offen")]);
++    assert_eq!(aus.status.code(), Some(2));
++}
++
+ #[test]
+ fn leerer_ordner() {
+     let t = TempOrdner::neu();
