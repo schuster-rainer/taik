@@ -297,6 +297,26 @@ async function runDesignGate(requireOpen) {
       await delayFrame();
       await chooseTicket('job-floorplanner');
     }
+    // A job tells who planned, judged and worked, and where its result is.
+    {
+      const planned = structuredClone(snapshot);
+      const job = planned.jobs.find(entry => entry.id === 'job-floorplanner');
+      job.plan = { kind: 'sitzung', repo: 'taik', gate: 'pruefer', work: 'standard', reason: 'Bestehende Dateien werden geändert.' };
+      job.adopted = 'taik/floorplanner';
+      window.updateFactory(planned);
+      await delayFrame();
+      await chooseTicket('job-floorplanner');
+      const actors = Object.fromEntries([...document.querySelectorAll('#taik-flow .flow-node')].map(node =>
+        [node.querySelector('.flow-name')?.textContent.trim(), node.textContent]));
+      requireFact(actors.Gate?.includes('@pruefer') && actors.Arbeit?.includes('Standard') && !actors.Arbeit.includes('@standard'), 'The flow does not name who wrote the gate and who worked: ' + JSON.stringify(actors));
+      const ticket = find('#taik-ticket');
+      requireFact(ticket.textContent.includes('Sitzung auf taik · Gate @pruefer · Arbeit @standard') && ticket.textContent.includes('Bestehende Dateien werden geändert.'), 'The ticket of a job lacks its plan');
+      const branch = [...ticket.querySelectorAll('code')].find(code => code.textContent.trim() === 'taik/floorplanner');
+      requireFact(branch && branch.scrollWidth <= branch.clientWidth + 1, 'The ticket does not show the branch of its result');
+      window.updateFactory(snapshot);
+      await delayFrame();
+      await chooseTicket('job-floorplanner');
+    }
     // Crew: a new agent is typed while the snapshot refreshes. The draft and the focus survive.
     const crew = find('#taik-crew');
     if (crew) {

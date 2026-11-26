@@ -603,6 +603,13 @@
         const rounds = job.rounds ?? [];
         const worker = [...rounds].reverse().map(round => round.fields?.worker).find(value => String(value ?? '').trim());
         actors = { 2: job.agent, 4: worker };
+        if (job.plan && typeof job.plan === 'object') {
+          // The plan names who wrote the gate and who works; "standard" is the service default without @.
+          const planned = name => String(name ?? '').trim().replace(/^@+/, '').toLowerCase() === 'standard' ? '' : name;
+          const gate = String(job.plan.gate ?? '').trim();
+          const work = String(job.plan.work ?? '').trim();
+          actors = { 2: gate ? planned(gate) : job.agent, 4: work ? planned(work) : worker };
+        }
         const said = job.messages?.at(-1);
         const waiting = said?.author === 'agent' || (said?.author === 'user' && said.round >= rounds.length);
         finished = rounds.length > 0 && !job.sourceActive && !job.sourceQueued && !isPending(job) && !waiting;
@@ -1250,7 +1257,13 @@
       const told = ticketThread(job).map(item => item.kind === 'round'
         ? renderRound(job.rounds[item.number - 1], item.number - 1, job, flows[item.number - 1])
         : `<li class="thread-message ${item.author === 'user' ? 'user' : 'agent'}"><span class="who">${item.author === 'user' ? 'Du' : 'Agent'}</span>${escape(item.text)}</li>`).join('');
+      const plan = job.plan && typeof job.plan === 'object' ? job.plan : null;
+      const adopted = job.adopted != null && String(job.adopted) !== '' ? String(job.adopted) : '';
+      const adoptedRepo = plan && plan.repo != null && String(plan.repo).trim() !== '' ? String(plan.repo) : '';
+      const adoptedRow = adopted ? `<div class="adopted"><dt>Ergebnis</dt><dd>Zweig <code>${escape(adopted)}</code>${adoptedRepo ? ' im Repository ' + escape(adoptedRepo) : ''}</dd></div>` : '';
+      const planBlock = plan ? `<dl class="ticket-state"><div><dt>Plan</dt><dd>${escape(planLine(plan))}</dd></div><div><dt>Grund</dt><dd>${escape(plan.reason)}</dd></div></dl>` : '';
       const stateBlock = state => `<dl class="ticket-state">${state.waits ? `<div class="waits"><dt>Wartet auf dich</dt><dd>${escape(state.waits)}</dd></div>` : ''}<div><dt>Stand</dt><dd>${escape(state.done)}</dd></div>
+          ${adoptedRow}
           ${state.problem ? `<div class="problem"><dt>Problem</dt><dd>${escape(state.problem)}</dd></div>` : ''}
           ${state.analysis.map(([label, text]) => `<div class="analysis"><dt>${escape(label || 'Analyse')}</dt><dd>${escape(text)}</dd></div>`).join('')}
           ${state.question ? `<div class="question"><dt>Offene Frage</dt><dd>${escape(state.question)}</dd></div>` : ''}
@@ -1275,6 +1288,7 @@
           <div class="section-heading"><h2>Ticket</h2><span class="sub">${escape(job.id)} · ${jobStatus(job)}${job.agent ? ' · @' + escape(job.agent) : ''}${job.cost > 0 ? ' · ' + money(job.cost) : ''}</span></div>
           <div class="ticket-top"><h3 class="ticket-title">${escape(ticketTitle(job.goal) || job.id)}</h3>${artifactButton}</div>
           ${stateBlock(ticketState(job))}
+          ${planBlock}
           ${job.brief ? `<details class="ticket-brief" data-round="${escape(briefKey)}" data-initial-open="${briefOpen}"${briefOpen ? ' open' : ''}><summary>Beschreibung</summary><pre>${escape(job.brief)}</pre></details>` : ''}
           <div class="thread" aria-label="Auftragsverlauf">${totalsLine}
           ${told ? `<ol class="rounds">${told}</ol>` : '<p class="sub lead">Die Factory hat den Auftrag erhalten. Die erste Runde steht noch aus.</p>'}</div>
