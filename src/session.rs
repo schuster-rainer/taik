@@ -78,6 +78,7 @@ pub fn queue(
     repo: Option<&Path>,
     agent: Option<&str>,
     said: &[talk::Message],
+    plan: Option<&Path>,
 ) -> Result<PathBuf> {
     let name = crate::worker_name(name).ok_or("invalid job name")?;
     let brief = record::read_regular(brief, record::MAX_RECORD_BYTES)?;
@@ -114,6 +115,15 @@ pub fn queue(
     }
     for message in said {
         talk::write(staged.path(), message.author, 0, &message.text)?;
+    }
+    // The plan of the proposal travels with the job, byte for byte, before the service sees it.
+    if let Some(plan) = plan {
+        let text = record::read_regular(plan, record::MAX_RECORD_BYTES)?;
+        record::publish_text(
+            &staged.path().join("plan.txt"),
+            &text,
+            record::MAX_RECORD_BYTES,
+        )?;
     }
     record::publish(&staged.path().join("request.run"), source::REQUEST)?;
     fs::rename(staged.path(), &job)?;

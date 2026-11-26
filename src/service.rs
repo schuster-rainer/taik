@@ -194,6 +194,7 @@ pub fn queue_source(
     seed: Option<&Path>,
     agent: Option<&str>,
     conversation: &[crate::talk::Message],
+    plan: Option<&Path>,
 ) -> Result<PathBuf> {
     if name.is_empty()
         || name.len() > 48
@@ -248,6 +249,11 @@ pub fn queue_source(
     // What was said before the job existed is in place before the service can see the job.
     for message in conversation {
         crate::talk::write(job.path(), message.author, 0, &message.text)?;
+    }
+    // The plan of the proposal travels with the job, byte for byte, before the service sees it.
+    if let Some(plan) = plan {
+        let text = record::read_regular(plan, MAX_RECORD_BYTES)?;
+        record::publish_text(&job.path().join("plan.txt"), &text, MAX_RECORD_BYTES)?;
     }
     record::publish(&job.path().join("request.run"), crate::source::REQUEST)?;
     publish_job(job, jobs.join(destination))

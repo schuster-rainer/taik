@@ -456,6 +456,7 @@ fn run() -> Result<bool> {
                 rest.get(3).map(Path::new),
                 None,
                 &[],
+                None,
             )?;
             println!("{}", job.display());
             Ok(true)
@@ -551,6 +552,7 @@ fn run() -> Result<bool> {
                     plain.get(3).map(Path::new),
                     agent,
                     &[],
+                    None,
                 )?
                 .display()
             );

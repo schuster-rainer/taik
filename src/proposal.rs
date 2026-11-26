@@ -453,6 +453,12 @@ pub fn approve(state: &Path, name: &str) -> Result<PathBuf> {
         .map(|plan| plan.work.as_str())
         .filter(|name| *name != crate::orchestrator::STANDARD);
     let said = crate::talk::read(&proposal);
+    // The plan file is copied as it is, so that the job still names who wrote its gate.
+    let plan_file = proposal.join("plan.txt");
+    let plan_file = plan_file
+        .symlink_metadata()
+        .is_ok()
+        .then_some(plan_file.as_path());
     let job = if let Some((_, repo)) = plan
         .as_ref()
         .filter(|plan| plan.session)
@@ -466,6 +472,7 @@ pub fn approve(state: &Path, name: &str) -> Result<PathBuf> {
             Some(repo),
             worker,
             &said,
+            plan_file,
         )?
     } else {
         service::queue_source(
@@ -479,6 +486,7 @@ pub fn approve(state: &Path, name: &str) -> Result<PathBuf> {
             worker,
             // What the user said about the proposal starts the conversation of the job.
             &said,
+            plan_file,
         )?
     };
     record::publish_text(
