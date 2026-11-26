@@ -339,6 +339,13 @@ pub fn propose_planned(
             },
         )
     };
+    // What the user answered to the questions of the orchestrator belongs to the request.
+    let prompt = format!(
+        "{prompt}{}",
+        crate::talk::prompt(&crate::talk::read(&crate::orchestrator::conversation(
+            &record_path
+        )))
+    );
     let scratch = tempfile::tempdir()?;
     let scratch = scratch.path().canonicalize()?;
     let workspace = scratch.join("worker");

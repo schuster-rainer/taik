@@ -63,6 +63,23 @@ pub fn reply(state: &Path, name: &str, text: &str) -> Result<PathBuf> {
                 .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
     });
     let jobs = jobs_in(state)?;
+    // An answer to a question of the orchestrator about a request that has no proposal yet.
+    if let Some(ticket) = crate::worker_name(name).filter(|_| !plain) {
+        let requests = state.join("requests");
+        let request = requests.join(format!("{ticket}.run"));
+        let talk = crate::orchestrator::conversation(&request);
+        if request.is_file()
+            && fs::symlink_metadata(state.join("proposals").join(ticket)).is_err()
+            && crate::talk::waits_for_user(&crate::talk::read(&talk))
+        {
+            let message = crate::talk::write(&talk, crate::talk::Author::User, 0, text)?;
+            let wake = tempfile::Builder::new()
+                .prefix(".wake-")
+                .tempdir_in(&jobs)?;
+            drop(wake);
+            return Ok(message);
+        }
+    }
     // A comment on a proposal is kept with the proposal and moves into the job on approval.
     if !plain {
         let proposal = crate::worker_name(name)
@@ -155,7 +172,16 @@ fn derive_requests(home: &Path) {
         }
         // The orchestrator decides how the request is carried out, then the agent it names writes the gate.
         let request = requests.join(format!("{name}.run"));
+        // The orchestrator asked the user something: the request waits for the answer.
+        if crate::talk::waits_for_user(&crate::talk::read(&crate::orchestrator::conversation(
+            &request,
+        ))) {
+            continue;
+        }
         let derived = crate::orchestrator::plan(home, &name, &request).and_then(|plan| {
+            let Some(plan) = plan else {
+                return Ok(None);
+            };
             let mut outcome = crate::proposal::propose_planned(home, &name, &request, Some(&plan));
             // An agent that cannot be reached does not end the request: another one writes the gate.
             let mut tried = plan.gate.clone();

@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use crate::progress::Progress;
-use crate::{Result, record, source};
+use crate::{Result, record, source, talk};
 
 pub const STANDARD: &str = "standard";
 const MAX_PLAN_BYTES: usize = 2048;
@@ -23,10 +23,15 @@ Grund: <one German sentence of at most 30 words: why this kind and these agents>
 'dokument' is right when the result is one new self-contained text document, such as a single HTML page or a small program in one bundle. \
 'sitzung' is right when existing files of a listed repository must be read or changed; it needs a repository, and its work agent must be on the claude harness or be 'standard'. \
 The gate is written before the work and judges it. For a 'sitzung' prefer a Gate agent on the claude harness other than the work agent: only such an agent can read the repository before it writes the gate. Choose two different agents for Gate and Arbeit whenever two are listed, so that nobody judges their own work. \
-Prefer the agent whose description fits the task; without a reason to prefer one, use 'standard' for the work.";
+Prefer the agent whose description fits the task; without a reason to prefer one, use 'standard' for the work.\n\n\
+Instead of the five lines you may reply with exactly one line 'Frage: <one question in German>' and nothing else. \
+Ask only when a wrong assumption would make the work order worthless; otherwise decide. The user answers, and then you plan again. \
+You may ask at most three questions about one request.";
 const RULES: &str = "A change to a listed product is of the kind 'dokument': the job starts from the product's accepted source and is judged by its own pinned gate. \
 A session may not change the protected paths listed under its repository; a commit that touches one is rejected. \
 An agent marked '(failed recently)' could not be reached a short while ago; do not choose it for the gate while another agent can write it.";
+/// How many questions the orchestrator may ask about one request.
+pub const MAX_QUESTIONS: usize = 3;
 // How long a failed call of a gate author keeps it out of the gate.
 const FAILED_FOR: Duration = Duration::from_secs(6 * 60 * 60);
 
@@ -328,7 +333,60 @@ fn compose(
         "\nREQUEST OF THE USER:\n{}",
         record::read_regular(request, record::MAX_RECORD_BYTES)?
     ));
+    let said = talk::read(&conversation(request));
+    prompt.push_str(&talk::prompt(&said));
+    if questions(&said) >= MAX_QUESTIONS {
+        prompt.push_str(
+            "\n\nYou asked three questions about this request already. Do not ask again: reply with the five lines of the plan.",
+        );
+    }
     Ok(prompt)
+}
+
+/// The conversation about a request STATE/requests/NAME.run: the folder STATE/requests/NAME.talk.
+pub fn conversation(request: &Path) -> PathBuf {
+    request.with_extension("talk")
+}
+
+// The questions the orchestrator asked so far.
+fn questions(said: &[talk::Message]) -> usize {
+    said.iter()
+        .filter(|message| message.author == talk::Author::Agent)
+        .count()
+}
+
+// An answer of exactly one line 'Frage: ...' is a question to the user.
+fn question(answer: &str) -> Option<String> {
+    let mut lines = answer.lines().map(str::trim).filter(|line| !line.is_empty());
+    let line = lines.next()?;
+    if lines.next().is_some() {
+        return None;
+    }
+    let line = line.trim_start_matches(['-', '*', ' ']).replace("**", "");
+    let text = line.strip_prefix("Frage:")?.trim();
+    (!text.is_empty() && text.len() <= talk::MAX_MESSAGE_BYTES).then(|| text.to_owned())
+}
+
+#[derive(Debug, PartialEq)]
+enum Answer {
+    Plan(Plan),
+    Question(String),
+}
+
+// What the worker of the orchestrator answered: a plan, or a question while questions are left.
+fn decide(
+    answer: &str,
+    asked: usize,
+    crew: &[Member],
+    repositories: &[(String, PathBuf)],
+) -> Result<Answer> {
+    if let Some(text) = question(answer) {
+        if asked >= MAX_QUESTIONS {
+            return Err("the orchestrator asked more than three questions".into());
+        }
+        return Ok(Answer::Question(text));
+    }
+    parse(answer, crew, repositories).map(Answer::Plan)
 }
 
 /// The text the orchestrator would send to its worker for a request. Nothing is called or written.
@@ -336,11 +394,17 @@ pub fn prompt(home: &Path, request: &Path) -> Result<String> {
     compose(home, &crew(home), &repositories(home), request)
 }
 
-/// Asks the standard worker for the plan of a request and keeps it beside the request.
-pub fn plan(home: &Path, name: &str, request: &Path) -> Result<Plan> {
+/// Asks the standard worker for the plan of a request and keeps it beside the request. `None`: the
+/// orchestrator asked the user a question, or one waits for an answer, and there is no plan yet.
+pub fn plan(home: &Path, name: &str, request: &Path) -> Result<Option<Plan>> {
     let target = request.with_file_name(format!("{name}.plan"));
     if let Some(plan) = Plan::read(&target) {
-        return Ok(plan);
+        return Ok(Some(plan));
+    }
+    let chat = conversation(request);
+    let said = talk::read(&chat);
+    if talk::waits_for_user(&said) {
+        return Ok(None);
     }
     let folder = request.parent().ok_or("request without a folder")?;
     let crew = crew(home);
@@ -352,21 +416,38 @@ pub fn plan(home: &Path, name: &str, request: &Path) -> Result<Plan> {
     fs::create_dir(&workspace)?;
     let (answer, worker) = source::ask(&workspace, folder, &prompt, &mut Progress::silent());
     let (answer, usage) = answer?;
+    let asked = questions(&said);
     // An answer that is no plan does not hold the request up: it runs the plain way, and says so.
-    let plan = parse(&answer, &crew, &repositories).unwrap_or_else(|error| Plan {
-        session: false,
-        repo: None,
-        gate: STANDARD.to_owned(),
-        work: STANDARD.to_owned(),
-        reason: format!("Der Orchestrator gab keinen gültigen Plan ({error}). Der Auftrag läuft als Dokument beim Standard."),
-    });
+    let plan = match decide(&answer, asked, &crew, &repositories) {
+        Ok(Answer::Question(text)) => {
+            fs::create_dir_all(&chat)?;
+            talk::write(&chat, talk::Author::Agent, 0, &text)?;
+            let _ = record::publish_text(
+                &folder.join(format!("{name}.question-{}.run", asked + 1)),
+                &format!(
+                    "decision=observed\nidentity={name}.question-{}\nworker={worker}\n{usage}end\n",
+                    asked + 1
+                ),
+                record::MAX_RECORD_BYTES,
+            );
+            return Ok(None);
+        }
+        Ok(Answer::Plan(plan)) => plan,
+        Err(error) => Plan {
+            session: false,
+            repo: None,
+            gate: STANDARD.to_owned(),
+            work: STANDARD.to_owned(),
+            reason: format!("Der Orchestrator gab keinen gültigen Plan ({error}). Der Auftrag läuft als Dokument beim Standard."),
+        },
+    };
     record::publish_text(&target, &plan.text(), MAX_PLAN_BYTES)?;
     record::publish_text(
         &folder.join(format!("{name}.plan.run")),
         &format!("decision=observed\nidentity={name}.plan\nworker={worker}\n{usage}end\n"),
         record::MAX_RECORD_BYTES,
     )?;
-    Ok(plan)
+    Ok(Some(plan))
 }
 
 #[cfg(test)]
@@ -537,6 +618,92 @@ mod tests {
         let file = folder.path().join("a.plan");
         fs::write(&file, plan.text()).unwrap();
         assert_eq!(Plan::read(&file), Some(plan));
+    }
+
+    #[test]
+    fn a_question_is_recognised() {
+        assert_eq!(
+            question("Frage: Welche Farbe soll der Titel haben?").as_deref(),
+            Some("Welche Farbe soll der Titel haben?")
+        );
+        assert_eq!(
+            question("\n  - **Frage:** Für welches Repo?  \n\n").as_deref(),
+            Some("Für welches Repo?")
+        );
+        // An empty question, a second line or another label is no question.
+        assert_eq!(question("Frage:   "), None);
+        assert_eq!(question("Frage: Welche Farbe?\nArt: dokument"), None);
+        assert_eq!(question("Art: dokument"), None);
+        assert_eq!(question("Ich frage: Welche Farbe?"), None);
+        assert_eq!(question(""), None);
+        assert_eq!(
+            question(&format!("Frage: {}", "x".repeat(talk::MAX_MESSAGE_BYTES + 1))),
+            None
+        );
+
+        let crew = [member(STANDARD, true), member("anna", true)];
+        assert_eq!(
+            decide("Frage: Welche Farbe?", 0, &crew, &[]).unwrap(),
+            Answer::Question("Welche Farbe?".into())
+        );
+        let planned = decide(
+            "Art: dokument\nRepo: -\nGate: anna\nArbeit: standard\nGrund: Ein Dokument.",
+            0,
+            &crew,
+            &[],
+        )
+        .unwrap();
+        assert!(matches!(planned, Answer::Plan(plan) if plan.gate == "anna"));
+    }
+
+    #[test]
+    fn after_three_questions_the_orchestrator_must_plan() {
+        let crew = [member(STANDARD, true), member("anna", true)];
+        for asked in 0..MAX_QUESTIONS {
+            assert!(matches!(
+                decide("Frage: Noch etwas?", asked, &crew, &[]),
+                Ok(Answer::Question(_))
+            ));
+        }
+        // A fourth question is an answer that is no plan.
+        assert!(decide("Frage: Noch etwas?", MAX_QUESTIONS, &crew, &[]).is_err());
+        // A plan is still taken.
+        assert!(matches!(
+            decide(
+                "Art: dokument\nRepo: -\nGate: anna\nArbeit: standard\nGrund: Klar.",
+                MAX_QUESTIONS,
+                &crew,
+                &[]
+            ),
+            Ok(Answer::Plan(_))
+        ));
+
+        // The prompt carries the conversation and, after three questions, says that none is left.
+        let home = tempfile::tempdir().unwrap();
+        let requests = home.path().join("requests");
+        fs::create_dir_all(&requests).unwrap();
+        let request = requests.join("ticket-001.run");
+        fs::write(&request, "decision=observed\nidentity=ticket-001\nend\n").unwrap();
+        let plain = prompt(home.path(), &request).unwrap();
+        assert!(!plain.contains("CONVERSATION ABOUT THIS WORK ORDER"));
+        assert!(plain.contains("Frage: <one question in German>"));
+        let chat = conversation(&request);
+        assert_eq!(chat, requests.join("ticket-001.talk"));
+        fs::create_dir(&chat).unwrap();
+        for number in 1..=MAX_QUESTIONS {
+            talk::write(&chat, talk::Author::Agent, 0, &format!("Frage {number}?")).unwrap();
+            let asked = prompt(home.path(), &request).unwrap();
+            assert!(asked.contains(&format!("[you] Frage {number}?\n")), "{asked}");
+            assert_eq!(
+                asked.contains("Do not ask again"),
+                number == MAX_QUESTIONS,
+                "{asked}"
+            );
+            talk::write(&chat, talk::Author::User, 0, &format!("Antwort {number}.")).unwrap();
+        }
+        let said = talk::read(&chat);
+        assert_eq!(questions(&said), MAX_QUESTIONS);
+        assert!(!talk::waits_for_user(&said));
     }
 
     #[test]
