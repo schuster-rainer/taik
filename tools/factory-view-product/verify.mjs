@@ -551,3 +551,31 @@ assert.equal(st[1].name, 'Plan des Orchestrators', 'Station 2 muss „Plan des O
 assert.equal(st[1].state, 'aktiv', 'Bei einer Rückfrage muss „Plan des Orchestrators" aktiv sein.');
 for (let i = 2; i < 6; i++) assert.equal(st[i].state, 'offen', 'Bei einer Rückfrage müssen alle späteren Stationen offen sein (Station ' + (i + 1) + ').');
 })();
+// TAIK: check added by job ticket-023
+await (async () => {
+  const { default: assert } = await import('node:assert/strict');
+  const { readFileSync } = await import('node:fs');
+  const html = readFileSync(process.argv[2], 'utf8');
+  void readFileSync;
+const m = html.match(/\/\*BOARD_BEGIN\*\/[\s\S]*?\/\*BOARD_END\*\//);
+assert.ok(m, 'Der Block BOARD (/*BOARD_BEGIN*/ bis /*BOARD_END*/) fehlt.');
+const api = new Function(m[0] + '\nreturn { ticketActions: typeof ticketActions === "function" ? ticketActions : undefined };')();
+assert.equal(typeof api.ticketActions, 'function', 'Die Funktion ticketActions fehlt im Block BOARD.');
+const f = api.ticketActions;
+const waiting = ["Freigeben", "Ablehnen", "Senden"];
+assert.deepEqual(f({ name: 'ticket-1' }), waiting, 'Ein Vorschlag ohne state soll ["Freigeben","Ablehnen","Senden"] liefern.');
+assert.deepEqual(f({ name: 'ticket-1', state: undefined }), waiting, 'state undefined soll wie ohne state behandelt werden.');
+assert.deepEqual(f({ name: 'ticket-1', state: null }), waiting, 'state null soll wie ohne state behandelt werden.');
+assert.deepEqual(f({ name: 'ticket-1', state: '' }), waiting, 'Ein leerer state soll wie ohne state behandelt werden.');
+assert.deepEqual(f({ state: 'asks' }), ["Zurückziehen", "Senden"], 'Bei state "asks" sollen "Zurückziehen" und "Senden" kommen.');
+for (const s of ['deriving', 'declined', 'failed', 'other']) {
+  assert.deepEqual(f({ state: s }), [], `Bei state "${s}" soll die Liste leer sein.`);
+}
+assert.deepEqual(f(undefined), [], 'Bei undefined soll die Liste leer sein.');
+assert.deepEqual(f(null), [], 'Bei null soll die Liste leer sein.');
+const frozen = Object.freeze({ name: 'ticket-2', state: 'asks', messages: Object.freeze([]) });
+assert.deepEqual(f(frozen), ["Zurückziehen", "Senden"], 'Die Funktion soll ihr Argument nur lesen und auch bei eingefrorenen Daten arbeiten.');
+const a = f({});
+a.push('x');
+assert.deepEqual(f({}), waiting, 'Jeder Aufruf soll eine neue Liste liefern, ohne gemeinsamen Zustand.');
+})();

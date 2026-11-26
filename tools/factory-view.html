@@ -868,6 +868,15 @@
     function firstTicket(columns, chosen) {
       return columns[boardTab(columns, chosen)][0]?.key ?? null;
     }
+
+    // The buttons of a proposal's ticket, in order. A proposal that waits for approval can be approved,
+    // declined or answered; a request the orchestrator asks about can be withdrawn or answered.
+    function ticketActions(proposal) {
+      if (proposal === undefined || proposal === null) return [];
+      if (!proposal.state) return ['Freigeben', 'Ablehnen', 'Senden'];
+      if (proposal.state === 'asks') return ['Zurückziehen', 'Senden'];
+      return [];
+    }
     /*BOARD_END*/
 
     /*STEPS_BEGIN*/
@@ -1083,9 +1092,13 @@
           <option value="">Standard des Dienstes</option>${agents.map(agent => `<option value="${escape(agent.name)}"${job.agent === agent.name ? ' selected' : ''}>@${escape(agent.name)} · ${escape(agentLine(agent))}</option>`).join('')}</select></label>` : '';
       return `<div class="ticket-detail" data-detail="${escape(entry.key)}">${chooser}
         <textarea aria-label="Kommentar zu ${escape(entry.key)}" placeholder="Antwort oder Frage an die Factory. Mit @name übernimmt ein Agent die nächste Runde.">${escape(draft)}</textarea>
-        <div class="actions">${entry.proposal && !entry.asks ? `<button type="button" data-proposal="${escape(entry.proposal)}">Freigeben</button>` : ''}
-          ${entry.closable && job ? `<button type="button" data-ticket-end="${escape(job.id)}">Schließen</button>` : ''}
-          <button type="button" class="send" data-ticket-send="${escape(entry.key)}">Senden</button></div></div>`;
+        <div class="actions">${entry.proposal ? ticketActions(entry.item ?? (snapshot.proposals ?? []).find(candidate => candidate.name === entry.proposal)
+            ?? { state: entry.asks ? 'asks' : undefined }).map(action => action === 'Freigeben'
+            ? `<button type="button" data-proposal="${escape(entry.proposal)}">Freigeben</button>`
+            : action === 'Senden' ? `<button type="button" class="send" data-ticket-send="${escape(entry.key)}">Senden</button>`
+            : `<button type="button" data-ticket-decline="${escape(entry.key)}">${escape(action)}</button>`).join('')
+          : `${entry.closable && job ? `<button type="button" data-ticket-end="${escape(job.id)}">Schließen</button>` : ''}
+          <button type="button" class="send" data-ticket-send="${escape(entry.key)}">Senden</button>`}</div></div>`;
     }
 
     function readiness(data) {
@@ -1313,7 +1326,7 @@
           ${gateText ? `<details class="ticket-brief ticket-gate" data-round="${escape(gateKey)}" data-initial-open="${gateOpen}"${gateOpen ? ' open' : ''}><summary>Gate (${gateLines} Zeilen)</summary><pre>${escape(gateText)}</pre></details>` : ''}
           <div class="thread" aria-label="Auftragsverlauf">${(proposal.messages ?? []).length ? `<ol class="rounds">${proposal.messages.map(item =>
             `<li class="thread-message ${item.author === 'user' ? 'user' : 'agent'}"><span class="who">${item.author === 'user' ? 'Du' : 'Agent'}</span>${escape(item.text)}</li>`).join('')}</ol>` : ''}</div>
-          ${proposal.state && proposal.state !== 'asks' ? '' : ticketDetail({ key: 'proposal:' + proposal.name, proposal: proposal.name, asks: proposal.state === 'asks' })}</section>`
+          ${proposal.state && proposal.state !== 'asks' ? '' : ticketDetail({ key: 'proposal:' + proposal.name, proposal: proposal.name, asks: proposal.state === 'asks', item: proposal })}</section>`
         : `${ticketOpen} data-job="${escape(job.id)}">
           <div class="section-heading"><h2>Ticket</h2><span class="sub">${escape(job.id)} · ${jobStatus(job)}${job.agent ? ' · @' + escape(job.agent) : ''}${job.cost > 0 ? ' · ' + money(job.cost) : ''}</span></div>
           <div class="ticket-top"><h3 class="ticket-title">${escape(ticketTitle(job.goal) || job.id)}</h3>${artifactButton}</div>
@@ -1490,6 +1503,17 @@
         const text = field?.value.trim() ?? '';
         if (!text) { field?.focus(); return; }
         window.webkit.messageHandlers.closeTicket.postMessage({ job: end.dataset.ticketEnd, text });
+        return;
+      }
+      const decline = event.target.closest('button[data-ticket-decline]');
+      if (decline) {
+        const key = decline.dataset.ticketDecline;
+        const field = decline.closest('.ticket-detail')?.querySelector('textarea');
+        const text = field?.value.trim() ?? '';
+        if (!text) { field?.focus(); return; }
+        decline.disabled = true;
+        window.webkit?.messageHandlers?.declineTicket?.postMessage({ name: key.replace(/^proposal:/, ''), text });
+        ticketDrafts.delete(key);
         return;
       }
       const send = event.target.closest('button[data-ticket-send]');
