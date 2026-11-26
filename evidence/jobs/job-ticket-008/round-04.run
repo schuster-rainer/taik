@@ -1,0 +1,22 @@
+decision=rejected
+kind=software
+procedure=
+tags=
+identity=round-04
+intent=Der Orchestrator soll seinen Auftragssatz sichtbar machen, Produkte und geschützte Pfade nennen, ausgefallene Agenten berücksichtigen und Fehlschläge benannter Gate-Autoren als Zustand führen.
+baseline=8ce94a252375a65099be4f35933719db91bf0ef3
+worker=claude-session
+worker_failure=session
+worker_duration_ms=74487
+session=a72e3215-7201-4511-bb4c-c2dc0b16da2b
+limits=6 rounds and one per reply; lease 600s without ceiling; file tools only
+gate_sha256=e4b53e8cd7156111308361bfc2f726b3d53a282402409465961ddf284056ea47
+gate_ms=
+checks=the agent did not finish: the harness ended with exit status: 143: 
+artifact=
+commit=1c07c08313022b081961ada051b1ab78fc15a17f
+files=src/orchestrator.rs +136 -3
+summary=
+continuation=The copy keeps the rejected state. The next round continues the session with this finding.
+advance=false
+end

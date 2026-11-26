@@ -1,0 +1,103 @@
+diff --git a/src/orchestrator.rs b/src/orchestrator.rs
+index 282ebfa..3898f21 100644
+--- a/src/orchestrator.rs
++++ b/src/orchestrator.rs
+@@ -118,7 +118,8 @@ fn zone(text: &str) -> Option<i64> {
+         "CEST" | "MESZ" | "EET" => return Some(7200),
+         "EEST" => return Some(3 * 3600),
+         "EST" => return Some(-5 * 3600),
+-        "EDT" | "CDT" => return Some(-4 * 3600 - i64::from(text == "CDT") * 3600),
++        "EDT" => return Some(-4 * 3600),
++        "CDT" => return Some(-5 * 3600),
+         "PST" => return Some(-8 * 3600),
+         "PDT" => return Some(-7 * 3600),
+         _ => {}
+@@ -200,6 +201,7 @@ fn words(text: &str) -> Option<SystemTime> {
+     let (mut year, mut month, mut day, mut time, mut offset) = (None, None, None, None, 0);
+     for token in text
+         .split(|c: char| c.is_whitespace() || c == ',')
++        .map(|token| token.trim_end_matches('.'))
+         .filter(|token| !token.is_empty())
+     {
+         let lower = token.to_lowercase();
+@@ -209,7 +211,7 @@ fn words(text: &str) -> Option<SystemTime> {
+         } else if digits && token.len() == 4 {
+             year = token.parse().ok();
+         } else if digits && token.len() <= 2 {
+-            day = token.trim_end_matches('.').parse().ok();
++            day = token.parse().ok();
+         } else if let Some(found) = MONTHS
+             .iter()
+             .position(|names| names.iter().any(|name| lower.starts_with(name)))
+@@ -240,39 +242,19 @@ fn iso(text: &str) -> Option<SystemTime> {
+         return None;
+     }
+     let time = time.trim();
+-    let (clock, offset) = if let Some(clock) = time.strip_suffix(['Z', 'z']) {
+-        (clock, 0)
++    let (time, offset) = if let Some(time) = time.strip_suffix(['Z', 'z']) {
++        (time, 0)
++    } else if let Some((time, last)) = time.rsplit_once(' ')
++        && let Some(offset) = zone(last)
++    {
++        (time, offset)
+     } else if let Some(at) = time.rfind(['+', '-']) {
+-        let (clock, zone) = time.split_at(at);
+-        let sign = if zone.starts_with('-') { -1 } else { 1 };
+-        let zone = zone[1..].replace(':', "");
+-        if zone.len() != 4 || !zone.bytes().all(|byte| byte.is_ascii_digit()) {
+-            return None;
+-        }
+-        (
+-            clock,
+-            sign * (number(&zone[..2])? * 3600 + number(&zone[2..])? * 60),
+-        )
++        let (time, last) = time.split_at(at);
++        (time, zone(last)?)
+     } else {
+         (time, 0)
+     };
+-    let clock = clock.trim().split('.').next()?;
+-    let mut clock = clock.split(':');
+-    let hour = number(clock.next()?)?;
+-    let minute = number(clock.next()?)?;
+-    let second = clock.next().map_or(Some(0), number)?;
+-    if clock.next().is_some() || hour > 23 || minute > 59 || second > 60 {
+-        return None;
+-    }
+-    // Days since 1970-01-01 in the proleptic Gregorian calendar.
+-    let shifted = if month <= 2 { year - 1 } else { year };
+-    let era = shifted.div_euclid(400);
+-    let of_era = shifted - era * 400;
+-    let of_year = (153 * ((month + 9) % 12) + 2) / 5 + day - 1;
+-    let of_cycle = of_era * 365 + of_era / 4 - of_era / 100 + of_year;
+-    let days = era * 146_097 + of_cycle - 719_468;
+-    let seconds = days * 86_400 + hour * 3600 + minute * 60 + second - offset;
+-    Some(UNIX_EPOCH + Duration::from_secs(u64::try_from(seconds).ok()?))
++    civil([year, month, day], clock(time)?, offset)
+ }
+ 
+ // An agent whose call failed within the last six hours. The time is the one the marker names,
+@@ -697,6 +679,22 @@ mod tests {
+             timestamp("2026-11-26 10:00")
+         );
+         assert_eq!(timestamp("kaputt"), None);
++        let ten = timestamp("2026-11-26T10:00:00Z");
++        for written in [
++            "1795687200",
++            "1795687200000",
++            "1795687200.25",
++            "@1795687200",
++            "at=1795687200",
++            "2026-11-26T10:00:00.123Z",
++            "2026-11-26 11:00:00 +0100",
++            "2026-11-26T05:00:00-05:00",
++            "Thu Nov 26 11:00:00 CET 2026",
++            "Thu, 26 Nov 2026 11:00:00 +0100",
++            "Do 26. Nov 2026 12:00:00 CEST",
++        ] {
++            assert_eq!(timestamp(written), ten, "{written}");
++        }
+     }
+ 
+     #[test]

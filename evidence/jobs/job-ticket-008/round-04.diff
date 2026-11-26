@@ -1,0 +1,153 @@
+diff --git a/src/orchestrator.rs b/src/orchestrator.rs
+index 1b6fdfb..282ebfa 100644
+--- a/src/orchestrator.rs
++++ b/src/orchestrator.rs
+@@ -86,12 +86,145 @@ pub fn failed_marker(home: &Path, name: &str) -> PathBuf {
+     home.join("crew").join(format!("{name}.failed"))
+ }
+ 
+-// A point in time written as seconds since 1970 or as `YYYY-MM-DD[T ]HH:MM[:SS][Z|±HH:MM]`.
++// The seconds since 1970 of a civil date and time in UTC, shifted by an offset in seconds.
++fn civil(date: [i64; 3], clock: [i64; 3], offset: i64) -> Option<SystemTime> {
++    let [year, month, day] = date;
++    let [hour, minute, second] = clock;
++    if !(1..=12).contains(&month)
++        || !(1..=31).contains(&day)
++        || hour > 23
++        || minute > 59
++        || second > 60
++    {
++        return None;
++    }
++    // Days since 1970-01-01 in the proleptic Gregorian calendar.
++    let shifted = if month <= 2 { year - 1 } else { year };
++    let era = shifted.div_euclid(400);
++    let of_era = shifted - era * 400;
++    let of_year = (153 * ((month + 9) % 12) + 2) / 5 + day - 1;
++    let of_cycle = of_era * 365 + of_era / 4 - of_era / 100 + of_year;
++    let days = era * 146_097 + of_cycle - 719_468;
++    let seconds = days * 86_400 + hour * 3600 + minute * 60 + second - offset;
++    Some(UNIX_EPOCH + Duration::from_secs(u64::try_from(seconds).ok()?))
++}
++
++// A zone as `±HHMM`, `±HH:MM`, `±HH`, or a common abbreviation; the offset in seconds.
++fn zone(text: &str) -> Option<i64> {
++    let text = text.trim();
++    match text.to_ascii_uppercase().as_str() {
++        "Z" | "UTC" | "GMT" | "UT" => return Some(0),
++        "CET" | "MEZ" | "BST" => return Some(3600),
++        "CEST" | "MESZ" | "EET" => return Some(7200),
++        "EEST" => return Some(3 * 3600),
++        "EST" => return Some(-5 * 3600),
++        "EDT" | "CDT" => return Some(-4 * 3600 - i64::from(text == "CDT") * 3600),
++        "PST" => return Some(-8 * 3600),
++        "PDT" => return Some(-7 * 3600),
++        _ => {}
++    }
++    let sign = match text.as_bytes().first()? {
++        b'+' => 1,
++        b'-' => -1,
++        _ => return None,
++    };
++    let digits = text[1..].replace(':', "");
++    if !digits.bytes().all(|byte| byte.is_ascii_digit()) {
++        return None;
++    }
++    let (hours, minutes) = match digits.len() {
++        2 => (digits.parse::<i64>().ok()?, 0),
++        4 => (digits[..2].parse().ok()?, digits[2..].parse().ok()?),
++        _ => return None,
++    };
++    Some(sign * (hours * 3600 + minutes * 60))
++}
++
++// `HH:MM[:SS[.fraction]]`.
++fn clock(text: &str) -> Option<[i64; 3]> {
++    let mut parts = text.trim().split('.').next()?.split(':');
++    let mut next = || -> Option<i64> {
++        let part = parts.next()?;
++        (!part.is_empty() && part.bytes().all(|byte| byte.is_ascii_digit()))
++            .then(|| part.parse().ok())?
++    };
++    let hour = next()?;
++    let minute = next()?;
++    let second = next().unwrap_or(0);
++    next().is_none().then_some([hour, minute, second])
++}
++
++// A point in time as people and tools write it: seconds or milliseconds since 1970, ISO 8601
++// (`2026-11-26T03:00:00Z`, `2026-11-26 03:00:00 +0100`), or the form of `date` and of mail headers
++// (`Thu Nov 26 03:00:00 CET 2026`, `Thu, 26 Nov 2026 03:00:00 +0100`). A time without zone is UTC.
+ fn timestamp(text: &str) -> Option<SystemTime> {
+     let text = text.trim();
+-    if text.len() >= 9 && text.bytes().all(|byte| byte.is_ascii_digit()) {
+-        return Some(UNIX_EPOCH + Duration::from_secs(text.parse().ok()?));
++    let text = text
++        .strip_prefix('@')
++        .or_else(|| text.split_once('=').map(|(_, value)| value.trim()))
++        .unwrap_or(text);
++    // Seconds since 1970, possibly with a fraction; thirteen digits and more are milliseconds.
++    let whole = text.split('.').next().unwrap_or("");
++    if whole.len() >= 9
++        && whole.bytes().all(|byte| byte.is_ascii_digit())
++        && text[whole.len()..]
++            .strip_prefix('.')
++            .is_none_or(|fraction| fraction.bytes().all(|byte| byte.is_ascii_digit()))
++    {
++        let value: u64 = whole.parse().ok()?;
++        return Some(if whole.len() >= 12 {
++            UNIX_EPOCH + Duration::from_millis(value)
++        } else {
++            UNIX_EPOCH + Duration::from_secs(value)
++        });
+     }
++    iso(text).or_else(|| words(text))
++}
++
++// The form of `date` and of mail headers, also with German month names.
++fn words(text: &str) -> Option<SystemTime> {
++    const MONTHS: [&[&str]; 12] = [
++        &["jan"],
++        &["feb"],
++        &["mar", "mär", "mrz"],
++        &["apr"],
++        &["may", "mai"],
++        &["jun"],
++        &["jul"],
++        &["aug"],
++        &["sep"],
++        &["oct", "okt"],
++        &["nov"],
++        &["dec", "dez"],
++    ];
++    let (mut year, mut month, mut day, mut time, mut offset) = (None, None, None, None, 0);
++    for token in text
++        .split(|c: char| c.is_whitespace() || c == ',')
++        .filter(|token| !token.is_empty())
++    {
++        let lower = token.to_lowercase();
++        let digits = token.bytes().all(|byte| byte.is_ascii_digit());
++        if token.contains(':') && time.is_none() {
++            time = Some(clock(token)?);
++        } else if digits && token.len() == 4 {
++            year = token.parse().ok();
++        } else if digits && token.len() <= 2 {
++            day = token.trim_end_matches('.').parse().ok();
++        } else if let Some(found) = MONTHS
++            .iter()
++            .position(|names| names.iter().any(|name| lower.starts_with(name)))
++            .filter(|_| month.is_none() && lower.chars().all(char::is_alphabetic))
++        {
++            month = Some(found as i64 + 1);
++        } else if let Some(found) = zone(token) {
++            offset = found;
++        }
++    }
++    civil([year?, month?, day?], time?, offset)
++}
++
++// `YYYY-MM-DD[T ]HH:MM[:SS[.fraction]][ ][Z|±HH:MM|±HHMM|ZONE]`.
++fn iso(text: &str) -> Option<SystemTime> {
+     let number = |part: &str| -> Option<i64> {
+         (!part.is_empty() && part.bytes().all(|byte| byte.is_ascii_digit()))
+             .then(|| part.parse().ok())?

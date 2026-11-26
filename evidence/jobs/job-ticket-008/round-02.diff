@@ -1,0 +1,67 @@
+diff --git a/src/orchestrator.rs b/src/orchestrator.rs
+index e44a46c..5722b10 100644
+--- a/src/orchestrator.rs
++++ b/src/orchestrator.rs
+@@ -173,17 +173,17 @@ fn crew(home: &Path) -> Vec<Member> {
+         .flatten()
+         .flatten()
+         .filter_map(|entry| {
+-            entry
+-                .file_name()
+-                .to_string_lossy()
+-                .strip_suffix(".agent")
+-                .map(str::to_owned)
++            let file = entry.file_name().to_string_lossy().into_owned();
++            // STATE/crew/NAME.agent, or an entry named like an agent without the suffix.
++            let name = file.strip_suffix(".agent").unwrap_or(&file).to_owned();
++            crate::crew::valid_name(&name).then_some(name)
+         })
+         .collect();
+     names.sort_unstable();
++    names.dedup();
+     for name in names {
+-        if let Ok(agent) = crate::crew::load(home, &name) {
+-            members.push(Member {
++        match crate::crew::load(home, &name) {
++            Ok(agent) => members.push(Member {
+                 claude: agent.harness == crate::crew::Harness::Claude,
+                 about: format!(
+                     "harness {:?}, model {}{}",
+@@ -201,7 +201,17 @@ fn crew(home: &Path) -> Vec<Member> {
+                 ),
+                 failed: failed_recently(home, &name),
+                 name,
+-            });
++            }),
++            // Still listed, so that the orchestrator sees it and whether it failed recently.
++            Err(error) => members.push(Member {
++                claude: false,
++                about: format!(
++                    "an agent whose definition cannot be read ({})",
++                    source::single_line(&error.to_string())
++                ),
++                failed: failed_recently(home, &name),
++                name,
++            }),
+         }
+     }
+     members
+@@ -606,6 +616,18 @@ mod tests {
+                 .to_owned()
+         };
+         assert!(line("gate-author").ends_with(" (failed recently)"));
++        // An agent whose definition cannot be read, or that has no suffix, is listed all the same.
++        fs::write(home.join("crew/halb.agent"), "harness=claude\n").unwrap();
++        fs::write(home.join("crew/nackt"), "harness=claude\nend\n").unwrap();
++        fs::write(failed_marker(&home, "nackt"), "kaputt\n").unwrap();
++        let more = prompt(&home, &request).unwrap();
++        let listed = |name: &str| {
++            more.lines()
++                .find(|line| line.starts_with(&format!("- {name}: ")))
++                .map(str::to_owned)
++        };
++        assert!(listed("halb").is_some_and(|line| !line.contains("(failed recently)")));
++        assert!(listed("nackt").is_some_and(|line| line.ends_with(" (failed recently)")));
+         assert!(!line("other").contains("(failed recently)"));
+         assert!(!line(STANDARD).contains("(failed recently)"));
+         assert!(text.contains("A change to a listed product is of kind 'dokument'."));

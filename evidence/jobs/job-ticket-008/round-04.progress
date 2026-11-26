@@ -1,0 +1,8 @@
+15653	start	Sitzung in /Users/rainer/.local/state/taik-factory/work/ticket-008
+15960	worker	Setzt fort: die Sitzung a72e3215
+4730437	tool	Grep kürzlich ausgefallen|gate-author
+7428259	tool	Grep kürzlich ausgefallen|failed recently
+44418880	tool	Read src/orchestrator.rs
+65177655	tool	Edit src/orchestrator.rs
+74418951	checks	1 Dateien geändert, Commit 1c07c083
+74500386	rejected	the agent did not finish: the harness ended with exit status: 143: 

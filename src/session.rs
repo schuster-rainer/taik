@@ -347,6 +347,16 @@ fn call(
             }
         },
     )?;
+    // A last line without a line end still counts.
+    if call.is_none()
+        && let Some(event) = response
+            .stdout
+            .rsplit(|byte| *byte == b'\n')
+            .find_map(|line| serde_json::from_slice::<serde_json::Value>(line).ok())
+            .filter(|event| event["type"] == "result")
+    {
+        call = Some(event);
+    }
     if !response.status.success() && call.is_none() {
         return Err(format!(
             "the harness ended with {}: {}",
@@ -382,6 +392,79 @@ fn call(
             .unwrap_or(0),
         output_tokens: report["usage"]["output_tokens"].as_u64().unwrap_or(0),
     })
+}
+
+/// One call of an agent that may read a repository and change nothing: the author of a gate. It
+/// works in a throwaway copy with Read, Glob and Grep and returns its answer with the usage lines.
+pub fn read_and_answer(
+    home: &Path,
+    repo: &Path,
+    agent: Option<&crate::crew::Agent>,
+    prompt: &str,
+) -> Result<(String, String)> {
+    let scratch = tempfile::tempdir()?;
+    let scratch = scratch.path().canonicalize()?;
+    let copy = scratch.join("copy");
+    let cloned = Command::new("git")
+        .args(["clone", "--quiet", "--local", "--no-hardlinks"])
+        .arg(repo)
+        .arg(&copy)
+        .output()?;
+    if !cloned.status.success() {
+        return Err("cannot copy the repository for the author of the gate".into());
+    }
+    let program = std::env::var_os("TAIK_SESSION_AGENT")
+        .map(PathBuf::from)
+        .or_else(|| crate::crew::program("claude"))
+        .ok_or("the Claude CLI is not installed")?;
+    let (model, effort) = agent.map_or(("", ""), |agent| {
+        (agent.model.as_str(), agent.effort.as_str())
+    });
+    let arguments: Vec<String> = [
+        "-p",
+        "--model",
+        if model.is_empty() {
+            "claude-opus-5-5"
+        } else {
+            model
+        },
+        "--effort",
+        if effort.is_empty() { "medium" } else { effort },
+        "--tools",
+        "Read,Glob,Grep",
+        "--permission-mode",
+        "bypassPermissions",
+        "--strict-mcp-config",
+        "--setting-sources",
+        "",
+        "--no-session-persistence",
+        "--output-format",
+        "stream-json",
+        "--verbose",
+        "--",
+        prompt,
+    ]
+    .into_iter()
+    .map(str::to_owned)
+    .collect();
+    let jobs = home.join("jobs").canonicalize()?;
+    let answer = call(
+        &program,
+        &arguments,
+        &copy,
+        &jobs,
+        &scratch.join("dialog.jsonl"),
+        &mut Progress::silent(),
+    )?;
+    Ok((
+        answer.result,
+        format!(
+            "worker_model={}\nworker_output_tokens={}\nsession_listed_usd={}\n",
+            source::single_line(&answer.model),
+            answer.output_tokens,
+            answer.cost
+        ),
+    ))
 }
 
 // The pinned gate judges a clean checkout of one commit. Its output is kept beside the round.

@@ -1,0 +1,26 @@
+decision=rejected
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=Der Orchestrator soll seinen Auftragssatz sichtbar machen, Produkte und geschützte Pfade nennen, ausgefallene Agenten berücksichtigen und Fehlschläge benannter Gate-Autoren als Zustand führen.
+baseline=8ce94a252375a65099be4f35933719db91bf0ef3
+worker=claude-session
+worker_model=claude-opus-5-5
+worker_output_tokens=34249
+worker_cache_read_tokens=1538279
+session_listed_usd=1.7420278000000005
+worker_failure=
+worker_duration_ms=335742
+session=a72e3215-7201-4511-bb4c-c2dc0b16da2b
+limits=6 rounds and one per reply; lease 600s without ceiling; file tools only
+gate_sha256=e4b53e8cd7156111308361bfc2f726b3d53a282402409465961ddf284056ea47
+gate_ms=5881
+checks=gate failed (exit status: 1): FAIL: gate-author ist nicht als kürzlich ausgefallen markiert
+artifact=
+commit=67da746d95c0a19ec016306c73ab2b7ae2929055
+files=README.md +6 -1; src/main.rs +9 -0; src/orchestrator.rs +352 -15; src/proposal.rs +21 -1; tests/orchestrator.rs +280 -0
+summary=Ich habe alles umgesetzt, aber nichts gebaut oder getestet. Das Gate muss also noch zeigen, ob es kompiliert und die Tests bestehen. Neu ist der Befehl `taik-seed orchestrator-prompt STATE REQUEST.run`: Er gibt den Auftragssatz aus, ohne einen Worker aufzurufen, und `plan()` benutzt denselben Text (`src/orchestrator.rs`, `src/main.rs`). Der Auftragssatz zeigt jetzt die Produkte unter `PRODUCTS:` und unter jedem Repository dessen geschützte Pfade, und er markiert Agenten mit einem höchstens sechs Stunden alten `.failed` mit „(failed recently)“. Wählt der Worker so einen Agenten fürs Gate, ersetzt der Orchestrator ihn und nennt im Grund beide Namen mit @. Schlägt der Aufruf eines benannten Gate-Autors fehl, schreibt der Dienst `STATE/crew/NAME.failed`; liefert der Agent wieder ein Gate, wird die Datei gelöscht, und für den Standard-Worker entsteht keine (`src/proposal.rs`). Bitte beachten: Damit die Gate-Vorgabe sicher greift, gelten jetzt auch Ordner `STATE/repositories/NAME` ohne `.git` als bekannte Repositor
+continuation=The copy keeps the rejected state. The next round continues the session with this finding.
+advance=false
+end

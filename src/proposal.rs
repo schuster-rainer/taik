@@ -148,7 +148,7 @@ Brief: Markdown in German, at most 6000 bytes. Its first line is one sentence th
 
 Gate: a POSIX shell script of at most 12000 bytes. It runs in a clean checkout of the agent's commit, as the working directory, in a sandbox without network. It exits with a status other than 0 and prints one clear line when a requirement is not met. On success its last line starts with 'PASS: '. It may use only tools that the listed files show the repository already uses, plus sh, grep, test and node.
 
-Rules for the gate: check behaviour and results, not the presence of words. Every requirement must be satisfiable together with all others. Never require what the brief does not state. Keep the job as small as the request justifies.
+Rules for the gate: check behaviour and results, not the presence of words. Every requirement must be satisfiable together with all others. Never require what the brief does not state. Keep the job as small as the request justifies. The sandbox of the gate cannot start another sandbox and has no network: run only the test targets this job adds or names, never the whole test suite of the repository. Print the reason of a failure, including the relevant output of a failed build or test.
 
 If the request cannot be checked by a gate or is unclear, reply with exactly one line 'STOP: <reason in one German sentence>' and nothing else.";
 
@@ -251,7 +251,24 @@ pub fn propose_planned(
         .filter(|name| *name != crate::orchestrator::STANDARD)
         .map(|name| crate::crew::load(&state, name))
         .transpose()?;
+    // The author of a session gate reads the repository, when its harness has file tools. A gate
+    // written blind checks against names and layouts that do not exist.
+    let reads = session.is_some()
+        && author
+            .as_ref()
+            .is_none_or(|agent| agent.harness == crate::crew::Harness::Claude);
     let (answer, worker) = match &author {
+        _ if reads => (
+            crate::session::read_and_answer(
+                &state,
+                &session.expect("a session plan names its repository").1,
+                author.as_ref(),
+                &format!(
+                    "{prompt}\n\nYou are in a copy of the repository and can read it with Read, Glob and Grep. Read the code this job touches before you write the gate. Check against the real paths, file formats and commands you find there, never against ones you assume."
+                ),
+            ),
+            "standard-reader",
+        ),
         Some(agent) => (
             source::call_agent(
                 agent,

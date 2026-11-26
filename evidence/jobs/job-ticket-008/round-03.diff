@@ -1,0 +1,61 @@
+diff --git a/src/orchestrator.rs b/src/orchestrator.rs
+index 5722b10..1b6fdfb 100644
+--- a/src/orchestrator.rs
++++ b/src/orchestrator.rs
+@@ -106,6 +106,7 @@ fn timestamp(text: &str) -> Option<SystemTime> {
+     if date.next().is_some() || !(1..=12).contains(&month) || !(1..=31).contains(&day) {
+         return None;
+     }
++    let time = time.trim();
+     let (clock, offset) = if let Some(clock) = time.strip_suffix(['Z', 'z']) {
+         (clock, 0)
+     } else if let Some(at) = time.rfind(['+', '-']) {
+@@ -122,7 +123,7 @@ fn timestamp(text: &str) -> Option<SystemTime> {
+     } else {
+         (time, 0)
+     };
+-    let clock = clock.split('.').next()?;
++    let clock = clock.trim().split('.').next()?;
+     let mut clock = clock.split(':');
+     let hour = number(clock.next()?)?;
+     let minute = number(clock.next()?)?;
+@@ -174,8 +175,14 @@ fn crew(home: &Path) -> Vec<Member> {
+         .flatten()
+         .filter_map(|entry| {
+             let file = entry.file_name().to_string_lossy().into_owned();
+-            // STATE/crew/NAME.agent, or an entry named like an agent without the suffix.
+-            let name = file.strip_suffix(".agent").unwrap_or(&file).to_owned();
++            // STATE/crew/NAME.agent, an entry named like an agent without the suffix, or the
++            // marker of an agent that failed.
++            let marker = file.strip_suffix(".failed").filter(|name| *name != STANDARD);
++            let name = file
++                .strip_suffix(".agent")
++                .or(marker)
++                .unwrap_or(&file)
++                .to_owned();
+             crate::crew::valid_name(&name).then_some(name)
+         })
+         .collect();
+@@ -620,6 +627,8 @@ mod tests {
+         fs::write(home.join("crew/halb.agent"), "harness=claude\n").unwrap();
+         fs::write(home.join("crew/nackt"), "harness=claude\nend\n").unwrap();
+         fs::write(failed_marker(&home, "nackt"), "kaputt\n").unwrap();
++        fs::write(failed_marker(&home, "geist"), "kaputt\n").unwrap();
++        fs::write(failed_marker(&home, STANDARD), "kaputt\n").unwrap();
+         let more = prompt(&home, &request).unwrap();
+         let listed = |name: &str| {
+             more.lines()
+@@ -628,6 +637,13 @@ mod tests {
+         };
+         assert!(listed("halb").is_some_and(|line| !line.contains("(failed recently)")));
+         assert!(listed("nackt").is_some_and(|line| line.ends_with(" (failed recently)")));
++        // A marker alone names the agent; the standard worker is listed once and never marked.
++        assert!(listed("geist").is_some_and(|line| line.ends_with(" (failed recently)")));
++        let standard: Vec<&str> = more
++            .lines()
++            .filter(|line| line.starts_with("- standard: "))
++            .collect();
++        assert_eq!(standard, ["- standard: the standard worker of the service"]);
+         assert!(!line("other").contains("(failed recently)"));
+         assert!(!line(STANDARD).contains("(failed recently)"));
+         assert!(text.contains("A change to a listed product is of kind 'dokument'."));

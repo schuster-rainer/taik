@@ -21,7 +21,7 @@ Arbeit: <name of a listed agent>\n\
 Grund: <one German sentence of at most 30 words: why this kind and these agents>\n\n\
 'dokument' is right when the result is one new self-contained text document, such as a single HTML page or a small program in one bundle. \
 'sitzung' is right when existing files of a listed repository must be read or changed; it needs a repository, and its work agent must be on the claude harness or be 'standard'. \
-The gate is written before the work and judges it. Choose two different agents for Gate and Arbeit whenever two are listed, so that nobody judges their own work. \
+The gate is written before the work and judges it. For a 'sitzung' prefer a Gate agent on the claude harness other than the work agent: only such an agent can read the repository before it writes the gate. Choose two different agents for Gate and Arbeit whenever two are listed, so that nobody judges their own work. \
 Prefer the agent whose description fits the task; without a reason to prefer one, use 'standard' for the work.";
 
 #[derive(Clone, Debug, PartialEq)]

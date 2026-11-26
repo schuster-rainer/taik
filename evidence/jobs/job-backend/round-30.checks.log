@@ -1,0 +1,140 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.02s
+     Running unittests src/main.rs (target/debug/deps/taik_seed-c3a5d7c891872f43)
+
+running 7 tests
+test crew::tests::an_agent_definition_is_read_strictly ... ok
+test source::patch_tests::patches_apply_in_order_and_refuse_ambiguous_or_missing_text ... ok
+test procedure::tests::reference_rejects_a_changed_search_decision ... ok
+test orchestrator::tests::a_plan_is_read_checked_and_kept ... ok
+test orchestrator::tests::another_agent_steps_in_for_a_gate_author_that_fails ... ok
+test procedure::tests::every_admitted_order_agrees_with_the_independent_reference ... ok
+test talk::tests::a_conversation_is_kept_in_order_and_decides_who_is_next ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/adopt.rs (target/debug/deps/adopt-d0451ea73aeadc63)
+
+running 4 tests
+test a_last_round_that_is_not_accepted_is_refused ... ok
+test an_unknown_job_or_a_job_without_repository_is_refused ... ok
+test a_branch_on_another_commit_is_refused ... ok
+test the_accepted_commit_becomes_a_branch_of_the_origin ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.19s
+
+     Running tests/close.rs (target/debug/deps/close-da70b92440714011)
+
+running 3 tests
+test an_unknown_job_is_refused ... ok
+test the_reason_is_between_1_and_2000_bytes ... ok
+test a_job_is_closed_once_with_exactly_the_given_reason ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests/factory.rs (target/debug/deps/factory-005f187fc64c1821)
+
+running 5 tests
+expected a regular file
+test accepted_records_reject_a_fifo_without_blocking ... ok
+test concurrent_publication_has_one_winner ... ok
+test invalid_proposal_and_staging_cannot_replace_or_seed_accepted_work ... ok
+test service_resumes_from_an_accepted_round_and_wakes_for_new_work ... ok
+test queued_source_repairs_an_assertion_and_resumes_from_saved_feedback ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.17s
+
+     Running tests/promote.rs (target/debug/deps/promote-6daf3c57489ac7a9)
+
+running 2 tests
+test a_running_service_leaves_the_next_job_to_a_replaced_binary ... ok
+test the_installed_binary_judges_installs_and_keeps_its_predecessor ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.32s
+
+     Running tests/proposal.rs (target/debug/deps/proposal-3653e09506941c19)
+
+running 4 tests
+test a_rejected_round_gets_a_short_analysis_once ... ok
+test a_request_of_the_user_becomes_a_proposal_and_keeps_what_was_said ... ok
+test a_proposed_job_waits_until_it_is_approved ... ok
+test the_orchestrator_plans_a_request_and_approval_follows_the_plan ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.14s
+
+     Running tests/session.rs (target/debug/deps/session-a28e4715a8954c21)
+
+running 1 test
+test an_agent_session_works_in_its_copy_and_is_judged_by_commit ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.82s
+
+     Running tests/source_worker.rs (target/debug/deps/source_worker-a39472baf3c16ded)
+
+running 10 tests
+test savant_is_a_streamed_worker_with_its_own_cost_record ... ok
+test a_queued_job_builds_on_an_accepted_source_through_a_patch ... ok
+test a_job_holds_its_conversation_and_a_reply_reopens_it ... ok
+test a_job_is_worked_by_the_agent_it_names ... ok
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=Deliver a marked document
+baseline=(empty)
+worker=claude-cli
+worker_model=m
+worker_output_tokens=1
+worker_cost_usd=0
+worker_duration_ms=1909
+worker_account_usage=
+limits=4 rounds; worker lease 60s without ceiling; verifier 15s; 512KiB source
+gate_sha256=0a3226871fa90dbe7b2815940fc6ffabdf2c2e06cf0c60b465c3a040855aa3da
+gate_ms=57
+patch_blocks=
+checks=PASS: any
+artifact=round-01.html
+rejected_candidate=
+feedback=
+follow_up=
+continuation=Retain the accepted artifact. No further work was authorized by this round.
+advance=false
+end
+test a_gate_can_name_a_release_step_for_its_accepted_artifact ... ok
+test a_configured_second_worker_takes_over_and_is_named_in_the_record ... ok
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=Deliver a marked document
+baseline=(empty)
+worker=claude-cli
+worker_model=m
+worker_output_tokens=1
+worker_cost_usd=0
+worker_duration_ms=1553
+worker_account_usage=
+limits=4 rounds; worker lease 60s without ceiling; verifier 15s; 512KiB source
+gate_sha256=0a3226871fa90dbe7b2815940fc6ffabdf2c2e06cf0c60b465c3a040855aa3da
+gate_ms=55
+patch_blocks=
+checks=PASS: any
+artifact=round-01.html
+rejected_candidate=
+feedback=
+follow_up=
+continuation=Retain the accepted artifact. No further work was authorized by this round.
+advance=false
+end
+test a_job_that_arrives_during_work_takes_a_free_slot ... ok
+test worker_failure_records_distinguish_phases_without_persisting_stderr ... ok
+test a_worker_keeps_its_lease_by_output_and_loses_it_by_silence ... ok
+test queued_software_jobs_run_side_by_side ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 13.03s
+
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.05s
+   Compiling taik-seed v0.1.0 (/Users/rainer/projects/ideas/talk)
+    Finished `release` profile [optimized] target(s) in 8.22s
+PASS: Rust tests, Clippy with warnings denied, release build

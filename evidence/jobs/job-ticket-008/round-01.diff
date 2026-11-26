@@ -1,0 +1,818 @@
+diff --git a/README.md b/README.md
+index 36369e1..14d7964 100644
+--- a/README.md
++++ b/README.md
+@@ -129,10 +129,15 @@ printf 'Bitte die Überschrift kürzen.' | taik-seed reply STATE job-NAME
+ # The copy lives in STATE/work/NAME. Paths listed in .taik/protected of the repository may not change.
+ taik-seed queue-session STATE NAME BRIEF.md GATE.sh REPOSITORY
+ # A request in plain words. The orchestrator plans it: one document or a session on a repository
+-# listed in STATE/repos/NAME.repo, who writes the gate, who does the work. The proposal waits for approval.
++# listed in STATE/repos/NAME.repo or kept in STATE/repositories/NAME, who writes the gate, who does
++# the work. The proposal waits for approval.
+ printf 'Eine Seite mit Uhrzeit' | taik-seed request STATE
++# The text the orchestrator would send its worker for a request, on stdout. No worker is called.
++taik-seed orchestrator-prompt STATE REQUEST.run
+ ```
+ 
++The orchestrator's text lists the agents, the repositories with the paths each protects in `.taik/protected`, and the products in `STATE/products`. A change to a listed product is a document. When the call of a named gate author fails, the service writes `STATE/crew/NAME.failed` with the error and removes it once that agent delivers a gate again. For six hours the agent is marked `(failed recently)`, and the orchestrator moves its gate to the first other agent that does not do the work. The standard worker is never marked.
++
+ A reply to a finished job grants exactly one further round, and its worker reads the whole conversation. Each reply grants one round beyond the budget of four, at most eight. A worker may return a question instead of a candidate. Then nothing is judged, the question stands in the job, its cost in a record of its own, and the job waits until the user has answered. The viewer shows description, messages and rounds in the open ticket and plays a sound when a ticket starts to wait.
+ 
+ ## The service
+diff --git a/src/main.rs b/src/main.rs
+index 6f58f55..bb41c25 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -462,6 +462,15 @@ fn run() -> Result<bool> {
+             Ok(true)
+         }
+         #[cfg(target_os = "macos")]
++        "orchestrator-prompt" if rest.len() == 1 => {
++            use std::io::Write;
++            let text = orchestrator::prompt(first, Path::new(&rest[0]))?;
++            let mut stdout = std::io::stdout().lock();
++            stdout.write_all(text.as_bytes())?;
++            stdout.flush()?;
++            Ok(true)
++        }
++        #[cfg(target_os = "macos")]
+         "crew" if rest.is_empty() => {
+             println!("{}", crew::publish_overview(first)?);
+             Ok(true)
+diff --git a/src/orchestrator.rs b/src/orchestrator.rs
+index 8936e75..e44a46c 100644
+--- a/src/orchestrator.rs
++++ b/src/orchestrator.rs
+@@ -6,6 +6,7 @@
+ 
+ use std::fs;
+ use std::path::{Path, PathBuf};
++use std::time::{Duration, SystemTime, UNIX_EPOCH};
+ 
+ use crate::progress::Progress;
+ use crate::{Result, record, source};
+@@ -22,7 +23,12 @@ Grund: <one German sentence of at most 30 words: why this kind and these agents>
+ 'dokument' is right when the result is one new self-contained text document, such as a single HTML page or a small program in one bundle. \
+ 'sitzung' is right when existing files of a listed repository must be read or changed; it needs a repository, and its work agent must be on the claude harness or be 'standard'. \
+ The gate is written before the work and judges it. Choose two different agents for Gate and Arbeit whenever two are listed, so that nobody judges their own work. \
+-Prefer the agent whose description fits the task; without a reason to prefer one, use 'standard' for the work.";
++Prefer the agent whose description fits the task; without a reason to prefer one, use 'standard' for the work. \
++A change to a listed product is of kind 'dokument'. \
++A session must not change the protected paths listed under its repository. \
++An agent marked '(failed recently)' could not be reached lately; do not choose it for the gate while another agent is available.";
++/// How long a failed call keeps a gate author out of the orchestrator's choice.
++const FAILED_FOR: Duration = Duration::from_secs(6 * 60 * 60);
+ 
+ #[derive(Clone, Debug, PartialEq)]
+ pub struct Plan {
+@@ -72,6 +78,86 @@ struct Member {
+     name: String,
+     claude: bool,
+     about: String,
++    failed: bool,
++}
++
++/// The marker the service keeps while a named gate author cannot be reached: STATE/crew/NAME.failed.
++pub fn failed_marker(home: &Path, name: &str) -> PathBuf {
++    home.join("crew").join(format!("{name}.failed"))
++}
++
++// A point in time written as seconds since 1970 or as `YYYY-MM-DD[T ]HH:MM[:SS][Z|±HH:MM]`.
++fn timestamp(text: &str) -> Option<SystemTime> {
++    let text = text.trim();
++    if text.len() >= 9 && text.bytes().all(|byte| byte.is_ascii_digit()) {
++        return Some(UNIX_EPOCH + Duration::from_secs(text.parse().ok()?));
++    }
++    let number = |part: &str| -> Option<i64> {
++        (!part.is_empty() && part.bytes().all(|byte| byte.is_ascii_digit()))
++            .then(|| part.parse().ok())?
++    };
++    let (date, time) = text.split_once(['T', ' '])?;
++    let mut date = date.split('-');
++    let (year, month, day) = (
++        number(date.next()?)?,
++        number(date.next()?)?,
++        number(date.next()?)?,
++    );
++    if date.next().is_some() || !(1..=12).contains(&month) || !(1..=31).contains(&day) {
++        return None;
++    }
++    let (clock, offset) = if let Some(clock) = time.strip_suffix(['Z', 'z']) {
++        (clock, 0)
++    } else if let Some(at) = time.rfind(['+', '-']) {
++        let (clock, zone) = time.split_at(at);
++        let sign = if zone.starts_with('-') { -1 } else { 1 };
++        let zone = zone[1..].replace(':', "");
++        if zone.len() != 4 || !zone.bytes().all(|byte| byte.is_ascii_digit()) {
++            return None;
++        }
++        (
++            clock,
++            sign * (number(&zone[..2])? * 3600 + number(&zone[2..])? * 60),
++        )
++    } else {
++        (time, 0)
++    };
++    let clock = clock.split('.').next()?;
++    let mut clock = clock.split(':');
++    let hour = number(clock.next()?)?;
++    let minute = number(clock.next()?)?;
++    let second = clock.next().map_or(Some(0), number)?;
++    if clock.next().is_some() || hour > 23 || minute > 59 || second > 60 {
++        return None;
++    }
++    // Days since 1970-01-01 in the proleptic Gregorian calendar.
++    let shifted = if month <= 2 { year - 1 } else { year };
++    let era = shifted.div_euclid(400);
++    let of_era = shifted - era * 400;
++    let of_year = (153 * ((month + 9) % 12) + 2) / 5 + day - 1;
++    let of_cycle = of_era * 365 + of_era / 4 - of_era / 100 + of_year;
++    let days = era * 146_097 + of_cycle - 719_468;
++    let seconds = days * 86_400 + hour * 3600 + minute * 60 + second - offset;
++    Some(UNIX_EPOCH + Duration::from_secs(u64::try_from(seconds).ok()?))
++}
++
++// An agent whose call failed within the last six hours. The time is the one the marker names,
++// otherwise the time it was last written.
++fn failed_recently(home: &Path, name: &str) -> bool {
++    let marker = failed_marker(home, name);
++    let Ok(metadata) = fs::symlink_metadata(&marker) else {
++        return false;
++    };
++    if !metadata.is_file() {
++        return false;
++    }
++    let text = record::read_regular(&marker, 4096).unwrap_or_default();
++    let when = timestamp(text.lines().next().unwrap_or(""))
++        .or_else(|| metadata.modified().ok());
++    // A time in the future counts as recent.
++    when.is_some_and(|when| {
++        !matches!(SystemTime::now().duration_since(when), Ok(age) if age >= FAILED_FOR)
++    })
+ }
+ 
+ // The standard worker of the service and every agent of the crew.
+@@ -80,6 +166,7 @@ fn crew(home: &Path) -> Vec<Member> {
+         name: STANDARD.to_owned(),
+         claude: true,
+         about: "the standard worker of the service".to_owned(),
++        failed: false,
+     }];
+     let mut names: Vec<String> = fs::read_dir(home.join("crew"))
+         .into_iter()
+@@ -112,6 +199,7 @@ fn crew(home: &Path) -> Vec<Member> {
+                         format!(", {}", source::single_line(&agent.persona))
+                     }
+                 ),
++                failed: failed_recently(home, &name),
+                 name,
+             });
+         }
+@@ -136,6 +224,65 @@ fn repositories(home: &Path) -> Vec<(String, PathBuf)> {
+             (crate::crew::valid_name(&name) && path.join(".git").exists()).then_some((name, path))
+         })
+         .collect();
++    // A repository kept inside the state: STATE/repositories/NAME, unless it is listed already.
++    let mut kept: Vec<(String, PathBuf)> = fs::read_dir(home.join("repositories"))
++        .into_iter()
++        .flatten()
++        .flatten()
++        .filter_map(|entry| {
++            let name = entry.file_name().to_str()?.to_owned();
++            let path = entry.path().canonicalize().ok()?;
++            (crate::crew::valid_name(&name) && path.is_dir()).then_some((name, path))
++        })
++        .collect();
++    kept.sort();
++    for (name, path) in kept {
++        if !found
++            .iter()
++            .any(|known| known.0 == name || known.1 == path)
++        {
++            found.push((name, path));
++        }
++    }
++    found.sort();
++    found
++}
++
++// The paths a repository protects: the lines of its .taik/protected that are not empty or comments.
++fn protected(repository: &Path) -> Vec<String> {
++    record::read_regular(&repository.join(".taik/protected"), record::MAX_RECORD_BYTES)
++        .unwrap_or_default()
++        .lines()
++        .map(str::trim)
++        .filter(|line| !line.is_empty() && !line.starts_with('#'))
++        .map(source::single_line)
++        .collect()
++}
++
++// The products of the Factory, STATE/products/NAME.product, with what each one is.
++fn products(home: &Path) -> Vec<(String, String)> {
++    let mut found: Vec<(String, String)> = fs::read_dir(home.join("products"))
++        .into_iter()
++        .flatten()
++        .flatten()
++        .filter_map(|entry| {
++            let name = entry
++                .file_name()
++                .to_str()?
++                .strip_suffix(".product")?
++                .to_owned();
++            if !crate::crew::valid_name(&name) {
++                return None;
++            }
++            let text = record::read_regular(&entry.path(), record::MAX_RECORD_BYTES).ok()?;
++            let about = text
++                .lines()
++                .find_map(|line| line.strip_prefix("about="))
++                .unwrap_or("")
++                .trim();
++            Some((name, source::single_line(about)))
++        })
++        .collect();
+     found.sort();
+     found
+ }
+@@ -186,6 +333,18 @@ fn parse(answer: &str, crew: &[Member], repositories: &[(String, PathBuf)]) -> R
+         gate = other;
+         reason.push_str(" Das Gate schreibt ein anderer Agent als die Arbeit.");
+     }
++    // An agent that failed recently does not write the gate while another one can.
++    if gate.failed
++        && let Some(other) = crew
++            .iter()
++            .find(|member| !member.failed && member.name != work.name)
++    {
++        reason.push_str(&format!(
++            " @{} fiel kürzlich aus, deshalb schreibt @{} das Gate.",
++            gate.name, other.name
++        ));
++        gate = other;
++    }
+     Ok(Plan {
+         session,
+         repo: repo.filter(|_| session),
+@@ -212,34 +371,74 @@ pub fn substitutes(home: &Path, plan: &Plan) -> Vec<Plan> {
+         .collect()
+ }
+ 
+-/// Asks the standard worker for the plan of a request and keeps it beside the request.
+-pub fn plan(home: &Path, name: &str, request: &Path) -> Result<Plan> {
+-    let target = request.with_file_name(format!("{name}.plan"));
+-    if let Some(plan) = Plan::read(&target) {
+-        return Ok(plan);
+-    }
+-    let folder = request.parent().ok_or("request without a folder")?;
+-    let crew = crew(home);
+-    let repositories = repositories(home);
++// The text the orchestrator sends its worker, built from the same crew and repositories it checks
++// the answer against.
++fn assignment(
++    home: &Path,
++    request: &Path,
++    crew: &[Member],
++    repositories: &[(String, PathBuf)],
++) -> Result<String> {
+     let mut prompt = format!("{CONTRACT}\n\nAGENTS:\n");
+-    for member in &crew {
+-        prompt.push_str(&format!("- {}: {}\n", member.name, member.about));
++    for member in crew {
++        prompt.push_str(&format!(
++            "- {}: {}{}\n",
++            member.name,
++            member.about,
++            if member.failed {
++                " (failed recently)"
++            } else {
++                ""
++            }
++        ));
+     }
+     prompt.push_str("\nREPOSITORIES:\n");
+     if repositories.is_empty() {
+         prompt.push_str("(none)\n");
+     }
+-    for (name, path) in &repositories {
++    for (name, path) in repositories {
+         let about = fs::read_to_string(path.join("README.md")).unwrap_or_default();
++        let protected = protected(path);
+         prompt.push_str(&format!(
+-            "- {name}: {}\n",
+-            source::single_line(&about.chars().take(300).collect::<String>())
++            "- {name}: {}\n  protected: {}\n",
++            source::single_line(&about.chars().take(300).collect::<String>()),
++            if protected.is_empty() {
++                "(none)".to_owned()
++            } else {
++                protected.join(", ")
++            }
+         ));
+     }
++    prompt.push_str("\nPRODUCTS:\n");
++    let products = products(home);
++    if products.is_empty() {
++        prompt.push_str("(none)\n");
++    }
++    for (name, about) in &products {
++        prompt.push_str(&format!("- {name}: {about}\n"));
++    }
+     prompt.push_str(&format!(
+         "\nREQUEST OF THE USER:\n{}",
+         record::read_regular(request, record::MAX_RECORD_BYTES)?
+     ));
++    Ok(prompt)
++}
++
++/// The text the orchestrator would send its worker for this request. No worker is called.
++pub fn prompt(home: &Path, request: &Path) -> Result<String> {
++    assignment(home, request, &crew(home), &repositories(home))
++}
++
++/// Asks the standard worker for the plan of a request and keeps it beside the request.
++pub fn plan(home: &Path, name: &str, request: &Path) -> Result<Plan> {
++    let target = request.with_file_name(format!("{name}.plan"));
++    if let Some(plan) = Plan::read(&target) {
++        return Ok(plan);
++    }
++    let folder = request.parent().ok_or("request without a folder")?;
++    let crew = crew(home);
++    let repositories = repositories(home);
++    let prompt = assignment(home, request, &crew, &repositories)?;
+     let scratch = tempfile::tempdir()?;
+     let scratch = scratch.path().canonicalize()?;
+     let workspace = scratch.join("worker");
+@@ -272,9 +471,147 @@ mod tests {
+             name: name.into(),
+             claude,
+             about: String::new(),
++            failed: false,
+         }
+     }
+ 
++    #[test]
++    fn a_gate_author_that_failed_recently_is_replaced() {
++        let mut broken = member("anna", true);
++        broken.failed = true;
++        let crew = [member(STANDARD, true), broken, member("bert", true)];
++        let plan = parse(
++            "Art: dokument\nRepo: -\nGate: anna\nArbeit: standard\nGrund: Anna prüft gut.",
++            &crew,
++            &[],
++        )
++        .unwrap();
++        assert_eq!((plan.gate.as_str(), plan.work.as_str()), ("bert", STANDARD));
++        assert!(plan.reason.starts_with("Anna prüft gut. "), "{}", plan.reason);
++        assert!(
++            plan.reason.contains("@anna") && plan.reason.contains("@bert"),
++            "{}",
++            plan.reason
++        );
++
++        // The work is done by bert: the standard worker steps in.
++        let plan = parse(
++            "Art: dokument\nRepo: -\nGate: anna\nArbeit: bert\nGrund: x.",
++            &crew,
++            &[],
++        )
++        .unwrap();
++        assert_eq!((plan.gate.as_str(), plan.work.as_str()), ("standard", "bert"));
++        assert!(plan.reason.contains("@anna") && plan.reason.contains("@standard"));
++
++        // Nobody else is there: the choice stays.
++        let mut broken = member("anna", true);
++        broken.failed = true;
++        let alone = [member(STANDARD, true), broken];
++        let plan = parse(
++            "Art: dokument\nRepo: -\nGate: anna\nArbeit: standard\nGrund: x.",
++            &alone,
++            &[],
++        )
++        .unwrap();
++        assert_eq!((plan.gate.as_str(), plan.reason.as_str()), ("anna", "x."));
++    }
++
++    #[test]
++    fn a_failed_marker_counts_for_six_hours() {
++        let home = tempfile::tempdir().unwrap();
++        let home = home.path();
++        fs::create_dir(home.join("crew")).unwrap();
++        assert!(!failed_recently(home, "anna"));
++        let marker = failed_marker(home, "anna");
++        fs::write(&marker, "kaputt\n").unwrap();
++        assert!(failed_recently(home, "anna"));
++        let old = SystemTime::now() - Duration::from_secs(7 * 60 * 60);
++        fs::File::options()
++            .write(true)
++            .open(&marker)
++            .unwrap()
++            .set_modified(old)
++            .unwrap();
++        assert!(!failed_recently(home, "anna"));
++        // A time written into the marker counts before the time of the file.
++        let seconds = old.duration_since(UNIX_EPOCH).unwrap().as_secs();
++        fs::write(&marker, format!("{seconds}\n")).unwrap();
++        assert!(!failed_recently(home, "anna"));
++        assert_eq!(
++            timestamp("2026-11-26T10:00:00Z"),
++            Some(UNIX_EPOCH + Duration::from_secs(1_795_687_200))
++        );
++        assert_eq!(
++            timestamp("2026-11-26T12:00:00+02:00"),
++            timestamp("2026-11-26 10:00")
++        );
++        assert_eq!(timestamp("kaputt"), None);
++    }
++
++    #[test]
++    fn the_assignment_names_products_protected_paths_and_failed_agents() {
++        let home = tempfile::tempdir().unwrap();
++        let home = home.path().canonicalize().unwrap();
++        let request = home.join("ticket-001.run");
++        fs::write(&request, "decision=observed\nintent=x\nend\n").unwrap();
++
++        let empty = prompt(&home, &request).unwrap();
++        assert!(empty.contains("\nREPOSITORIES:\n(none)\n"), "{empty}");
++        assert!(empty.contains("\nPRODUCTS:\n(none)\n"), "{empty}");
++        assert!(!empty.contains("(failed recently)"));
++        assert!(empty.ends_with("REQUEST OF THE USER:\ndecision=observed\nintent=x\nend\n"));
++
++        fs::create_dir_all(home.join("products")).unwrap();
++        fs::write(home.join("products/lager.product"), "about=Lager\n").unwrap();
++        fs::write(home.join("products/kasse.product"), "about=Kasse\nend\n").unwrap();
++        for name in ["alpha", "beta"] {
++            fs::create_dir_all(home.join(format!("repositories/{name}/.taik"))).unwrap();
++        }
++        fs::write(
++            home.join("repositories/alpha/.taik/protected"),
++            "# Kommentar\nsrc/secret.rs\n\nCargo.toml\n",
++        )
++        .unwrap();
++        fs::write(home.join("repositories/beta/.taik/protected"), "").unwrap();
++        fs::create_dir_all(home.join("crew")).unwrap();
++        for name in ["gate-author", "other"] {
++            fs::write(
++                home.join(format!("crew/{name}.agent")),
++                "harness=claude\nmodel=m\neffort=low\npersona=\nend\n",
++            )
++            .unwrap();
++            fs::write(failed_marker(&home, name), "kaputt\n").unwrap();
++        }
++        fs::File::options()
++            .write(true)
++            .open(failed_marker(&home, "other"))
++            .unwrap()
++            .set_modified(SystemTime::now() - Duration::from_secs(7 * 60 * 60))
++            .unwrap();
++
++        let text = prompt(&home, &request).unwrap();
++        assert!(
++            text.contains("\nPRODUCTS:\n- kasse: Kasse\n- lager: Lager\n\n"),
++            "{text}"
++        );
++        assert!(
++            text.contains("\n- alpha: \n  protected: src/secret.rs, Cargo.toml\n- beta: \n  protected: (none)\n"),
++            "{text}"
++        );
++        let line = |name: &str| {
++            text.lines()
++                .find(|line| line.starts_with(&format!("- {name}: ")))
++                .unwrap()
++                .to_owned()
++        };
++        assert!(line("gate-author").ends_with(" (failed recently)"));
++        assert!(!line("other").contains("(failed recently)"));
++        assert!(!line(STANDARD).contains("(failed recently)"));
++        assert!(text.contains("A change to a listed product is of kind 'dokument'."));
++        assert!(text.contains("A session must not change the protected paths"));
++    }
++
+     #[test]
+     fn a_plan_is_read_checked_and_kept() {
+         let crew = [member(STANDARD, true), member("savant", false)];
+diff --git a/src/proposal.rs b/src/proposal.rs
+index 9e5ca6d..fa21e2c 100644
+--- a/src/proposal.rs
++++ b/src/proposal.rs
+@@ -266,7 +266,23 @@ pub fn propose_planned(
+         None => source::ask(&workspace, job, &prompt, &mut Progress::silent()),
+     };
+     let worker = author.as_ref().map_or(worker, |agent| agent.name.as_str());
+-    let (answer, usage) = answer?;
++    // A named gate author that cannot be reached is marked, so that the orchestrator avoids it for a
++    // while. The standard worker is never marked.
++    let marker = author
++        .as_ref()
++        .map(|agent| crate::orchestrator::failed_marker(&state, &agent.name));
++    let (answer, usage) = match answer {
++        Ok(answer) => answer,
++        Err(error) => {
++            if let Some(marker) = &marker {
++                let _ = fs::write(
++                    marker,
++                    format!("{}\n", source::single_line(&error.to_string())),
++                );
++            }
++            return Err(error);
++        }
++    };
+     // An optional first line names the open intent that the worker took up.
+     let mut answer = answer.trim_start().to_owned();
+     let mut intent_from = String::new();
+@@ -377,6 +393,10 @@ pub fn propose_planned(
+         record::MAX_RECORD_BYTES,
+     )?;
+     note(&format!("proposal {} waits for approval", target.display()))?;
++    // The agent delivered a gate again.
++    if let Some(marker) = &marker {
++        let _ = fs::remove_file(marker);
++    }
+     Ok(Some(target))
+ }
+ 
+diff --git a/tests/orchestrator.rs b/tests/orchestrator.rs
+new file mode 100644
+index 0000000..4463742
+--- /dev/null
++++ b/tests/orchestrator.rs
+@@ -0,0 +1,280 @@
++#![cfg(target_os = "macos")]
++
++use std::fs;
++use std::os::unix::fs::PermissionsExt;
++use std::path::Path;
++use std::process::{Command, Output};
++use std::time::{Duration, SystemTime};
++
++fn factory() -> Command {
++    Command::new(env!("CARGO_BIN_EXE_taik-seed"))
++}
++
++fn agent(state: &Path, name: &str, model: &str) {
++    fs::create_dir_all(state.join("crew")).unwrap();
++    fs::write(
++        state.join(format!("crew/{name}.agent")),
++        format!("harness=claude\nmodel={model}\neffort=low\npersona=\nend\n"),
++    )
++    .unwrap();
++}
++
++fn age(path: &Path, hours: u64) {
++    fs::File::options()
++        .write(true)
++        .open(path)
++        .unwrap()
++        .set_modified(SystemTime::now() - Duration::from_secs(hours * 60 * 60))
++        .unwrap();
++}
++
++fn executable(path: &Path, text: &str) {
++    fs::write(path, text).unwrap();
++    fs::set_permissions(path, fs::Permissions::from_mode(0o700)).unwrap();
++}
++
++fn reply(text: &str) -> String {
++    serde_json::json!({"type": "result", "is_error": false, "result": text,
++        "usage": {"output_tokens": 1}, "total_cost_usd": 0.01, "modelUsage": {"m": {}}})
++    .to_string()
++}
++
++fn request(state: &Path, text: &str) -> String {
++    use std::io::Write;
++    use std::process::Stdio;
++    let mut child = factory()
++        .arg("request")
++        .arg(state)
++        .stdin(Stdio::piped())
++        .stdout(Stdio::piped())
++        .spawn()
++        .unwrap();
++    child
++        .stdin
++        .take()
++        .unwrap()
++        .write_all(text.as_bytes())
++        .unwrap();
++    let output = child.wait_with_output().unwrap();
++    assert!(output.status.success(), "{output:?}");
++    String::from_utf8_lossy(&output.stdout).trim().to_owned()
++}
++
++fn drain(state: &Path, root: &Path, worker: &Path) -> Output {
++    factory()
++        .arg("drain")
++        .arg(state)
++        .env("TAIK_LEAD_WORKER", worker)
++        .env(
++            "PATH",
++            format!("{}:{}", root.display(), std::env::var("PATH").unwrap()),
++        )
++        .env_remove("TAIK_SECOND_WORKER")
++        .env_remove("TAIK_AUTO_PROPOSE")
++        .output()
++        .unwrap()
++}
++
++fn orchestrator_prompt(state: &Path, request: &Path, worker: &Path) -> Output {
++    factory()
++        .arg("orchestrator-prompt")
++        .arg(state)
++        .arg(request)
++        .env("TAIK_LEAD_WORKER", worker)
++        .output()
++        .unwrap()
++}
++
++#[test]
++fn the_orchestrator_shows_its_assignment_without_calling_a_worker() {
++    let root = tempfile::Builder::new()
++        .prefix("taik-assignment-")
++        .tempdir_in("/tmp")
++        .unwrap();
++    let root = root.path().canonicalize().unwrap();
++    let state = root.join("state");
++    fs::create_dir_all(&state).unwrap();
++    let request = root.join("REQUEST.run");
++    fs::write(
++        &request,
++        "decision=pending\nidentity=gate-check\nintent=Prüfe den Auftragssatz\nobservation=Ein Wunsch\ncontinuation=Test\n",
++    )
++    .unwrap();
++    // A worker that must not be called: it does not exist.
++    let never = root.join("never");
++
++    // Without products, repositories and agents.
++    let empty = orchestrator_prompt(&state, &request, &never);
++    assert_eq!(empty.status.code(), Some(0), "{empty:?}");
++    let empty = String::from_utf8(empty.stdout).unwrap();
++    assert!(empty.starts_with("You are the orchestrator"), "{empty}");
++    assert!(empty.contains("\nPRODUCTS:\n(none)\n"), "{empty}");
++    assert!(empty.contains("\nREPOSITORIES:\n(none)\n"), "{empty}");
++    assert!(empty.ends_with("\nREQUEST OF THE USER:\ndecision=pending\nidentity=gate-check\nintent=Prüfe den Auftragssatz\nobservation=Ein Wunsch\ncontinuation=Test\n"));
++
++    fs::create_dir_all(state.join("products")).unwrap();
++    fs::write(state.join("products/kasse.product"), "about=Kasse\n").unwrap();
++    fs::write(state.join("products/lager.product"), "about=Lager\n").unwrap();
++    for name in ["alpha", "beta"] {
++        fs::create_dir_all(state.join(format!("repositories/{name}/.taik"))).unwrap();
++    }
++    fs::write(
++        state.join("repositories/alpha/.taik/protected"),
++        "# Kommentar\nsrc/secret.rs\n\nCargo.toml\n",
++    )
++    .unwrap();
++    fs::write(state.join("repositories/beta/.taik/protected"), "").unwrap();
++    agent(&state, "gate-author", "m");
++    agent(&state, "other", "m");
++    fs::write(state.join("crew/gate-author.failed"), "kaputt\n").unwrap();
++    fs::write(state.join("crew/other.failed"), "kaputt\n").unwrap();
++    age(&state.join("crew/other.failed"), 7);
++
++    let shown = orchestrator_prompt(&state, &request, &never);
++    assert_eq!(shown.status.code(), Some(0), "{shown:?}");
++    let text = String::from_utf8(shown.stdout).unwrap();
++    assert!(
++        text.contains("\nPRODUCTS:\n- kasse: Kasse\n- lager: Lager\n"),
++        "{text}"
++    );
++    assert!(
++        text.contains("\n- alpha: \n  protected: src/secret.rs, Cargo.toml\n"),
++        "{text}"
++    );
++    assert!(text.contains("\n- beta: \n  protected: (none)\n"), "{text}");
++    let line = |name: &str| {
++        text.lines()
++            .find(|line| line.starts_with(&format!("- {name}: ")))
++            .unwrap_or_else(|| panic!("{text}"))
++            .to_owned()
++    };
++    assert!(line("gate-author").ends_with(" (failed recently)"), "{text}");
++    assert!(!line("other").contains("(failed recently)"), "{text}");
++    assert!(text.contains("A change to a listed product is of kind 'dokument'."));
++    assert!(text.contains("must not change the protected paths"));
++    // Nothing was planned, nothing was recorded.
++    assert!(!root.join("REQUEST.plan").exists());
++    assert!(!root.join("REQUEST.plan.run").exists());
++    assert_eq!(fs::read_dir(&root).unwrap().count(), 2);
++}
++
++#[test]
++fn a_failing_gate_author_is_marked_avoided_and_cleared() {
++    let root = tempfile::Builder::new()
++        .prefix("taik-failed-")
++        .tempdir_in("/tmp")
++        .unwrap();
++    let root = root.path().canonicalize().unwrap();
++    let state = root.join("state");
++    fs::create_dir_all(state.join("jobs")).unwrap();
++    // pruefer fails while the file `broken` exists; ersatz always answers.
++    agent(&state, "pruefer", "kaputt");
++    agent(&state, "ersatz", "m");
++    fs::write(
++        root.join("plan.json"),
++        reply("Art: dokument\nRepo: -\nGate: pruefer\nArbeit: standard\nGrund: Pruefer schreibt die Prüfung."),
++    )
++    .unwrap();
++    fs::write(
++        root.join("files.json"),
++        reply("=== brief.md ===\nEine Seite mit Titel bauen\n\n=== verify.mjs ===\nconsole.log('PASS');\n"),
++    )
++    .unwrap();
++    let worker = root.join("lead");
++    executable(
++        &worker,
++        &format!(
++            "#!/bin/sh\ncase \"$*\" in *'--model kaputt'*) test -f '{0}/broken' && exit 1;; esac\ncase \"$*\" in *'orchestrator of a software factory'*) cat '{0}/plan.json';; *) cat '{0}/files.json';; esac\n",
++            root.display()
++        ),
++    );
++    fs::copy(&worker, root.join("claude")).unwrap();
++    fs::write(root.join("broken"), "").unwrap();
++    let marker = state.join("crew/pruefer.failed");
++
++    // 1. The named gate author fails: the service marks it, another agent writes the gate.
++    assert_eq!(request(&state, "Eine Seite"), "ticket-001");
++    let served = drain(&state, &root, &worker);
++    let message = fs::read_to_string(&marker).unwrap_or_else(|_| panic!("{served:?}"));
++    assert_eq!(message.lines().count(), 1, "{message}");
++    assert!(!message.trim().is_empty());
++    let origin = fs::read_to_string(state.join("proposals/ticket-001/origin.txt")).unwrap();
++    assert!(origin.contains("proposed_by=ersatz\n"), "{origin}");
++    assert!(!state.join("crew/standard.failed").exists());
++    assert!(!state.join("crew/ersatz.failed").exists());
++
++    // 2. The assignment shows it, and the orchestrator moves its gate to another agent.
++    let shown = orchestrator_prompt(&state, &state.join("requests/ticket-001.run"), &worker);
++    let text = String::from_utf8(shown.stdout).unwrap();
++    assert!(
++        text.lines()
++            .any(|line| line.starts_with("- pruefer: ") && line.ends_with(" (failed recently)")),
++        "{text}"
++    );
++    assert!(
++        text.lines()
++            .any(|line| line.starts_with("- ersatz: ") && !line.contains("failed")),
++        "{text}"
++    );
++    assert_eq!(request(&state, "Noch eine Seite"), "ticket-002");
++    let served = drain(&state, &root, &worker);
++    let plan = fs::read_to_string(state.join("requests/ticket-002.plan"))
++        .unwrap_or_else(|_| panic!("{served:?}"));
++    assert!(plan.contains("gate=ersatz\n"), "{plan}");
++    assert!(
++        plan.contains("@pruefer") && plan.contains("@ersatz"),
++        "{plan}"
++    );
++    assert!(marker.exists());
++
++    // 3. Six hours later the agent is chosen again, delivers a gate, and the marker is gone.
++    fs::remove_file(root.join("broken")).unwrap();
++    age(&marker, 7);
++    assert_eq!(request(&state, "Eine dritte Seite"), "ticket-003");
++    let served = drain(&state, &root, &worker);
++    let plan = fs::read_to_string(state.join("requests/ticket-003.plan"))
++        .unwrap_or_else(|_| panic!("{served:?}"));
++    assert!(plan.contains("gate=pruefer\n"), "{plan}");
++    let origin = fs::read_to_string(state.join("proposals/ticket-003/origin.txt"))
++        .unwrap_or_else(|_| panic!("{served:?}"));
++    assert!(origin.contains("proposed_by=pruefer\n"), "{origin}");
++    assert!(!marker.exists(), "{served:?}");
++}
++
++#[test]
++fn the_standard_worker_is_never_marked() {
++    let root = tempfile::Builder::new()
++        .prefix("taik-standard-")
++        .tempdir_in("/tmp")
++        .unwrap();
++    let root = root.path().canonicalize().unwrap();
++    let state = root.join("state");
++    fs::create_dir_all(state.join("jobs")).unwrap();
++    fs::write(
++        root.join("plan.json"),
++        reply("Art: dokument\nRepo: -\nGate: standard\nArbeit: standard\nGrund: Einfach."),
++    )
++    .unwrap();
++    // It plans, then fails to write the gate.
++    let worker = root.join("lead");
++    executable(
++        &worker,
++        &format!(
++            "#!/bin/sh\ncase \"$*\" in *'orchestrator of a software factory'*) cat '{}/plan.json';; *) exit 1;; esac\n",
++            root.display()
++        ),
++    );
++    assert_eq!(request(&state, "Eine Seite"), "ticket-001");
++    let served = drain(&state, &root, &worker);
++    assert!(
++        state.join("requests/ticket-001.failed").exists(),
++        "{served:?}"
++    );
++    assert!(!state.join("crew/standard.failed").exists());
++    let marked = fs::read_dir(state.join("crew"))
++        .into_iter()
++        .flatten()
++        .flatten()
++        .any(|entry| entry.file_name().to_string_lossy().ends_with(".failed"));
++    assert!(!marked);
++}
