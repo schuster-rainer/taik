@@ -470,9 +470,11 @@ pub fn approve(state: &Path, name: &str) -> Result<PathBuf> {
             &proposal.join("brief.md"),
             &proposal.join("gate.sh"),
             Some(repo),
-            worker,
-            &said,
-            plan_file,
+            service::Handover {
+                agent: worker,
+                said: &said,
+                plan: plan_file,
+            },
         )?
     } else {
         service::queue_source(
@@ -483,10 +485,12 @@ pub fn approve(state: &Path, name: &str) -> Result<PathBuf> {
             Some(proposal.join("seed.html"))
                 .filter(|seed| seed.is_file())
                 .as_deref(),
-            worker,
-            // What the user said about the proposal starts the conversation of the job.
-            &said,
-            plan_file,
+            service::Handover {
+                agent: worker,
+                // What the user said about the proposal starts the conversation of the job.
+                said: &said,
+                plan: plan_file,
+            },
         )?
     };
     record::publish_text(
