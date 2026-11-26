@@ -241,6 +241,7 @@ taik-seed source JOB BRIEF GATE [--attached[=WORKER]]
 taik-seed promote JOB BRIEF GATE INSTALLED_BINARY WORKER
 taik-seed propose STATE NAME RECORD.run
 taik-seed approve STATE NAME
+taik-seed adopt STATE job-NAME
 taik-seed experiment BASELINE.run OUTPUT_DIRECTORY
 taik-seed queue STATE BASELINE.run
 taik-seed queue-source STATE NAME BRIEF GATE [ACCEPTED_SOURCE]

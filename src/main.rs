@@ -1,5 +1,6 @@
 #[cfg(target_os = "macos")]
 mod activation;
+mod adopt;
 #[cfg(target_os = "macos")]
 mod analysis;
 #[cfg(target_os = "macos")]
@@ -60,6 +61,7 @@ const USAGE: &str = "usage: taik-seed seed OUTPUT.run
        taik-seed queue-session STATE NAME BRIEF.md GATE.sh [REPOSITORY]
        taik-seed propose STATE NAME RECORD.run
        taik-seed approve STATE NAME
+       taik-seed adopt STATE job-NAME
        taik-seed experiment BASELINE.run OUTPUT_DIRECTORY
        taik-seed queue STATE BASELINE.run
        taik-seed queue-source STATE NAME BRIEF GATE [ACCEPTED_SOURCE] [--agent=NAME]
@@ -392,6 +394,11 @@ fn run() -> Result<bool> {
         "evolve" if rest.len() == 1 => Ok(evolve(first, Path::new(&rest[0]))?.accepted),
         "close" if rest.len() == 1 => {
             close(first, &rest[0])?;
+            Ok(true)
+        }
+        "adopt" if rest.len() == 1 => {
+            let name = rest[0].to_str().ok_or("job name must be ASCII")?;
+            println!("{}", adopt::adopt(first, name)?);
             Ok(true)
         }
         "experiment" if rest.len() == 1 => {
