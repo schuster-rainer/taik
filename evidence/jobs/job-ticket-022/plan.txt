@@ -1,0 +1,6 @@
+kind=sitzung
+repo=taik
+repo_path=/Users/rainer/projects/ideas/talk
+gate=pruefer
+work=standard
+reason=Bestehender Rust-Code im Repo taik muss um den Befehl decline, Tests und README ergänzt werden; pruefer liest den Code für das Gate, standard arbeitet.

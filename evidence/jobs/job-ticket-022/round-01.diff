@@ -1,0 +1,535 @@
+diff --git a/README.md b/README.md
+index dadd363..a8a2904 100644
+--- a/README.md
++++ b/README.md
+@@ -164,8 +164,11 @@ The service stays a persistent process. It finished tag jobs in 55 to 72 ms. A `
+ ```sh
+ taik-seed propose STATE NAME evidence/jobs/job-X/round-NN.run
+ taik-seed approve STATE NAME
++printf 'reason' | taik-seed decline STATE NAME
+ ```
+ 
++`decline` keeps the reason (1 to 2000 bytes from standard input) as `declined.md` in a waiting proposal, which then can no longer be approved. For a request without a proposal it writes `STATE/requests/NAME.withdrawn`: the service no longer plans the request, and `reply` to it is refused. Each happens once.
++
+ With `TAIK_AUTO_PROPOSE` set, the service reflects once after each finished software job, at most three times in 24 hours, and either writes a proposal or records why it stops. Waiting proposals appear in the viewer with an approve button.
+ 
+ The reflection reads the open intents of the Factory: the continuation of every observation record that no reflection has taken up yet. It may also propose a change to a product. A product is a file `STATE/products/NAME.product` that names an accepted artifact, its pinned gate and what it is. Such a proposal carries only a brief, and the job starts from the accepted source under the product's own gate.
+@@ -246,6 +249,7 @@ taik-seed source JOB BRIEF GATE [--attached[=WORKER]]
+ taik-seed promote JOB BRIEF GATE INSTALLED_BINARY WORKER
+ taik-seed propose STATE NAME RECORD.run
+ taik-seed approve STATE NAME
++taik-seed decline STATE NAME
+ taik-seed orchestrator-prompt STATE REQUEST.run
+ taik-seed adopt STATE job-NAME
+ taik-seed settle STATE job-NAME
+diff --git a/src/main.rs b/src/main.rs
+index 9350c58..6a8d51c 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -61,6 +61,7 @@ const USAGE: &str = "usage: taik-seed seed OUTPUT.run
+        taik-seed queue-session STATE NAME BRIEF.md GATE.sh [REPOSITORY]
+        taik-seed propose STATE NAME RECORD.run
+        taik-seed approve STATE NAME
++       taik-seed decline STATE NAME < REASON
+        taik-seed orchestrator-prompt STATE REQUEST.run
+        taik-seed adopt STATE job-NAME
+        taik-seed settle STATE job-NAME
+@@ -495,6 +496,17 @@ fn run() -> Result<bool> {
+             Ok(true)
+         }
+         #[cfg(target_os = "macos")]
++        "decline" if rest.len() == 1 => {
++            use std::io::Read;
++            let name = rest[0].to_str().ok_or("proposal name must be ASCII")?;
++            let mut reason = Vec::new();
++            std::io::stdin()
++                .take(proposal::MAX_DECLINE_REASON_BYTES as u64 + 1)
++                .read_to_end(&mut reason)?;
++            println!("{}", proposal::decline(first, name, &reason)?.display());
++            Ok(true)
++        }
++        #[cfg(target_os = "macos")]
+         "promote" if rest.len() == 4 => promote::run(
+             first,
+             Path::new(&rest[0]),
+diff --git a/src/proposal.rs b/src/proposal.rs
+index 8908d5b..e89dc80 100644
+--- a/src/proposal.rs
++++ b/src/proposal.rs
+@@ -563,9 +563,64 @@ pub fn reflect(state: &Path, jobs: &Path, job: &Path) -> Result<()> {
+     propose(state, &name, &last).map(|_| ())
+ }
+ 
++/// The reason a proposal was declined with. A declined proposal is never approved.
++pub const DECLINED: &str = "declined.md";
++/// The reason a request STATE/requests/NAME.run was withdrawn with: STATE/requests/NAME.withdrawn.
++pub const WITHDRAWN: &str = "withdrawn";
++pub const MAX_DECLINE_REASON_BYTES: usize = 2000;
++
++/// The file that marks the request STATE/requests/NAME.run as withdrawn.
++pub fn withdrawn(state: &Path, name: &str) -> PathBuf {
++    state.join("requests").join(format!("{name}.{WITHDRAWN}"))
++}
++
++/// Declines a waiting proposal or withdraws a request, with the reason as it was given. Nothing is
++/// written when the name, the reason or the state of the proposal or request does not allow it.
++pub fn decline(state: &Path, name: &str, reason: &[u8]) -> Result<PathBuf> {
++    let name = crate::worker_name(name).ok_or("invalid proposal or request name")?;
++    let proposal = state.join("proposals").join(name);
++    let target = if proposal.is_dir() {
++        if proposal.join("approved.txt").symlink_metadata().is_ok() {
++            return Err("the proposal is already approved".into());
++        }
++        let declined = proposal.join(DECLINED);
++        if declined.symlink_metadata().is_ok() {
++            return Err("the proposal is already declined".into());
++        }
++        declined
++    } else if state.join("requests").join(format!("{name}.run")).is_file() {
++        let withdrawn = withdrawn(state, name);
++        if withdrawn.symlink_metadata().is_ok() {
++            return Err("the request is already withdrawn".into());
++        }
++        withdrawn
++    } else {
++        return Err(format!("no waiting proposal or request named {name}").into());
++    };
++    if reason.is_empty() || reason.len() > MAX_DECLINE_REASON_BYTES {
++        return Err("a reason is between 1 and 2000 bytes".into());
++    }
++    use std::io::Write;
++    let folder = target.parent().ok_or("a reason without a folder")?;
++    let mut pending = tempfile::Builder::new()
++        .prefix(".taik-")
++        .suffix(".pending")
++        .tempfile_in(folder)?;
++    pending.write_all(reason)?;
++    pending.as_file().sync_all()?;
++    // Never replaces an existing reason.
++    pending
++        .persist_noclobber(&target)
++        .map_err(|error| error.error)?;
++    Ok(target)
++}
++
+ pub fn approve(state: &Path, name: &str) -> Result<PathBuf> {
+     let name = crate::worker_name(name).ok_or("invalid proposal name")?;
+     let proposal = state.canonicalize()?.join("proposals").join(name);
++    if proposal.join(DECLINED).symlink_metadata().is_ok() {
++        return Err("a declined proposal cannot be approved".into());
++    }
+     let plan = crate::orchestrator::Plan::read(&proposal.join("plan.txt"));
+     let worker = plan
+         .as_ref()
+diff --git a/src/service.rs b/src/service.rs
+index 43d619c..247595e 100644
+--- a/src/service.rs
++++ b/src/service.rs
+@@ -62,6 +62,24 @@ pub fn reply(state: &Path, name: &str, text: &str) -> Result<PathBuf> {
+                 .bytes()
+                 .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
+     });
++    // A withdrawn request and a declined proposal take no further word.
++    if let Some(ticket) = crate::worker_name(name).filter(|_| !plain) {
++        let proposal = state.join("proposals").join(ticket);
++        if fs::symlink_metadata(&proposal).is_err()
++            && crate::proposal::withdrawn(state, ticket)
++                .symlink_metadata()
++                .is_ok()
++        {
++            return Err("the request is withdrawn".into());
++        }
++        if proposal
++            .join(crate::proposal::DECLINED)
++            .symlink_metadata()
++            .is_ok()
++        {
++            return Err("the proposal is declined".into());
++        }
++    }
+     let jobs = jobs_in(state)?;
+     // An answer to a question of the orchestrator about a request that has no proposal yet.
+     if let Some(ticket) = crate::worker_name(name).filter(|_| !plain) {
+@@ -166,6 +184,9 @@ fn derive_requests(home: &Path) {
+     for name in names {
+         if requests.join(format!("reflection-{name}.run")).exists()
+             || requests.join(format!("{name}.failed")).exists()
++            || crate::proposal::withdrawn(home, &name)
++                .symlink_metadata()
++                .is_ok()
+             || home.join("proposals").join(&name).exists()
+         {
+             continue;
+diff --git a/tests/decline.rs b/tests/decline.rs
+new file mode 100644
+index 0000000..a1d31b6
+--- /dev/null
++++ b/tests/decline.rs
+@@ -0,0 +1,226 @@
++#![cfg(target_os = "macos")]
++
++//! The user declines a waiting proposal or withdraws a request. The test lays out proposal and
++//! request itself in the state folder. No worker and no sandbox run.
++
++use std::collections::BTreeMap;
++use std::fs;
++use std::io::Write;
++use std::path::{Path, PathBuf};
++use std::process::{Command, Output, Stdio};
++
++fn factory() -> Command {
++    Command::new(env!("CARGO_BIN_EXE_taik-seed"))
++}
++
++fn say(arguments: &[&str], text: &[u8]) -> Output {
++    let mut child = factory()
++        .args(arguments)
++        .stdin(Stdio::piped())
++        .stdout(Stdio::piped())
++        .stderr(Stdio::piped())
++        .spawn()
++        .unwrap();
++    // A command that refuses early may close its input before all of it is read.
++    let _ = child.stdin.take().unwrap().write_all(text);
++    child.wait_with_output().unwrap()
++}
++
++// Every file and folder below the state with its content: what a refused command must leave alone.
++fn snapshot(root: &Path) -> BTreeMap<PathBuf, Option<Vec<u8>>> {
++    let mut found = BTreeMap::new();
++    let mut open = vec![root.to_path_buf()];
++    while let Some(folder) = open.pop() {
++        for entry in fs::read_dir(&folder).unwrap().flatten() {
++            let path = entry.path();
++            let relative = path.strip_prefix(root).unwrap().to_path_buf();
++            if path.is_dir() {
++                found.insert(relative, None);
++                open.push(path);
++            } else {
++                found.insert(relative, Some(fs::read(&path).unwrap()));
++            }
++        }
++    }
++    found
++}
++
++fn state() -> (tempfile::TempDir, PathBuf) {
++    let root = tempfile::Builder::new()
++        .prefix("taik-decline-")
++        .tempdir_in("/tmp")
++        .unwrap();
++    let state = root.path().canonicalize().unwrap().join("state");
++    fs::create_dir_all(state.join("jobs")).unwrap();
++    (root, state)
++}
++
++fn proposal(state: &Path, name: &str) -> PathBuf {
++    let folder = state.join("proposals").join(name);
++    fs::create_dir_all(&folder).unwrap();
++    fs::write(
++        folder.join("brief.md"),
++        "Eine Seite mit blauem Titel bauen\n\nDer Titel ist blau.\n",
++    )
++    .unwrap();
++    fs::write(folder.join("verify.mjs"), "console.log('PASS: ok');\n").unwrap();
++    fs::write(
++        folder.join("origin.txt"),
++        "derived_from=x\nproposed_by=test\nstate=waiting for approval\n",
++    )
++    .unwrap();
++    folder
++}
++
++// A request whose orchestrator asked a question that nobody has answered yet.
++fn asked_request(state: &Path, name: &str) -> PathBuf {
++    let requests = state.join("requests");
++    fs::create_dir_all(&requests).unwrap();
++    let request = requests.join(format!("{name}.run"));
++    fs::write(
++        &request,
++        format!("decision=observed\nidentity={name}\nintent=Eine Seite\nobservation=\ncontinuation=Derive one job.\nend\n"),
++    )
++    .unwrap();
++    let talk = requests.join(format!("{name}.talk"));
++    fs::create_dir_all(&talk).unwrap();
++    fs::write(
++        talk.join("message-001.agent.md"),
++        "round=0\n\nWelche Farbe soll der Titel haben?\n",
++    )
++    .unwrap();
++    request
++}
++
++fn jobs(state: &Path) -> usize {
++    fs::read_dir(state.join("jobs")).unwrap().count()
++}
++
++#[test]
++fn a_waiting_proposal_is_declined_once_and_cannot_be_approved() {
++    let (_root, state) = state();
++    let home = state.to_str().unwrap();
++    let folder = proposal(&state, "titel");
++    let reason = "Das brauchen wir nicht.\nZu klein.\n";
++
++    let declined = say(&["decline", home, "titel"], reason.as_bytes());
++    assert_eq!(declined.status.code(), Some(0), "{declined:?}");
++    assert_eq!(fs::read(folder.join("declined.md")).unwrap(), reason.as_bytes());
++
++    // A second decline is refused and the first reason stays.
++    let before = snapshot(&state);
++    let again = say(&["decline", home, "titel"], b"Anders.");
++    assert_eq!(again.status.code(), Some(2), "{again:?}");
++    assert_eq!(snapshot(&state), before);
++
++    // A declined proposal cannot be approved: no job, no approval.
++    let approved = factory()
++        .arg("approve")
++        .arg(&state)
++        .arg("titel")
++        .output()
++        .unwrap();
++    assert_eq!(approved.status.code(), Some(2), "{approved:?}");
++    assert!(!folder.join("approved.txt").exists());
++    assert_eq!(jobs(&state), 0);
++    assert_eq!(snapshot(&state), before);
++}
++
++#[test]
++fn a_request_is_withdrawn_once_and_takes_no_reply() {
++    let (_root, state) = state();
++    let home = state.to_str().unwrap();
++    asked_request(&state, "ticket-001");
++    let reason = "Hat sich erledigt.";
++
++    let withdrawn = say(&["decline", home, "ticket-001"], reason.as_bytes());
++    assert_eq!(withdrawn.status.code(), Some(0), "{withdrawn:?}");
++    assert_eq!(
++        fs::read(state.join("requests/ticket-001.withdrawn")).unwrap(),
++        reason.as_bytes()
++    );
++    assert!(!state.join("proposals/ticket-001").exists());
++
++    // The answer to the open question is refused and nothing is written.
++    let before = snapshot(&state);
++    let replied = say(&["reply", home, "ticket-001"], b"Blau.");
++    assert_eq!(replied.status.code(), Some(2), "{replied:?}");
++    assert_eq!(snapshot(&state), before);
++    assert!(
++        !state
++            .join("requests/ticket-001.talk/message-002.user.md")
++            .exists()
++    );
++
++    // A second withdrawal is refused and the first reason stays.
++    let again = say(&["decline", home, "ticket-001"], b"Nochmal.");
++    assert_eq!(again.status.code(), Some(2), "{again:?}");
++    assert_eq!(snapshot(&state), before);
++}
++
++#[test]
++fn a_request_that_is_not_withdrawn_still_takes_its_answer() {
++    let (_root, state) = state();
++    let home = state.to_str().unwrap();
++    asked_request(&state, "ticket-001");
++    let replied = say(&["reply", home, "ticket-001"], b"Blau.");
++    assert_eq!(replied.status.code(), Some(0), "{replied:?}");
++    assert!(
++        state
++            .join("requests/ticket-001.talk/message-002.user.md")
++            .is_file()
++    );
++}
++
++#[test]
++fn wrong_names_reasons_and_states_are_refused_without_writing() {
++    let (_root, state) = state();
++    let home = state.to_str().unwrap();
++    proposal(&state, "offen");
++    proposal(&state, "frei");
++    asked_request(&state, "ticket-001");
++
++    // An approved proposal is no longer declined.
++    let approved = factory()
++        .arg("approve")
++        .arg(&state)
++        .arg("frei")
++        .output()
++        .unwrap();
++    assert_eq!(approved.status.code(), Some(0), "{approved:?}");
++    assert!(state.join("proposals/frei/approved.txt").is_file());
++
++    let before = snapshot(&state);
++    let long = "x".repeat(2001);
++    let long_name = "a".repeat(33);
++    let refused: [(&str, &[u8]); 10] = [
++        ("unbekannt", b"Nein."),
++        ("Offen", b"Nein."),
++        ("of_fen", b"Nein."),
++        ("../offen", b"Nein."),
++        (&long_name, b"Nein."),
++        ("", b"Nein."),
++        ("offen", b""),
++        ("offen", long.as_bytes()),
++        ("ticket-001", b""),
++        ("frei", b"Nein."),
++    ];
++    for (name, reason) in refused {
++        let output = say(&["decline", home, name], reason);
++        assert_eq!(output.status.code(), Some(2), "{name}: {output:?}");
++        assert_eq!(snapshot(&state), before, "{name} wrote something");
++    }
++    assert!(!state.join("proposals/offen/declined.md").exists());
++    assert!(!state.join("proposals/frei/declined.md").exists());
++    assert!(!state.join("requests/ticket-001.withdrawn").exists());
++
++    // A reason of exactly 2000 bytes is kept byte for byte, even when it is not UTF-8.
++    let mut reason = vec![b'y'; 1998];
++    reason.extend_from_slice(&[0xff, b'\n']);
++    let kept = say(&["decline", home, "offen"], &reason);
++    assert_eq!(kept.status.code(), Some(0), "{kept:?}");
++    assert_eq!(
++        fs::read(state.join("proposals/offen/declined.md")).unwrap(),
++        reason
++    );
++}
+diff --git a/tests/decline_service.rs b/tests/decline_service.rs
+new file mode 100644
+index 0000000..6e8e570
+--- /dev/null
++++ b/tests/decline_service.rs
+@@ -0,0 +1,135 @@
++#![cfg(target_os = "macos")]
++
++//! A withdrawn request is neither planned nor derived by the service, also not after the user
++//! answered the question of the orchestrator. A stand-in plays the worker. The service runs in its
++//! sandbox.
++
++use std::fs;
++use std::io::Write;
++use std::os::unix::fs::PermissionsExt;
++use std::path::Path;
++use std::process::{Command, Output, Stdio};
++
++fn factory() -> Command {
++    Command::new(env!("CARGO_BIN_EXE_taik-seed"))
++}
++
++fn say(arguments: &[&str], text: &str) -> Output {
++    let mut child = factory()
++        .args(arguments)
++        .stdin(Stdio::piped())
++        .stdout(Stdio::piped())
++        .stderr(Stdio::piped())
++        .spawn()
++        .unwrap();
++    let _ = child.stdin.take().unwrap().write_all(text.as_bytes());
++    child.wait_with_output().unwrap()
++}
++
++// The questions of the orchestrator: the messages of the agent in the conversation.
++fn questions(talk: &Path) -> usize {
++    fs::read_dir(talk).map_or(0, |entries| {
++        entries
++            .flatten()
++            .filter(|entry| entry.file_name().to_string_lossy().ends_with(".agent.md"))
++            .count()
++    })
++}
++
++fn untouched(state: &Path, name: &str) {
++    assert!(!state.join(format!("requests/{name}.plan")).exists());
++    assert!(!state.join(format!("requests/{name}.failed")).exists());
++    assert!(!state.join("proposals").join(name).exists());
++}
++
++#[test]
++fn a_withdrawn_request_is_not_planned_even_after_an_answer() {
++    let root = tempfile::Builder::new()
++        .prefix("taik-withdraw-")
++        .tempdir_in("/tmp")
++        .unwrap();
++    let root = root.path().canonicalize().unwrap();
++    let state = root.join("state");
++    fs::create_dir_all(state.join("jobs")).unwrap();
++    let reply = |text: &str| {
++        serde_json::json!({"type": "result", "is_error": false, "result": text,
++            "usage": {"output_tokens": 1}, "total_cost_usd": 0.01, "modelUsage": {"m": {}}})
++        .to_string()
++    };
++    fs::write(
++        root.join("question.json"),
++        reply("Frage: Welche Farbe soll der Titel haben?"),
++    )
++    .unwrap();
++    fs::write(
++        root.join("plan.json"),
++        reply("Art: dokument\nRepo: -\nGate: standard\nArbeit: standard\nGrund: Die Farbe ist jetzt klar."),
++    )
++    .unwrap();
++    fs::write(
++        root.join("files.json"),
++        reply("=== brief.md ===\nEine Seite mit blauem Titel bauen\n\n=== verify.mjs ===\nconsole.log('PASS');\n"),
++    )
++    .unwrap();
++    // The orchestrator plans once the user said "Blau.", and asks otherwise.
++    let worker = root.join("lead");
++    fs::write(
++        &worker,
++        format!(
++            "#!/bin/sh\ncase \"$*\" in *'orchestrator of a software factory'*'[user] Blau.'*) cat '{0}/plan.json';; *'orchestrator of a software factory'*) cat '{0}/question.json';; *) cat '{0}/files.json';; esac\n",
++            root.display()
++        ),
++    )
++    .unwrap();
++    fs::set_permissions(&worker, fs::Permissions::from_mode(0o700)).unwrap();
++    let serve = || {
++        factory()
++            .arg("drain")
++            .arg(&state)
++            .env("TAIK_LEAD_WORKER", &worker)
++            .env_remove("TAIK_SECOND_WORKER")
++            .env_remove("TAIK_AUTO_PROPOSE")
++            .output()
++            .unwrap()
++    };
++    let home = state.to_str().unwrap();
++
++    // The orchestrator asks, the user answers and then withdraws the request.
++    let asked = say(&["request", home], "Eine Seite mit farbigem Titel");
++    assert_eq!(String::from_utf8_lossy(&asked.stdout).trim(), "ticket-001");
++    let served = serve();
++    let talk = state.join("requests/ticket-001.talk");
++    assert_eq!(questions(&talk), 1, "{served:?}");
++    let answered = say(&["reply", home, "ticket-001"], "Blau.");
++    assert_eq!(answered.status.code(), Some(0), "{answered:?}");
++    let withdrawn = say(&["decline", home, "ticket-001"], "Doch nicht.");
++    assert_eq!(withdrawn.status.code(), Some(0), "{withdrawn:?}");
++    for _ in 0..2 {
++        serve();
++        untouched(&state, "ticket-001");
++        assert_eq!(questions(&talk), 1);
++    }
++    let refused = say(&["reply", home, "ticket-001"], "Rot.");
++    assert_eq!(refused.status.code(), Some(2), "{refused:?}");
++
++    // A request withdrawn while its question is open is not asked about again.
++    let asked = say(&["request", home], "Noch eine Seite");
++    assert_eq!(String::from_utf8_lossy(&asked.stdout).trim(), "ticket-002");
++    let talk = state.join("requests/ticket-002.talk");
++    serve();
++    assert_eq!(questions(&talk), 1);
++    let withdrawn = say(&["decline", home, "ticket-002"], "Erledigt.");
++    assert_eq!(withdrawn.status.code(), Some(0), "{withdrawn:?}");
++    serve();
++    untouched(&state, "ticket-002");
++    assert_eq!(questions(&talk), 1);
++
++    // A request withdrawn before the service saw it is never planned.
++    let asked = say(&["request", home], "Eine dritte Seite");
++    assert_eq!(String::from_utf8_lossy(&asked.stdout).trim(), "ticket-003");
++    let withdrawn = say(&["decline", home, "ticket-003"], "Zu früh.");
++    assert_eq!(withdrawn.status.code(), Some(0), "{withdrawn:?}");
++    serve();
++    untouched(&state, "ticket-003");
++    assert_eq!(questions(&state.join("requests/ticket-003.talk")), 0);
++}

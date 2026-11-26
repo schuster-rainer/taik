@@ -105,7 +105,10 @@ fn a_waiting_proposal_is_declined_once_and_cannot_be_approved() {
 
     let declined = say(&["decline", home, "titel"], reason.as_bytes());
     assert_eq!(declined.status.code(), Some(0), "{declined:?}");
-    assert_eq!(fs::read(folder.join("declined.md")).unwrap(), reason.as_bytes());
+    assert_eq!(
+        fs::read(folder.join("declined.md")).unwrap(),
+        reason.as_bytes()
+    );
 
     // A second decline is refused and the first reason stays.
     let before = snapshot(&state);

@@ -1,0 +1,20 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-43
+intent=Einen Vorschlag ablehnen und einen Wunsch zurückziehen: `taik-seed decline STATE NAME`.
+baseline=taik-seed 8e904046521dab887300a8bc306253cdc0a8f926a93f3ceb6784c0093c616143
+worker=opus-session-ticket-022
+decided_by=the installed taik-seed 8e904046521dab887300a8bc306253cdc0a8f926a93f3ceb6784c0093c616143 at /Users/rainer/.local/state/taik-factory/taik-seed
+limits=99 rounds; gate 900s; candidate checks 10s each
+gate_sha256=76b41170f51fa7e1a5424ba01f903bcf2276b8f8f19e4d87f952e88d18b6b0ce
+gate_ms=40608
+checks=PASS: Rust tests, Clippy with warnings denied, release build; candidate seeded, rejected an invalid procedure without touching the accepted record, and extended it
+evidence=round-43.checks.log
+artifact=round-43-taik-seed
+artifact_sha256=d9eeb237ebe79d7137721456db72b88fd2f4a000c76b6fffc6f15083bedc65df
+rollback=round-43.rollback-taik-seed
+continuation=Restart the service so that it runs the accepted binary.
+advance=false
+end

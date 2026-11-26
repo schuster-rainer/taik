@@ -1,0 +1,26 @@
+decision=accepted
+kind=software
+procedure=
+tags=
+identity=round-01
+intent=Der Befehl `taik-seed decline STATE NAME` lehnt einen wartenden Vorschlag ab oder zieht einen Wunsch zurück.
+baseline=7cd44394625f0cce37b221f2f3cc9f0b132cd2f1
+worker=claude-session
+worker_model=claude-opus-5-5
+worker_output_tokens=16725
+worker_cache_read_tokens=1173736
+session_listed_usd=1.1167512000000002
+worker_failure=
+worker_duration_ms=203696
+session=c721ba48-0be5-4ad4-b7e4-462cb882d350
+limits=6 rounds and one per reply; lease 600s without ceiling; file tools only
+gate_sha256=9901c03739ad0887d6614c5c32b775770be6da6de2f76030bd37507b0f27e6ef
+gate_ms=9288
+checks=PASS: decline, approve-Sperre, withdrawn, reply-Sperre, Tests und clippy ok
+artifact=07bb81700c5e2bd34fe95126253f8b2b873faf19
+commit=07bb81700c5e2bd34fe95126253f8b2b873faf19
+files=README.md +4 -0; src/main.rs +12 -0; src/proposal.rs +55 -0; src/service.rs +21 -0; tests/decline.rs +226 -0; tests/decline_service.rs +135 -0
+summary=Ich habe `taik-seed decline STATE NAME` gebaut: Die Begründung von der Standardeingabe (1 bis 2000 Bytes) wird unverändert und nur einmal als `declined.md` in einen wartenden Vorschlag geschrieben, oder als `STATE/requests/NAME.withdrawn`, wenn es keinen Vorschlag, aber den Wunsch gibt (`src/proposal.rs`, `src/main.rs` samt `USAGE`-Text). Gebaut und getestet ist nichts, das prüft erst das Gate. `approve` lehnt einen abgelehnten Vorschlag mit Status 2 ab, und `reply` weist einen zurückgezogenen Wunsch ab, bevor es etwas schreibt; `derive_requests` überspringt zurückgezogene Wünsche, auch nach einer Antwort. Über den Auftrag hinaus weist `reply` auch einen Kommentar zu einem abgelehnten Vorschlag mit Status 2 ab, weil er keinen Sinn mehr hat. Neu sind `tests/decline.rs` mit vier Tests ohne Worker und Sandbox sowie `tests/decline_service.rs` mit Stand-in-Worker in der Sandbox, den das Gate nicht ausführt. Die README enthält im Abschnitt „Commands“ die Zeile `taik-seed decline STATE NAME` und eine kurze Erklärung
+continuation=The accepted state is commit 07bb8170 in /Users/rainer/.local/state/taik-factory/work/ticket-022.
+advance=false
+end
